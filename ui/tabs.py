@@ -41,6 +41,7 @@ class TabBar(QWidget):
         state.run_state_changed.connect(self._on_run_state)
         state.playlists_changed.connect(self._refresh_counts)
         self._on_view(state.view)
+        self._refresh_counts()
 
     def _log_errors(self) -> int:
         from backend.mock_data import MOCK_LOGS
@@ -84,15 +85,16 @@ class _TabBtn(QPushButton):
         self._refresh_style()
 
     def _refresh_style(self):
+        from ui.widgets import icon_pixmap
+        from PySide6.QtGui import QIcon
         is_err = self._key == "logs" and self._count_fn() > 0
         color  = PRIMARY if self._active else (ERROR_DARK if is_err else FG_MUTED)
         weight = "600" if self._active else "500"
         border = f"border-bottom:2px solid {PRIMARY};" if self._active else "border-bottom:2px solid transparent;"
-        cnt_bg = f"rgba(0,68,255,0.10)" if self._active else (ERROR_BG if is_err else "#E5E7EB")
-        cnt_fg = PRIMARY if self._active else (ERROR_DARK if is_err else FG_MUTED)
         count  = self._count_fn() if self._key == "logs" else self._count
 
-        self.setText(f"  {self._label}  {count}")
+        self.setIcon(QIcon(icon_pixmap(self._icon, 12, color)))
+        self.setText(f" {self._label}  {count}")
         self.setStyleSheet(f"""
             QPushButton {{
                 background:transparent; color:{color}; border:none; {border}

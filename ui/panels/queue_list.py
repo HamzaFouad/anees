@@ -50,12 +50,15 @@ class QueueList(QWidget):
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.NoFrame)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setStyleSheet(f"QScrollArea {{ background:{BG_SUBTLE}; border:none; }}")
         self._list_widget = QWidget()
+        self._list_widget.setStyleSheet(f"background:{BG_SUBTLE};")
         self._list_layout = QVBoxLayout(self._list_widget)
         self._list_layout.setContentsMargins(0, 0, 0, 0)
         self._list_layout.setSpacing(0)
         self._list_layout.addStretch()
         scroll.setWidget(self._list_widget)
+        scroll.viewport().setStyleSheet(f"background:{BG_SUBTLE};")
         root.addWidget(scroll)
 
         # footer add button
@@ -249,7 +252,7 @@ class PlaylistRow(QWidget):
             bg = "rgba(0,68,255,0.08)"
             border_left = f"border-left:2px solid {PRIMARY};"
         else:
-            bg = "transparent"
+            bg = BG_SUBTLE
             border_left = "border-left:2px solid transparent;"
         self.setStyleSheet(f"background:{bg}; {border_left}")
         self._main.setStyleSheet(

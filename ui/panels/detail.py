@@ -101,6 +101,7 @@ class _Detail(QWidget):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setStyleSheet(f"QScrollArea {{ background:{BG}; border:none; }}")
         self._rows_widget = QWidget()
         self._rows_widget.setStyleSheet(f"background:{BG};")
         self._rows_lay = QVBoxLayout(self._rows_widget)
@@ -108,6 +109,7 @@ class _Detail(QWidget):
         self._rows_lay.setSpacing(0)
         self._rows_lay.addStretch()
         scroll.setWidget(self._rows_widget)
+        scroll.viewport().setStyleSheet(f"background:{BG};")
         root.addWidget(scroll)
 
     def set_playlist(self, pl: Playlist, videos: list[Video]):
