@@ -53,6 +53,15 @@ backend/commands/ emits lines → callback → ui/ updates state
 
 ---
 
+## Environment
+
+- Python: **3.12** (use `python3.12 -m venv .venv` on macOS, `py -3.12 -m venv .venv` on Windows)
+- Venv: `.venv/` at project root — always activate before running or installing
+- Run: `.venv/bin/python main.py` (macOS) · `.venv\Scripts\python main.py` (Windows)
+- Install: `.venv/bin/pip install -r requirements.txt`
+
+---
+
 ## Git commits
 
 - Messages are **lowercase**, short, and contextual — describe *what changed and why*, not what Claude did
