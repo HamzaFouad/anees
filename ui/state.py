@@ -1,4 +1,5 @@
 from __future__ import annotations
+import copy
 from datetime import datetime
 from pathlib import Path
 from PySide6.QtCore import QObject, Signal
