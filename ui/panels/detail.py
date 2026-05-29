@@ -38,8 +38,11 @@ class DetailPanel(QWidget):
         self._stack_lay.addWidget(self._empty)
         self._stack_lay.addWidget(self._detail)
 
+        # playlists_changed is intentionally NOT connected here —
+        # connecting it would rebuild all video rows on every throttle tick
+        # (via _on_select_current) causing deleteLater/Spinner-timer segfaults.
+        # The detail panel refreshes only on explicit selection_changed events.
         state.selection_changed.connect(self._on_select)
-        state.playlists_changed.connect(self._on_select_current)
         self._on_select(state.selected_id)
 
     def _on_select(self, pid: str):
