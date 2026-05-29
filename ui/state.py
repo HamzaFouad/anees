@@ -1,10 +1,9 @@
 from __future__ import annotations
-import copy
 from datetime import datetime
 from pathlib import Path
 from PySide6.QtCore import QObject, Signal
 from backend.models import Playlist, Video, LogEntry, RunState
-from backend.mock_data import MOCK_PLAYLISTS, MOCK_LOGS
+from backend.mock_data import MOCK_LOGS
 
 
 class AppState(QObject):
@@ -18,8 +17,8 @@ class AppState(QObject):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._run_state = RunState.IDLE
-        self._playlists = copy.deepcopy(MOCK_PLAYLISTS)
-        self._selected  = self._playlists[0].id if self._playlists else ""
+        self._playlists: list[Playlist] = []
+        self._selected  = ""
         self._view      = "queue"
         self._query     = ""
         self._logs: list[LogEntry] = copy.deepcopy(MOCK_LOGS)
@@ -173,12 +172,6 @@ class AppState(QObject):
             self._selected = self._playlists[0].id if self._playlists else ""
             self.selection_changed.emit(self._selected)
         self.playlists_changed.emit()
-
-    def reset_queue(self) -> None:
-        self._playlists = copy.deepcopy(MOCK_PLAYLISTS)
-        self._selected  = self._playlists[0].id if self._playlists else ""
-        self.playlists_changed.emit()
-        self.selection_changed.emit(self._selected)
 
     def _playlist(self, pid: str) -> Playlist | None:
         return next((p for p in self._playlists if p.id == pid), None)
