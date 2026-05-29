@@ -4,14 +4,14 @@ from PySide6.QtGui import QPainter, QColor
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtCore import QByteArray
 
-from ui.theme import PRIMARY, FG, FG_MUTED, BORDER, EQUALIZER_SVG
+from ui.theme import PRIMARY, FG, FG_MUTED, BG, BORDER, WIN_CLOSE_HOVER, ON_PRIMARY, TEXT_MD, EQUALIZER_SVG
 
 
 class TitleBar(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setFixedHeight(36)
-        self.setStyleSheet(f"background:#fff; border-bottom: 1px solid {BORDER};")
+        self.setStyleSheet(f"background:{BG};")
         self._drag_pos = QPoint()
 
         lay = QHBoxLayout(self)
@@ -25,14 +25,14 @@ class TitleBar(QWidget):
         # title
         self._title_lbl = QLabel("Anees")
         self._title_lbl.setStyleSheet(
-            f"font-size:12px; font-weight:600; color:{FG};"
+            f"font-size:{TEXT_MD}px; font-weight:600; color:{FG};"
         )
         lay.addWidget(self._title_lbl)
 
         # subtitle
         self._sub_lbl = QLabel("")
         self._sub_lbl.setStyleSheet(
-            f"font-size:12px; color:{FG_MUTED};"
+            f"font-size:{TEXT_MD}px; color:{FG_MUTED};"
         )
         lay.addWidget(self._sub_lbl)
 
@@ -95,9 +95,9 @@ class _WinBtn(QPushButton):
 
     def _set_style(self, hovered: bool):
         if self._close and hovered:
-            bg, fg = "#E81123", "#fff"
+            bg, fg = WIN_CLOSE_HOVER, ON_PRIMARY
         elif hovered:
-            bg, fg = "#E5E7EB", FG
+            bg, fg = BORDER, FG
         else:
             bg, fg = "transparent", FG_MUTED
         self.setStyleSheet(

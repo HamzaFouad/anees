@@ -2,7 +2,7 @@ from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QPushButton
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QIcon
 
-from ui.theme import PRIMARY, FG, FG_MUTED, BG, BORDER, ERROR_DARK, ERROR_BG
+from ui.theme import PRIMARY, PRIMARY_TINT_8, FG, FG_MUTED, BG, BORDER, ERROR_DARK, ERROR_BG
 from ui.widgets import icon_pixmap
 from ui.state import AppState
 from backend.models import RunState
@@ -13,7 +13,7 @@ class TabBar(QWidget):
         super().__init__(parent)
         self._state = state
         self.setFixedHeight(36)
-        self.setStyleSheet(f"background:{BG}; border-bottom:1px solid {BORDER};")
+        self.setStyleSheet(f"background:{BG};")
 
         lay = QHBoxLayout(self)
         lay.setContentsMargins(14, 0, 14, 0)
@@ -90,7 +90,7 @@ class _TabBtn(QPushButton):
         is_err = self._key == "logs" and self._count_fn() > 0
         color  = PRIMARY if self._active else (ERROR_DARK if is_err else FG_MUTED)
         weight = "600" if self._active else "500"
-        border = f"border-bottom:2px solid {PRIMARY};" if self._active else "border-bottom:2px solid transparent;"
+        border = f"border-bottom:2px solid {PRIMARY};" if self._active else ""
         count  = self._count_fn() if self._key == "logs" else self._count
 
         self.setIcon(QIcon(icon_pixmap(self._icon, 12, color)))
@@ -99,7 +99,7 @@ class _TabBtn(QPushButton):
             QPushButton {{
                 background:transparent; color:{color}; border:none; {border}
                 font-size:12px; font-weight:{weight};
-                padding:0 14px; margin-bottom:-1px;
+                padding:0 14px;
             }}
             QPushButton:hover {{ color:{FG}; }}
         """)
@@ -122,5 +122,5 @@ class _LockPill(QWidget):
         lay.addWidget(lbl)
 
         self.setStyleSheet(
-            f"background:rgba(0,68,255,0.08); border-radius:99px;"
+            f"background:{PRIMARY_TINT_8}; border-radius:99px;"
         )
