@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QPushButton, QLineEdit
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QIcon
+from PySide6.QtCore import Qt, Signal, QTimer
+from PySide6.QtGui import QIcon, QPainter, QColor
 
 from ui.theme import (
     PRIMARY, PRIMARY_HOVER, ON_PRIMARY,
@@ -244,7 +244,6 @@ class _PulseDot(QWidget):
         self.setFixedSize(8, 8)
         self._alpha = 255
         self._growing = False
-        from PySide6.QtCore import QTimer
         t = QTimer(self)
         t.timeout.connect(self._tick)
         t.start(20)
@@ -270,4 +269,3 @@ class _PulseDot(QWidget):
         p.drawEllipse(0, 0, 8, 8)
 
 
-from PySide6.QtGui import QPainter
