@@ -139,10 +139,12 @@ class AppState(QObject):
             pl.completed = sum(1 for vv in pl.videos if vv.stage == "done")
             pl.status    = "done" if pl.completed >= pl.video_count else "active"
         pl.active_stage = stage
-        # schedule a batched UI refresh instead of emitting on every tick
-        self._dirty_pids.add(pid)
-        if not self._refresh_timer.isActive():
-            self._refresh_timer.start()
+        # only schedule a sidebar refresh when a video finishes — intermediate
+        # download percentage changes don't affect anything the sidebar displays
+        if stage == "done":
+            self._dirty_pids.add(pid)
+            if not self._refresh_timer.isActive():
+                self._refresh_timer.start()
 
     def _flush_ui(self) -> None:
         """Emit batched sidebar refresh only (runs at most every 300 ms).
