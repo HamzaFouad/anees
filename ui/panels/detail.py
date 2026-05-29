@@ -9,7 +9,8 @@ import copy
 
 from ui.theme import (
     PRIMARY, FG, FG_MUTED, FG_SUBTLE, BG, BG_MUTED, BG_SUBTLE, BG_ACCENT, BORDER,
-    SUCCESS, SUCCESS_DARK, SUCCESS_BG, ERROR, ERROR_DARK, ERROR_BG,
+    SUCCESS, SUCCESS_DARK, SUCCESS_BG, ERROR, ERROR_DARK, ERROR_BG, ERROR_BORDER,
+    SURFACE_ALT, ERROR_TINT_10,
     PIPELINE_STAGES, fmt_dur, fmt_mb,
 )
 from ui.widgets import Badge, Btn, PipelineStrip, SlimProgressBar, Spinner, icon_pixmap, icon_label
@@ -113,9 +114,8 @@ class _Detail(QWidget):
         root.addWidget(scroll)
 
     def set_playlist(self, pl: Playlist, videos: list[Video]):
-        self._header.update(pl, videos)
+        self._header.refresh(pl, videos)
         self._col_header.update(pl)
-        # rebuild rows
         while self._rows_lay.count() > 1:
             item = self._rows_lay.takeAt(0)
             if item.widget():
@@ -129,28 +129,30 @@ class _DetailHeader(QWidget):
     def __init__(self, on_retry_all, parent=None):
         super().__init__(parent)
         self._on_retry_all = on_retry_all
-        self.setStyleSheet(f"background:{BG}; border-bottom:1px solid {BORDER};")
+        self.setObjectName("detailHeader")
+        self.setStyleSheet(f"#detailHeader {{ background:{BG}; border-bottom:1px solid {BORDER}; }}")
         self._lay = QVBoxLayout(self)
         self._lay.setContentsMargins(18, 14, 18, 12)
         self._lay.setSpacing(0)
 
-    def update(self, pl: Playlist, videos: list[Video]):
-        # clear
+    def _clear(self):
         while self._lay.count():
             item = self._lay.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
-            elif item.layout():
-                self._clear_layout(item.layout())
+
+    def refresh(self, pl: Playlist, videos: list[Video]):
+        self._clear()
 
         failed_count = sum(1 for v in videos if v.stage == "failed")
         pct = int(pl.completed / pl.video_count * 100) if pl.video_count else 0
 
-        # top row: prefix + title + buttons
+        # top row: prefix badge + title/url + optional retry-all button
         top = QHBoxLayout()
         top.setSpacing(10)
 
         pfx = QLabel(pl.prefix)
+        pfx.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
         pfx.setStyleSheet(
             f"font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:600; "
             f"color:{FG_SUBTLE}; background:{BG_ACCENT}; border-radius:6px; padding:4px 10px;"
@@ -160,31 +162,45 @@ class _DetailHeader(QWidget):
         title_col = QVBoxLayout()
         title_col.setSpacing(2)
         t = QLabel(pl.title)
+        t.setTextFormat(Qt.PlainText)
         t.setStyleSheet(
-            f"font-size:16px; font-weight:600; letter-spacing:-0.01em; color:{FG};"
+            f"font-size:16px; font-weight:600; letter-spacing:-0.01em; color:{FG}; "
+            "background:transparent; border:none; text-decoration:none;"
         )
         title_col.addWidget(t)
         url_lbl = QLabel(pl.url)
+        url_lbl.setTextFormat(Qt.PlainText)
         url_lbl.setStyleSheet(
-            f"font-size:11px; color:{FG_MUTED}; font-family:'JetBrains Mono',monospace;"
+            f"font-size:11px; color:{FG_MUTED}; font-family:'JetBrains Mono',monospace; "
+            "background:transparent; border:none; text-decoration:none;"
         )
-        url_lbl.setMaximumWidth(550)
+        url_lbl.setMaximumWidth(500)
         title_col.addWidget(url_lbl)
         top.addLayout(title_col, 1)
 
         if failed_count > 0:
-            retry_all = QPushButton(f"  Retry {failed_count} failed")
-            retry_all.setIcon(QIcon(icon_pixmap("refresh", 12, ERROR_DARK)))
-            retry_all.setFixedHeight(28)
-            retry_all.setCursor(Qt.PointingHandCursor)
-            retry_all.setStyleSheet(f"""
+            retry_all_btn = QPushButton(f"  Retry {failed_count} failed")
+            retry_all_btn.setIcon(QIcon(icon_pixmap("refresh", 12, ERROR_DARK)))
+            retry_all_btn.setFixedHeight(28)
+            retry_all_btn.setCursor(Qt.PointingHandCursor)
+            retry_all_btn.setStyleSheet(f"""
                 QPushButton {{ background:{BG}; color:{ERROR_DARK};
                     border:1px solid #FCA5A5; border-radius:6px;
                     padding:0 10px; font-size:12px; font-weight:600; }}
                 QPushButton:hover {{ background:{ERROR_BG}; }}
             """)
-            retry_all.clicked.connect(self._on_retry_all)
-            top.addWidget(retry_all)
+            retry_all_btn.clicked.connect(self._on_retry_all)
+            top.addWidget(retry_all_btn)
+
+        more_btn = QPushButton()
+        more_btn.setIcon(QIcon(icon_pixmap("more", 14, FG_MUTED)))
+        more_btn.setFixedSize(28, 28)
+        more_btn.setCursor(Qt.PointingHandCursor)
+        more_btn.setStyleSheet(f"""
+            QPushButton {{ background:{BG}; border:1px solid {BORDER}; border-radius:6px; }}
+            QPushButton:hover {{ background:{BG_MUTED}; }}
+        """)
+        top.addWidget(more_btn)
 
         self._lay.addLayout(top)
         self._lay.addSpacing(14)
@@ -203,23 +219,31 @@ class _DetailHeader(QWidget):
         for label, val, sub, is_fail in stats:
             col = QVBoxLayout()
             col.setSpacing(1)
-            lbl_color = ERROR_DARK if is_fail and failed_count > 0 else FG_MUTED
-            val_color  = ERROR_DARK if is_fail and failed_count > 0 else FG
-            sub_color  = ERROR_DARK if is_fail and failed_count > 0 else FG_MUTED
-
+            lc = ERROR_DARK if is_fail and failed_count > 0 else FG_MUTED
+            vc = ERROR_DARK if is_fail and failed_count > 0 else FG
+            sc = ERROR_DARK if is_fail and failed_count > 0 else FG_MUTED
             lbl = QLabel(label.upper())
-            lbl.setStyleSheet(f"font-size:10px; color:{lbl_color}; font-weight:500; letter-spacing:0.04em;")
+            lbl.setTextFormat(Qt.PlainText)
+            lbl.setStyleSheet(
+                f"font-size:10px; color:{lc}; font-weight:500; letter-spacing:0.04em; "
+                "background:transparent; border:none; text-decoration:none;"
+            )
             col.addWidget(lbl)
-            v_lbl = QLabel(val)
-            v_lbl.setStyleSheet(f"font-size:14px; font-weight:600; color:{val_color};")
-            col.addWidget(v_lbl)
-            s_lbl = QLabel(sub)
-            s_lbl.setStyleSheet(f"font-size:10px; color:{sub_color};")
-            col.addWidget(s_lbl)
-
+            val_lbl = QLabel(val)
+            val_lbl.setTextFormat(Qt.PlainText)
+            val_lbl.setStyleSheet(
+                f"font-size:14px; font-weight:600; color:{vc}; "
+                "background:transparent; border:none; text-decoration:none;"
+            )
+            col.addWidget(val_lbl)
+            sub_lbl = QLabel(sub)
+            sub_lbl.setTextFormat(Qt.PlainText)
+            sub_lbl.setStyleSheet(
+                f"font-size:10px; color:{sc}; background:transparent; border:none; text-decoration:none;"
+            )
+            col.addWidget(sub_lbl)
             stats_row.addLayout(col)
             stats_row.addSpacing(24)
-
         stats_row.addStretch()
         self._lay.addLayout(stats_row)
         self._lay.addSpacing(14)
@@ -227,139 +251,30 @@ class _DetailHeader(QWidget):
         # pipeline strip
         pipe_row = QHBoxLayout()
         pipe_row.setSpacing(10)
-        pipe_lbl = QLabel("Pipeline")
-        pipe_lbl.setStyleSheet(
-            f"font-size:10px; color:{FG_MUTED}; font-weight:500; letter-spacing:0.04em; text-transform:uppercase;"
+        pl_lbl = QLabel("Pipeline")
+        pl_lbl.setTextFormat(Qt.PlainText)
+        pl_lbl.setStyleSheet(
+            f"font-size:10px; color:{FG_MUTED}; font-weight:500; "
+            f"letter-spacing:0.04em; text-transform:uppercase; "
+            "background:transparent; border:none; text-decoration:none;"
         )
-        pipe_row.addWidget(pipe_lbl)
+        pipe_row.addWidget(pl_lbl)
         pipe = PipelineStrip(pl.active_stage, pl.split_enabled)
         pipe_row.addWidget(pipe)
         pipe_row.addStretch()
         self._lay.addLayout(pipe_row)
-
-    def _on_retry_all(self):
-        self._on_retry_all_cb()
-
-    def _on_retry_all_cb(self):
-        pass
-
-    def update(self, pl, videos):
-        # re-bind callback
-        self._on_retry_all_cb = self._on_retry_all_fn if hasattr(self, "_on_retry_all_fn") else lambda: None
-        self._do_update(pl, videos)
-
-    def _do_update(self, pl, videos):
-        pass
-
-    def _clear_layout(self, lay):
-        while lay.count():
-            item = lay.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
-
-
-# Rebuild _DetailHeader.update properly (avoid the double-definition issue)
-def _header_update(self, pl: Playlist, videos: list[Video]):
-    while self._lay.count():
-        item = self._lay.takeAt(0)
-        if item.widget():
-            item.widget().deleteLater()
-
-    failed_count = sum(1 for v in videos if v.stage == "failed")
-    pct = int(pl.completed / pl.video_count * 100) if pl.video_count else 0
-
-    top = QHBoxLayout()
-    top.setSpacing(10)
-
-    pfx = QLabel(pl.prefix)
-    pfx.setStyleSheet(
-        f"font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:600; "
-        f"color:{FG_SUBTLE}; background:{BG_ACCENT}; border-radius:6px; padding:4px 10px;"
-    )
-    top.addWidget(pfx)
-
-    title_col = QVBoxLayout()
-    title_col.setSpacing(2)
-    t = QLabel(pl.title)
-    t.setStyleSheet(f"font-size:16px; font-weight:600; letter-spacing:-0.01em; color:{FG};")
-    title_col.addWidget(t)
-    url_lbl = QLabel(pl.url)
-    url_lbl.setStyleSheet(
-        f"font-size:11px; color:{FG_MUTED}; font-family:'JetBrains Mono',monospace;"
-    )
-    url_lbl.setMaximumWidth(500)
-    title_col.addWidget(url_lbl)
-    top.addLayout(title_col, 1)
-
-    if failed_count > 0:
-        retry_all_btn = QPushButton(f"  Retry {failed_count} failed")
-        retry_all_btn.setIcon(QIcon(icon_pixmap("refresh", 12, ERROR_DARK)))
-        retry_all_btn.setFixedHeight(28)
-        retry_all_btn.setCursor(Qt.PointingHandCursor)
-        retry_all_btn.setStyleSheet(f"""
-            QPushButton {{ background:{BG}; color:{ERROR_DARK};
-                border:1px solid #FCA5A5; border-radius:6px;
-                padding:0 10px; font-size:12px; font-weight:600; }}
-            QPushButton:hover {{ background:{ERROR_BG}; }}
-        """)
-        retry_all_btn.clicked.connect(self._on_retry_all)
-        top.addWidget(retry_all_btn)
-
-    self._lay.addLayout(top)
-    self._lay.addSpacing(14)
-
-    stats_row = QHBoxLayout()
-    stats_row.setSpacing(0)
-    stats = [
-        ("Progress", f"{pl.completed}/{pl.video_count}", f"{pct}%", False),
-        ("Speed",    f"{pl.speed}×",  "override" if pl.speed != 1.5 else "default", False),
-        ("Split",    f"{pl.split_min}m" if pl.split_enabled else "off",
-         "enabled" if pl.split_enabled else "—", False),
-        ("Size",     fmt_mb(pl.size_mb), pl.added_at, False),
-        ("Failed",   str(failed_count), "none" if failed_count == 0 else "see below", True),
-    ]
-    for label, val, sub, is_fail in stats:
-        col = QVBoxLayout()
-        col.setSpacing(1)
-        lc = ERROR_DARK if is_fail and failed_count > 0 else FG_MUTED
-        vc = ERROR_DARK if is_fail and failed_count > 0 else FG
-        sc = ERROR_DARK if is_fail and failed_count > 0 else FG_MUTED
-        l = QLabel(label.upper())
-        l.setStyleSheet(f"font-size:10px; color:{lc}; font-weight:500; letter-spacing:0.04em;")
-        col.addWidget(l)
-        v = QLabel(val)
-        v.setStyleSheet(f"font-size:14px; font-weight:600; color:{vc};")
-        col.addWidget(v)
-        s = QLabel(sub)
-        s.setStyleSheet(f"font-size:10px; color:{sc};")
-        col.addWidget(s)
-        stats_row.addLayout(col)
-        stats_row.addSpacing(24)
-    stats_row.addStretch()
-    self._lay.addLayout(stats_row)
-    self._lay.addSpacing(14)
-
-    pipe_row = QHBoxLayout()
-    pipe_row.setSpacing(10)
-    pl_lbl = QLabel("Pipeline")
-    pl_lbl.setStyleSheet(
-        f"font-size:10px; color:{FG_MUTED}; font-weight:500; letter-spacing:0.04em; text-transform:uppercase;"
-    )
-    pipe_row.addWidget(pl_lbl)
-    pipe = PipelineStrip(pl.active_stage, pl.split_enabled)
-    pipe_row.addWidget(pipe)
-    pipe_row.addStretch()
-    self._lay.addLayout(pipe_row)
-
-
-_DetailHeader.update = _header_update
 
 
 class _ColHeader(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setFixedHeight(32)
-        self.setStyleSheet(f"background:{BG_MUTED}; border-bottom:1px solid {BORDER};")
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        self.setStyleSheet(f"""
+            background:{BG_ACCENT};
+            border-top:1px solid {BORDER};
+            border-bottom:1px solid {BORDER};
+        """)
         self._lay = QHBoxLayout(self)
         self._lay.setContentsMargins(10, 0, 10, 0)
         self._lay.setSpacing(8)
@@ -373,11 +288,13 @@ class _ColHeader(QWidget):
 
         def h(text, align=Qt.AlignLeft, width=None):
             lbl = QLabel(text)
+            lbl.setTextFormat(Qt.PlainText)
             lbl.setStyleSheet(
                 f"font-size:10px; color:{FG_MUTED}; font-weight:500; "
-                f"letter-spacing:0.04em; text-transform:uppercase;"
+                f"letter-spacing:0.04em; text-transform:uppercase; "
+                "background:transparent; border:none; text-decoration:none;"
             )
-            lbl.setAlignment(align)
+            lbl.setAlignment(align | Qt.AlignVCenter)
             if width:
                 lbl.setFixedWidth(width)
             return lbl
@@ -409,13 +326,20 @@ class VideoRow(QWidget):
         self._on_retry = on_retry
 
         is_failed = video.stage == "failed"
-        bg = "rgba(239,68,68,0.04)" if is_failed else "transparent"
-        self.setStyleSheet(
-            f"background:{bg}; border-bottom:1px solid hsl(220,13%,94%);"
-        )
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        if is_failed:
+            self.setObjectName("videoRowFailed")
+            self.setStyleSheet(
+                f"#videoRowFailed {{ background: {ERROR_TINT_10}; }}"
+            )
+        else:
+            self.setObjectName("videoRow")
+            self.setStyleSheet(
+                f"#videoRow {{ background: transparent; border-bottom:1px solid {BORDER}; }}"
+            )
 
         lay = QHBoxLayout(self)
-        lay.setContentsMargins(10, 7, 10, 7)
+        lay.setContentsMargins(10, 8, 10, 8)
         lay.setSpacing(8)
 
         # index
@@ -424,43 +348,47 @@ class VideoRow(QWidget):
         num.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         num.setStyleSheet(
             f"font-family:'JetBrains Mono',monospace; font-size:11px; "
-            f"color:{ERROR_DARK if is_failed else FG_MUTED};"
+            f"color:{ERROR_DARK if is_failed else FG_MUTED}; "
+            "background:transparent; border:none;"
         )
         lay.addWidget(num)
 
         # title + error
-        title_col = QVBoxLayout()
-        title_col.setSpacing(3)
+        col_w = QWidget()
+        col_w.setStyleSheet("background:transparent;")
+        title_col = QVBoxLayout(col_w)
+        title_col.setContentsMargins(0, 0, 0, 0)
+        title_col.setSpacing(2)
         t = QLabel(video.title)
         t.setStyleSheet(f"font-size:12px; color:{FG};")
         title_col.addWidget(t)
         if is_failed and video.error:
             err_row = QHBoxLayout()
+            err_row.setContentsMargins(0, 0, 0, 0)
             err_row.setSpacing(5)
             err_icon = icon_label("alert", 11, ERROR_DARK)
             err_row.addWidget(err_icon)
             err_lbl = QLabel(video.error)
-            err_lbl.setStyleSheet(
-                f"font-size:10.5px; color:{ERROR_DARK};"
-            )
+            err_lbl.setStyleSheet(f"font-size:10.5px; color:{ERROR_DARK};")
             err_row.addWidget(err_lbl, 1)
             if video.retry_count > 0:
                 rc = QLabel(f"· retried {video.retry_count}×")
                 rc.setStyleSheet(f"font-size:10.5px; color:{FG_MUTED};")
                 err_row.addWidget(rc)
             err_row.addStretch()
-            w = QWidget()
-            w.setLayout(err_row)
-            title_col.addWidget(w)
-        col_w = QWidget()
-        col_w.setLayout(title_col)
+            err_w = QWidget()
+            err_w.setLayout(err_row)
+            title_col.addWidget(err_w)
         lay.addWidget(col_w, 1)
 
         # duration
         dur = QLabel(fmt_dur(video.duration_sec))
         dur.setFixedWidth(50)
         dur.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        dur.setStyleSheet(f"font-family:'JetBrains Mono',monospace; font-size:11px; color:{FG_MUTED};")
+        dur.setStyleSheet(
+            f"font-family:'JetBrains Mono',monospace; font-size:11px; color:{FG_MUTED}; "
+            "background:transparent; border:none;"
+        )
         lay.addWidget(dur)
 
         # stage cells
@@ -470,13 +398,14 @@ class VideoRow(QWidget):
         for i, (key, label, short, _) in enumerate(PIPELINE_STAGES):
             cell = QWidget()
             cell.setFixedSize(28, 28)
+            cell.setStyleSheet("background:transparent;")
             c_lay = QHBoxLayout(cell)
             c_lay.setContentsMargins(0, 0, 0, 0)
             c_lay.setAlignment(Qt.AlignCenter)
 
             if key == "split" and not split_enabled:
                 lbl = QLabel("—")
-                lbl.setStyleSheet(f"color:#D1D5DB; font-size:12px;")
+                lbl.setStyleSheet(f"color:{SURFACE_ALT}; font-size:12px;")
                 c_lay.addWidget(lbl)
             elif is_failed and i == failed_idx:
                 c_lay.addWidget(icon_label("alert", 13, ERROR))
@@ -485,7 +414,7 @@ class VideoRow(QWidget):
                 c_lay.addWidget(icon_label("check", 12, SUCCESS))
             elif is_failed and i > failed_idx:
                 lbl = QLabel("—")
-                lbl.setStyleSheet(f"color:#D1D5DB; font-size:12px;")
+                lbl.setStyleSheet(f"color:{SURFACE_ALT}; font-size:12px;")
                 c_lay.addWidget(lbl)
             elif not is_failed and stage_idx == i:
                 sp = Spinner(16, PRIMARY)
@@ -493,17 +422,19 @@ class VideoRow(QWidget):
             else:
                 dot = QLabel()
                 dot.setFixedSize(6, 6)
-                dot.setStyleSheet("background:#D1D5DB; border-radius:3px;")
+                dot.setStyleSheet(f"background:{SURFACE_ALT}; border-radius:3px;")
                 c_lay.addWidget(dot)
 
             cell.setToolTip(label)
             lay.addWidget(cell)
 
-        # status / retry
+        # state / retry
         status_w = QWidget()
         status_w.setFixedWidth(92)
+        status_w.setStyleSheet("background:transparent;")
         s_lay = QHBoxLayout(status_w)
         s_lay.setContentsMargins(0, 0, 0, 0)
+        s_lay.setSpacing(0)
         s_lay.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
         if video.stage == "done":

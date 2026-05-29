@@ -6,8 +6,10 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QIcon
 
 from ui.theme import (
-    PRIMARY, FG, FG_MUTED, FG_SUBTLE, BG, BG_MUTED, BG_SUBTLE, BORDER,
+    PRIMARY, PRIMARY_HOVER, ON_PRIMARY,
+    FG, FG_MUTED, FG_SUBTLE, BG, BG_MUTED, BG_SUBTLE, BORDER,
     ERROR_BG, ERROR_DARK, WARN_BG, WARN_DARK,
+    ERROR_TINT_4, WARN_TINT_4, LOG_BG_INFO, LOG_BG_DEBUG, LOG_BG_DARK, FG_ON_DARK,
 )
 from ui.widgets import Toggle, icon_pixmap
 from backend.mock_data import MOCK_LOGS
@@ -16,10 +18,10 @@ from backend.models import LogEntry
 LOG_LEVELS = ["error", "warn", "info", "debug"]
 
 LEVEL_STYLE = {
-    "error": (ERROR_BG,  ERROR_DARK),
-    "warn":  (WARN_BG,   WARN_DARK),
-    "info":  ("#E8ECF2", FG_SUBTLE),
-    "debug": ("#F1F5F9", FG_MUTED),
+    "error": (ERROR_BG,     ERROR_DARK),
+    "warn":  (WARN_BG,      WARN_DARK),
+    "info":  (LOG_BG_INFO,  FG_SUBTLE),
+    "debug": (LOG_BG_DEBUG, FG_MUTED),
 }
 
 
@@ -105,7 +107,7 @@ class LogsPanel(QWidget):
         lay.addWidget(sep)
 
         diag_btn = QPushButton("  Send diagnostics")
-        diag_btn.setIcon(QIcon(icon_pixmap("send", 12, "#fff")))
+        diag_btn.setIcon(QIcon(icon_pixmap("send", 12, ON_PRIMARY)))
         diag_btn.setFixedHeight(26)
         diag_btn.setCursor(Qt.PointingHandCursor)
         diag_btn.setStyleSheet(f"""
@@ -270,12 +272,8 @@ class _LogRow(QWidget):
         is_err = entry.lvl == "error"
         is_warn = entry.lvl == "warn"
 
-        row_bg = "rgba(239,68,68,0.04)" if is_err else (
-            "rgba(245,158,11,0.04)" if is_warn else "transparent"
-        )
-        self.setStyleSheet(
-            f"background:{row_bg}; border-bottom:1px solid #EAECF0;"
-        )
+        row_bg = ERROR_TINT_4 if is_err else (WARN_TINT_4 if is_warn else BG)
+        self.setStyleSheet(f"background:{row_bg};")
 
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
@@ -346,10 +344,10 @@ class _LogRow(QWidget):
         if expanded and self._has_detail:
             detail = QLabel(entry.detail)
             detail.setStyleSheet(
-                f"background:#0E142C; color:rgba(255,255,255,0.78); "
+                f"background:{LOG_BG_DARK}; color:{FG_ON_DARK}; "
                 f"font-size:10.5px; font-family:'JetBrains Mono',monospace; "
                 f"line-height:1.7; padding:8px 16px 12px 16px; "
-                f"border-left:2px solid #EF4444;"
+                f"border-left:2px solid {ERROR_DARK};"
             )
             detail.setWordWrap(True)
             detail.setContentsMargins(138, 0, 0, 0)
