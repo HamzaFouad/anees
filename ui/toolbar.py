@@ -87,9 +87,16 @@ class Toolbar(QWidget):
         lay.addWidget(s_btn)
 
         state.run_state_changed.connect(self._on_run_state)
-        state.playlists_changed.connect(self._run_controls.refresh)
+        state.playlists_changed.connect(self._on_playlists_changed)
         state.view_changed.connect(self._on_view)
         self._on_run_state(state.run_state)
+
+    def _on_playlists_changed(self):
+        # only rebuild run controls when idle — during a run this would recreate
+        # _PulseDot (20ms timer) on every progress tick, causing rapid
+        # create/delete cycles that segfault
+        if self._state.run_state == RunState.IDLE:
+            self._run_controls.refresh()
 
     def _on_run_state(self, rs: RunState):
         locked = rs in (RunState.RUNNING, RunState.PAUSED)

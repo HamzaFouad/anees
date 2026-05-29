@@ -53,7 +53,7 @@ FG_ON_DARK   = "rgba(255,255,255,0.78)"
 
 # ── Typography ────────────────────────────────────────────────────────────────
 FONT_UI   = "'.AppleSystemUIFont','Segoe UI','Helvetica Neue',sans-serif"
-FONT_MONO = "'JetBrains Mono',monospace"
+FONT_MONO = "'JetBrains Mono','Menlo','Consolas','Courier New',monospace"
 TEXT_XS   = 10    # uppercase field labels, badge counts
 TEXT_SM   = 11    # timestamps, secondary labels, hints
 TEXT_MD   = 12    # body text, table cells, button text
