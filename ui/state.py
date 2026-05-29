@@ -61,7 +61,7 @@ class AppState(QObject):
 
     # ── Run lifecycle ─────────────────────────────────────────────────────────
     def start_run(self) -> None:
-        from ui.workers.download_worker import DownloadWorker
+        from ui.workers.download_worker import DownloadWorker  # kept here to avoid circular import
         pending = [p for p in self._playlists if p.status != "done"]
         print(f"[state] start_run called — pending={len(pending)}", flush=True)
         if not pending:

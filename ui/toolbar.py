@@ -112,6 +112,12 @@ class RunControls(QWidget):
         self._lay.setSpacing(8)
         self.refresh()
 
+    # ── stable slots (no lambdas — lambdas can be silently GC'd) ─────────────
+    def _do_start(self)  -> None: self._state.set_run_state(RunState.RUNNING)
+    def _do_pause(self)  -> None: self._state.set_run_state(RunState.PAUSED)
+    def _do_resume(self) -> None: self._state.set_run_state(RunState.RUNNING)
+    def _do_stop(self)   -> None: self._state.set_run_state(RunState.IDLE)
+
     def _clear(self):
         while self._lay.count():
             item = self._lay.takeAt(0)
@@ -140,7 +146,7 @@ class RunControls(QWidget):
                 QPushButton:hover {{ background:{PRIMARY_HOVER}; }}
                 QPushButton:disabled {{ color:{DISABLED_FG}; }}
             """)
-            start_btn.clicked.connect(lambda: self._state.set_run_state(RunState.RUNNING))
+            start_btn.clicked.connect(self._do_start)
             self._lay.addWidget(start_btn)
 
             hint = QLabel(
@@ -152,11 +158,11 @@ class RunControls(QWidget):
 
         elif rs == RunState.RUNNING:
             pause_btn = self._ctrl_btn("pause", "Pause", FG, BG, BORDER)
-            pause_btn.clicked.connect(lambda: self._state.set_run_state(RunState.PAUSED))
+            pause_btn.clicked.connect(self._do_pause)
             self._lay.addWidget(pause_btn)
 
             stop_btn = self._ctrl_btn("x", "Stop", ERROR_DARK, BG, ERROR_BORDER)
-            stop_btn.clicked.connect(lambda: self._state.set_run_state(RunState.IDLE))
+            stop_btn.clicked.connect(self._do_stop)
             self._lay.addWidget(stop_btn)
 
             pulse = _PulseDot()
@@ -179,11 +185,11 @@ class RunControls(QWidget):
                     border-radius:6px; padding:0 16px; font-size:13px; font-weight:600; }}
                 QPushButton:hover {{ background:{PRIMARY_HOVER}; }}
             """)
-            resume_btn.clicked.connect(lambda: self._state.set_run_state(RunState.RUNNING))
+            resume_btn.clicked.connect(self._do_resume)
             self._lay.addWidget(resume_btn)
 
             stop_btn = self._ctrl_btn("x", "Stop", ERROR_DARK, BG, ERROR_BORDER)
-            stop_btn.clicked.connect(lambda: self._state.set_run_state(RunState.IDLE))
+            stop_btn.clicked.connect(self._do_stop)
             self._lay.addWidget(stop_btn)
 
             paused_lbl = QLabel(f"Paused · {c['videos_done']}/{c['videos_total']} done")
@@ -205,7 +211,7 @@ class RunControls(QWidget):
             self._lay.addWidget(merge_btn)
 
             new_btn = self._ctrl_btn("refresh", "New run", FG, BG, BORDER)
-            new_btn.clicked.connect(lambda: self._state.set_run_state(RunState.IDLE))
+            new_btn.clicked.connect(self._do_stop)
             self._lay.addWidget(new_btn)
 
             done_lbl = QLabel(f"✓  Complete · {c['videos_total']} videos · 1.2 GB")
