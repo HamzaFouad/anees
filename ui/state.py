@@ -143,16 +143,25 @@ class AppState(QObject):
             self._refresh_timer.start()
 
     def _flush_ui(self) -> None:
-        """Emit batched UI refresh signals (runs at most every 300 ms)."""
+        """Emit batched sidebar refresh only (runs at most every 300 ms).
+
+        Intentionally does NOT emit selection_changed during a run — rebuilding
+        all VideoRow widgets every 300 ms causes deleteLater/Spinner-timer races
+        that segfault. The detail panel is refreshed once when videos are ready
+        and once when the run completes.
+        """
         if not self._dirty_pids:
             return
         self.playlists_changed.emit()
-        if self._selected in self._dirty_pids:
-            self.selection_changed.emit(self._selected)
         self._dirty_pids.clear()
 
     def _on_run_complete(self) -> None:
-        self._flush_ui()   # ensure final state is reflected
+        # do a final detail panel refresh so all Done badges show
+        if not self._dirty_pids:
+            self._dirty_pids.add(self._selected)
+        self._flush_ui()
+        if self._selected:
+            self.selection_changed.emit(self._selected)
         self._worker = None
         self._set_run_state(RunState.COMPLETE)
 
