@@ -68,7 +68,7 @@ class MainWindow(QWidget):
         self._content.addWidget(self._history)
 
         # logs view
-        self._logs = LogsPanel()
+        self._logs = LogsPanel(self._state)
         self._logs.send_diagnostics_clicked.connect(self._on_send_diagnostics)
         self._content.addWidget(self._logs)
 

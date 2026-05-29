@@ -37,6 +37,7 @@ class Playlist:
     split_min: int
     size_mb: Optional[float]
     added_at: str
+    videos: list["Video"] = field(default_factory=list)
 
 
 @dataclass

@@ -28,12 +28,11 @@ LEVEL_STYLE = {
 class LogsPanel(QWidget):
     send_diagnostics_clicked = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, state=None, parent=None):
         super().__init__(parent)
+        self._state = state
         self._levels = {"error": True, "warn": True, "info": True, "debug": False}
-        self._expanded: set[int] = {
-            i for i, l in enumerate(MOCK_LOGS) if l.lvl == "error"
-        }
+        self._expanded: set[int] = set()
         self._auto_scroll = True
         self._query = ""
 
@@ -57,6 +56,9 @@ class LogsPanel(QWidget):
         root.addWidget(self._scroll)
 
         root.addWidget(self._build_footer())
+
+        if state:
+            state.logs_changed.connect(self._rebuild)
         self._rebuild()
 
     def _build_toolbar(self) -> QWidget:
@@ -167,9 +169,10 @@ class LogsPanel(QWidget):
             if item.widget():
                 item.widget().deleteLater()
 
+        source = self._state.logs if self._state else MOCK_LOGS
         q = self._query
         filtered = [
-            (i, l) for i, l in enumerate(MOCK_LOGS)
+            (i, l) for i, l in enumerate(source)
             if self._levels.get(l.lvl, True)
             and (not q or q in (l.msg + " " + l.src).lower())
         ]

@@ -5,7 +5,6 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon, QColor
-import copy
 
 from ui.theme import (
     PRIMARY, FG, FG_MUTED, FG_SUBTLE, BG, BG_MUTED, BG_SUBTLE, BG_ACCENT, BORDER,
@@ -16,14 +15,13 @@ from ui.theme import (
 from ui.widgets import Badge, Btn, PipelineStrip, SlimProgressBar, Spinner, icon_pixmap, icon_label
 from ui.state import AppState
 from backend.models import Playlist, Video
-from backend.mock_data import SAMPLE_VIDEOS
 
 
 class DetailPanel(QWidget):
     def __init__(self, state: AppState, parent=None):
         super().__init__(parent)
         self._state = state
-        self._videos: list[Video] = copy.deepcopy(SAMPLE_VIDEOS)
+        self._videos: list[Video] = []
 
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
@@ -47,7 +45,7 @@ class DetailPanel(QWidget):
     def _on_select(self, pid: str):
         pl = next((p for p in self._state.playlists if p.id == pid), None)
         if pl:
-            self._videos = copy.deepcopy(SAMPLE_VIDEOS)
+            self._videos = list(pl.videos)
             self._detail.set_playlist(pl, self._videos)
             self._empty.setVisible(False)
             self._detail.setVisible(True)
