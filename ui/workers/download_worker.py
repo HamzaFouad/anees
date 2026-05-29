@@ -1,7 +1,7 @@
 from __future__ import annotations
 from PySide6.QtCore import QThread, Signal
 from backend.models import Playlist, Video
-from backend.services.download_service import DownloadService
+from backend.api import DownloadService
 
 
 class DownloadWorker(QThread):

@@ -1,5 +1,7 @@
 from __future__ import annotations
 from PySide6.QtCore import QThread, Signal
+
+
 class InfoWorker(QThread):
     """Fetches playlist metadata (title + video list) without downloading."""
     info_ready = Signal(str, object, str)   # playlist_id, list[Video], real_title
@@ -10,9 +12,9 @@ class InfoWorker(QThread):
         self._url         = url
 
     def run(self) -> None:
-        from backend.commands.ytdlp import YtdlpClient
+        from backend.api import InfoService
         try:
-            videos, title = YtdlpClient().fetch_info(self._url)
+            videos, title = InfoService().fetch_playlist(self._url)
         except Exception as exc:
             print(f"[InfoWorker] {exc}", flush=True)
             return

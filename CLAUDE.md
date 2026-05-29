@@ -28,15 +28,25 @@ anees/
 
 ### `ui/` — PySide6 only
 - Contains: widgets, dialogs, panels, theme, AppState
-- May import from `backend/` for models and services
 - AppState lives here (owns PySide6 Signals); backend services receive callbacks, not Signal refs
 - No file I/O, no subprocess calls, no SQLite queries directly in widget code
 
+**Allowed `backend` imports from `ui/`:**
+| Module | Allowed? | Why |
+|--------|----------|-----|
+| `backend.models` | ✅ | Shared data structures (dataclasses only, no logic) |
+| `backend.api` | ✅ | The service gateway — the only way to call backend logic |
+| `backend.mock_data` | ✅ temporarily | Will be removed once real storage is wired |
+| `backend.services.*` | ❌ | Use `backend.api` instead |
+| `backend.commands.*` | ❌ | Implementation detail — never exposed to UI |
+| `backend.storage.*` | ❌ | Use `backend.api` instead |
+
+`backend/api.py` is the single contract between layers. When adding a new backend capability, expose it through `backend/api.py` — do not import the service or command directly in `ui/`.
+
 ### Communication pattern
 ```
-ui/ calls → backend/services/  (passes callback or receives return value)
-backend/services/ calls → backend/commands/  (subprocess)
-backend/commands/ emits lines → callback → ui/ updates state
+ui/ → backend/api.py → backend/services/ → backend/commands/ → yt-dlp / ffmpeg
+         ↑ only entry point for ui
 ```
 
 ---
