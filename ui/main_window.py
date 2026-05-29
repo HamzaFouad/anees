@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget, QFrame
 from PySide6.QtCore import Qt
 
 from ui.state import AppState
@@ -67,7 +67,12 @@ class MainWindow(QWidget):
         self._logs.send_diagnostics_clicked.connect(self._on_send_diagnostics)
         self._content.addWidget(self._logs)
 
-        # status bar
+        # full-width separator + status bar
+        from ui.theme import BORDER
+        sep = QFrame()
+        sep.setFixedHeight(1)
+        sep.setStyleSheet(f"background:{BORDER}; border:none;")
+        root.addWidget(sep)
         root.addWidget(StatusBar(self))
 
         # wire view switching

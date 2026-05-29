@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel
-from ui.theme import FG_MUTED, BG_MUTED, BORDER, SUCCESS
+from ui.theme import FG_MUTED, BG_MUTED, SUCCESS, FONT_MONO, TEXT_SM
+from ui.widgets import status_dot
 from backend.mock_data import MOCK_HISTORY
 
 
@@ -7,23 +8,21 @@ class StatusBar(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setFixedHeight(24)
-        self.setStyleSheet(f"background:{BG_MUTED}; border-top:1px solid {BORDER};")
+        self.setStyleSheet(f"background:{BG_MUTED};")
 
         lay = QHBoxLayout(self)
         lay.setContentsMargins(12, 0, 12, 0)
         lay.setSpacing(0)
 
-        def item(text: str, mono: bool = True) -> QLabel:
+        def item(text: str) -> QLabel:
             lbl = QLabel(text)
-            ff = "'JetBrains Mono', monospace" if mono else "inherit"
-            lbl.setStyleSheet(f"font-size:11px; color:{FG_MUTED}; font-family:{ff};")
+            lbl.setStyleSheet(
+                f"font-size:{TEXT_SM}px; color:{FG_MUTED}; font-family:{FONT_MONO};"
+            )
             return lbl
 
-        dot = QLabel()
-        dot.setFixedSize(6, 6)
-        dot.setStyleSheet(f"background:{SUCCESS}; border-radius:3px; margin-right:4px;")
-        lay.addWidget(dot)
-        lay.addSpacing(4)
+        lay.addWidget(status_dot(SUCCESS))
+        lay.addSpacing(6)
 
         for text in ["yt-dlp 2025.04.30", " · ", "ffmpeg 7.1", " · ", "2 parallel"]:
             lay.addWidget(item(text))
