@@ -1,4 +1,3 @@
-from PySide6.QtGui import QColor, QFont, QFontDatabase
 from PySide6.QtWidgets import QApplication
 
 # ── Colors ────────────────────────────────────────────────────────────────────
@@ -28,6 +27,58 @@ ERROR_BORDER  = "#FECACA"
 
 WARN_DARK     = "#92400E"
 WARN_BG       = "#FEF3C7"
+
+# ── Semantic surface / state roles ────────────────────────────────────────────
+ON_PRIMARY      = "#FFFFFF"           # text/icon on solid PRIMARY fill
+ROW_DIVIDER     = "#EAECF0"           # 1 px row separators in tables/lists
+DISABLED_BG     = "#F3F4F6"           # disabled button / input background
+DISABLED_FG     = "#9CA3AF"           # disabled text
+SURFACE_ALT     = "#E2E8F0"           # secondary button bg; toggle track-off
+INACTIVE        = "#D6D3D1"           # inactive playlist status dot
+WIN_CLOSE_HOVER = "#E81123"           # Windows system close-button hover
+
+# ── Tint palette (all rgba(primary/error, …) usages consolidated) ─────────────
+PRIMARY_TINT_4  = "rgba(0,68,255,0.04)"
+PRIMARY_TINT_8  = "rgba(0,68,255,0.08)"   # PRIMARY_TINT stays as 0.10
+PRIMARY_TINT_18 = "rgba(0,68,255,0.18)"
+ERROR_TINT_4    = "rgba(239,68,68,0.04)"
+ERROR_TINT_10   = "rgba(239,68,68,0.10)"
+WARN_TINT_4     = "rgba(245,158,11,0.04)"
+
+# ── Log level surfaces ────────────────────────────────────────────────────────
+LOG_BG_INFO  = "#E8ECF2"
+LOG_BG_DEBUG = "#F1F5F9"
+LOG_BG_DARK  = "#0E142C"              # expandable log-detail background
+FG_ON_DARK   = "rgba(255,255,255,0.78)"
+
+# ── Typography ────────────────────────────────────────────────────────────────
+FONT_UI   = "'Inter','Segoe UI',system-ui,sans-serif"
+FONT_MONO = "'JetBrains Mono',monospace"
+TEXT_XS   = 10    # uppercase field labels, badge counts
+TEXT_SM   = 11    # timestamps, secondary labels, hints
+TEXT_MD   = 12    # body text, table cells, button text
+TEXT_BASE = 13    # global default
+TEXT_LG   = 14    # dialog titles
+TEXT_XL   = 16    # detail panel playlist title
+TEXT_2XL  = 18    # history summary values
+
+# ── Spacing scale ─────────────────────────────────────────────────────────────
+SPACE_2  = 2;  SPACE_4  = 4;  SPACE_6  = 6;  SPACE_8  = 8
+SPACE_10 = 10; SPACE_12 = 12; SPACE_14 = 14; SPACE_16 = 16
+SPACE_18 = 18; SPACE_20 = 20; SPACE_24 = 24
+
+# ── Radius scale ─────────────────────────────────────────────────────────────
+RADIUS_SM   = 4    # checkboxes, badges, small buttons
+RADIUS_MD   = 6    # main buttons, inputs
+RADIUS_LG   = 8    # cards
+RADIUS_XL   = 12   # large cards
+RADIUS_PILL = 99   # fully-rounded pills
+
+# ── Fixed component dimensions ────────────────────────────────────────────────
+H_TITLEBAR  = 36;  H_TOOLBAR  = 52;  H_TABBAR    = 36;  H_STATUSBAR = 24
+H_BTN_SM    = 28;  H_BTN_MD   = 32;  H_ROW       = 44
+W_SIDEBAR   = 280; W_COL_IDX  = 28;  W_COL_DUR   = 50
+W_COL_STAGE = 28;  W_COL_STATE = 92
 
 # ── Equalizer icon SVG (app mark) ────────────────────────────────────────────
 EQUALIZER_SVG = """<svg width="12" height="12" viewBox="0 0 11 11" xmlns="http://www.w3.org/2000/svg">
