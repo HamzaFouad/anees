@@ -57,7 +57,9 @@ class AppState(QObject):
     def start_run(self) -> None:
         from ui.workers.download_worker import DownloadWorker
         pending = [p for p in self._playlists if p.status != "done"]
+        print(f"[state] start_run called — pending={len(pending)}", flush=True)
         if not pending:
+            print("[state] no pending playlists, aborting", flush=True)
             return
         self._worker = DownloadWorker(pending, self._output_root, self)
         self._worker.videos_ready.connect(self._on_videos_ready)
@@ -103,7 +105,8 @@ class AppState(QObject):
             self._set_run_state(state)
 
     # ── Worker callbacks (called on main thread via queued Signal) ────────────
-    def _on_videos_ready(self, pid: str, videos: list) -> None:
+    def _on_videos_ready(self, pid: str, videos) -> None:
+        print(f"[state] videos_ready received — pid={pid} count={len(videos)}", flush=True)
         pl = self._playlist(pid)
         if not pl:
             return
