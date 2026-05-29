@@ -390,9 +390,9 @@ class VideoRow(QWidget):
         title_col = QVBoxLayout(col_w)
         title_col.setContentsMargins(0, 0, 0, 0)
         title_col.setSpacing(2)
-        t = QLabel(video.title)
-        t.setStyleSheet(f"font-size:12px; color:{FG};")
-        title_col.addWidget(t)
+        self._title_lbl = QLabel(video.title)
+        self._title_lbl.setStyleSheet(f"font-size:12px; color:{FG};")
+        title_col.addWidget(self._title_lbl)
         if is_failed and video.error:
             err_row = QHBoxLayout()
             err_row.setContentsMargins(0, 0, 0, 0)
@@ -413,14 +413,14 @@ class VideoRow(QWidget):
         lay.addWidget(col_w, 1)
 
         # duration
-        dur = QLabel(fmt_dur(video.duration_sec))
-        dur.setFixedWidth(50)
-        dur.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        dur.setStyleSheet(
+        self._dur_lbl = QLabel(fmt_dur(video.duration_sec))
+        self._dur_lbl.setFixedWidth(50)
+        self._dur_lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self._dur_lbl.setStyleSheet(
             f"font-family:'JetBrains Mono',monospace; font-size:11px; color:{FG_MUTED}; "
             "background:transparent; border:none;"
         )
-        lay.addWidget(dur)
+        lay.addWidget(self._dur_lbl)
 
         # stage cells
         self._stage_cells: list[QWidget] = []
@@ -509,6 +509,11 @@ class VideoRow(QWidget):
     def refresh(self, video: Video) -> None:
         self._v = video
         is_failed = video.stage == "failed"
+
+        # update title and duration in place (no widget rebuild needed)
+        self._title_lbl.setText(video.title)
+        if video.duration_sec > 0:
+            self._dur_lbl.setText(fmt_dur(video.duration_sec))
 
         # update row background style for failed state change
         if is_failed:

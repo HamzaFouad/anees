@@ -207,6 +207,14 @@ class AppState(QObject):
         self._selected = pl.id
         self.playlists_changed.emit()
         self.selection_changed.emit(pl.id)
+        self._fetch_info_async(pl)
+
+    def _fetch_info_async(self, pl: Playlist) -> None:
+        from ui.workers.info_worker import InfoWorker
+        w = InfoWorker(pl.id, pl.url, self)
+        w.info_ready.connect(self._on_videos_ready)
+        w.finished.connect(w.deleteLater)
+        w.start()
 
     def remove_playlist(self, pid: str) -> None:
         self._playlists = [p for p in self._playlists if p.id != pid]
