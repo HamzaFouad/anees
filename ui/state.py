@@ -70,6 +70,7 @@ class AppState(QObject):
         self._worker = DownloadWorker(pending, self._output_root, self)
         self._worker.videos_ready.connect(self._on_videos_ready)
         self._worker.video_stage.connect(self._on_video_stage)
+        self._worker.video_meta.connect(self._on_video_meta)
         self._worker.log_added.connect(self._add_log)
         self._worker.run_complete.connect(self._on_run_complete)
         self._worker.start()
@@ -133,31 +134,38 @@ class AppState(QObject):
         while idx >= len(pl.videos):
             pl.videos.append(Video(title=f"Video {len(pl.videos)+1}", duration_sec=0, stage="queued"))
         v = pl.videos[idx]
+        stage_changed = v.stage != stage
         v.stage    = stage
         v.progress = progress
         if stage == "done":
             pl.completed = sum(1 for vv in pl.videos if vv.stage == "done")
             pl.status    = "done" if pl.completed >= pl.video_count else "active"
         pl.active_stage = stage
-        # only schedule a sidebar refresh when a video finishes — intermediate
-        # download percentage changes don't affect anything the sidebar displays
-        if stage == "done":
+        # schedule refresh on any stage *transition* (not every progress %)
+        # so the detail panel shows DL→MP3→Done advancing per video
+        if stage_changed or stage == "done":
             self._dirty_pids.add(pid)
             if not self._refresh_timer.isActive():
                 self._refresh_timer.start()
 
     def _flush_ui(self) -> None:
-        """Emit batched sidebar refresh only (runs at most every 300 ms).
-
-        Intentionally does NOT emit selection_changed during a run — rebuilding
-        all VideoRow widgets every 300 ms causes deleteLater/Spinner-timer races
-        that segfault. The detail panel is refreshed once when videos are ready
-        and once when the run completes.
-        """
+        """Batched UI refresh — runs at most every 300 ms via QTimer."""
         if not self._dirty_pids:
             return
         self.playlists_changed.emit()
+        if self._selected in self._dirty_pids:
+            self.selection_changed.emit(self._selected)
         self._dirty_pids.clear()
+
+    def _on_video_meta(self, pid: str, idx: int, title: str, duration_sec: int) -> None:
+        pl = self._playlist(pid)
+        if not pl or idx < 0 or idx >= len(pl.videos):
+            return
+        v = pl.videos[idx]
+        if title:
+            v.title = title
+        if duration_sec > 0:
+            v.duration_sec = duration_sec
 
     def _on_run_complete(self) -> None:
         self._refresh_timer.stop()

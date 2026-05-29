@@ -5,9 +5,10 @@ from backend.services.download_service import DownloadService
 
 
 class DownloadWorker(QThread):
-    videos_ready = Signal(str, object, str)      # playlist_id, list[Video], real_title
-    video_stage  = Signal(str, int, str, float)  # playlist_id, idx, stage, progress
-    log_added    = Signal(str, str, str)          # level, src, msg
+    videos_ready = Signal(str, object, str)         # playlist_id, list[Video], real_title
+    video_stage  = Signal(str, int, str, float)     # playlist_id, idx, stage, progress
+    video_meta   = Signal(str, int, str, int)        # playlist_id, idx, title, duration_sec
+    log_added    = Signal(str, str, str)             # level, src, msg
     run_complete = Signal()
 
     def __init__(self, playlists: list[Playlist], output_root: str, parent=None):
@@ -17,6 +18,7 @@ class DownloadWorker(QThread):
             output_root     = output_root,
             on_videos_ready = self.videos_ready.emit,
             on_video_stage  = self.video_stage.emit,
+            on_video_meta   = self.video_meta.emit,
             on_log          = self.log_added.emit,
             on_complete     = self.run_complete.emit,
         )

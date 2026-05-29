@@ -15,12 +15,14 @@ class DownloadService:
         output_root: str | None = None,
         on_videos_ready: Callable[[str, list[Video]], None] | None = None,
         on_video_stage:  Callable[[str, int, str, float], None] | None = None,
+        on_video_meta:   Callable[[str, int, str, int], None] | None = None,
         on_log:          Callable[[str, str, str], None] | None = None,
         on_complete:     Callable[[], None] | None = None,
     ):
         self._root            = output_root or str(Path.home() / "Downloads" / "Anees")
         self._on_videos_ready = on_videos_ready or (lambda *_: None)
         self._on_video_stage  = on_video_stage  or (lambda *_: None)
+        self._on_video_meta   = on_video_meta   or (lambda *_: None)
         self._on_log          = on_log          or (lambda *_: None)
         self._on_complete     = on_complete     or (lambda: None)
         self._stop  = threading.Event()
@@ -121,10 +123,12 @@ class DownloadService:
             if not key or key in _done_ids:
                 return
             _done_ids.add(key)
-            idx = self._current_idx
-            title = info.get("title", f"video {idx+1}")
+            idx      = self._current_idx
+            title    = info.get("title") or f"Video {idx+1}"
+            duration = int(info.get("duration") or 0)
             self._log("info", f"Done [{idx+1}] {title}")
             self._on_video_stage(pl.id, idx, "done", 1.0)
+            self._on_video_meta(pl.id, idx, title, duration)
             self._current_idx += 1
 
         opts = make_download_opts(pl, self._root, hook)
