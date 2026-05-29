@@ -20,7 +20,7 @@ class QueueList(QWidget):
         super().__init__(parent)
         self._state = state
         self.setFixedWidth(280)
-        self.setStyleSheet(f"background:{BG_SUBTLE}; border-right:1px solid {BORDER};")
+        self.setStyleSheet(f"background:{BG_SUBTLE};")
 
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
@@ -251,17 +251,16 @@ class PlaylistRow(QWidget):
 
     def _apply_style(self):
         if self._selected:
-            bg = PRIMARY_TINT_8
-            border_left = f"border-left:2px solid {PRIMARY};"
+            self.setStyleSheet(
+                f"background:{PRIMARY_TINT_8}; border:none; border-left:2px solid {PRIMARY};"
+            )
         else:
-            bg = BG_SUBTLE
-            border_left = "border-left:2px solid transparent;"
-        self.setStyleSheet(f"background:{bg}; {border_left}")
-        self._main.setStyleSheet("background:transparent;")
+            self.setStyleSheet(f"background:{BG_SUBTLE}; border:none;")
+        self._main.setStyleSheet("background:transparent; border:none;")
 
     def enterEvent(self, event):
         if not self._selected:
-            self.setStyleSheet(f"background:{BG_MUTED}; border-left:2px solid transparent;")
+            self.setStyleSheet(f"background:{BG_MUTED}; border:none;")
         if not self._locked and hasattr(self, "_rm_btn"):
             self._rm_btn.setVisible(True)
         super().enterEvent(event)

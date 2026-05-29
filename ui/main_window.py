@@ -53,6 +53,11 @@ class MainWindow(QWidget):
         q_lay.setSpacing(0)
         self._queue_list = QueueList(self._state)
         q_lay.addWidget(self._queue_list)
+        from ui.theme import BORDER
+        vsep = QFrame()
+        vsep.setFixedWidth(1)
+        vsep.setStyleSheet(f"background:{BORDER}; border:none;")
+        q_lay.addWidget(vsep)
         self._detail = DetailPanel(self._state)
         q_lay.addWidget(self._detail, 1)
         self._content.addWidget(self._queue_view)
