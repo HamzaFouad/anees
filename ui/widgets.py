@@ -8,11 +8,16 @@ from PySide6.QtGui import QPainter, QColor, QPen, QPixmap, QIcon, QFont
 from PySide6.QtSvg import QSvgRenderer
 
 from ui.theme import (
-    PRIMARY, PRIMARY_HOVER, FG, FG_MUTED, FG_SUBTLE,
-    BG, BG_MUTED, BG_ACCENT, BORDER,
+    PRIMARY, PRIMARY_HOVER, PRIMARY_TINT_8, PRIMARY_TINT_18,
+    ON_PRIMARY, SURFACE_ALT, DISABLED_BG, DISABLED_FG,
+    FG, FG_MUTED, FG_SUBTLE,
+    BG, BG_MUTED, BG_SUBTLE, BG_ACCENT, BORDER,
     SUCCESS, SUCCESS_DARK, SUCCESS_BG,
     ERROR_DARK, ERROR_BG, ERROR_BORDER,
     WARN_DARK, WARN_BG,
+    TEXT_XS, TEXT_SM, TEXT_MD,
+    SPACE_4, SPACE_8,
+    RADIUS_SM, RADIUS_MD, RADIUS_PILL,
     PIPELINE_STAGES, make_icon_svg, fmt_dur,
 )
 
@@ -37,11 +42,11 @@ def icon_label(key: str, size: int = 14, color: str = FG_MUTED) -> QLabel:
 
 # ── Btn ───────────────────────────────────────────────────────────────────────
 _BTN_STYLES = {
-    "primary":   (PRIMARY,   "#fff",      PRIMARY_HOVER,          "transparent"),
-    "outline":   ("#fff",    FG,          BG_ACCENT,              BORDER),
-    "secondary": (BG_MUTED,  FG_SUBTLE,   "#E2E8F0",              "transparent"),
-    "ghost":     ("transparent", FG,      BG_ACCENT,              "transparent"),
-    "danger":    ("#fff",    ERROR_DARK,  ERROR_BG,               BORDER),
+    "primary":   (PRIMARY,        ON_PRIMARY,  PRIMARY_HOVER,   "transparent"),
+    "outline":   (BG,             FG,          BG_ACCENT,       BORDER),
+    "secondary": (BG_MUTED,       FG_SUBTLE,   SURFACE_ALT,     "transparent"),
+    "ghost":     ("transparent",  FG,          BG_ACCENT,       "transparent"),
+    "danger":    (ON_PRIMARY,     ERROR_DARK,  ERROR_BG,        BORDER),
 }
 _BTN_SIZES = {
     "sm": (28, 10, 12),
@@ -67,7 +72,7 @@ class Btn(QPushButton):
             }}
             QPushButton:hover {{ background: {hover_bg}; }}
             QPushButton:disabled {{
-                background: #F3F4F6; color: {FG_MUTED};
+                background: {DISABLED_BG}; color: {DISABLED_FG};
                 border: 1px solid {BORDER}; opacity: 0.6;
             }}
         """)
@@ -81,13 +86,13 @@ class Btn(QPushButton):
 
 # ── Badge ─────────────────────────────────────────────────────────────────────
 _BADGE_STYLES = {
-    "default": (BG_MUTED,   FG_SUBTLE),
-    "primary": ("rgba(0,68,255,0.10)", PRIMARY),
-    "success": (SUCCESS_BG, SUCCESS_DARK),
-    "active":  ("rgba(0,68,255,0.10)", PRIMARY),
-    "queued":  (WARN_BG,    WARN_DARK),
-    "error":   (ERROR_BG,   ERROR_DARK),
-    "mono":    (BG_ACCENT,  FG_SUBTLE),
+    "default": (BG_MUTED,       FG_SUBTLE),
+    "primary": (PRIMARY_TINT_8, PRIMARY),
+    "success": (SUCCESS_BG,     SUCCESS_DARK),
+    "active":  (PRIMARY_TINT_8, PRIMARY),
+    "queued":  (WARN_BG,        WARN_DARK),
+    "error":   (ERROR_BG,       ERROR_DARK),
+    "mono":    (BG_ACCENT,      FG_SUBTLE),
 }
 
 class Badge(QLabel):
@@ -128,7 +133,7 @@ class Toggle(QWidget):
         p.setRenderHint(QPainter.Antialiasing)
         p.setPen(Qt.NoPen)
         # track
-        p.setBrush(QColor(PRIMARY if self._checked else "#D1D5DB"))
+        p.setBrush(QColor(PRIMARY if self._checked else SURFACE_ALT))
         p.drawRoundedRect(0, 3, 34, 14, 7, 7)
         # thumb
         p.setBrush(QColor("white"))
@@ -143,7 +148,7 @@ class Toggle(QWidget):
 
 # ── SlimProgressBar ───────────────────────────────────────────────────────────
 class SlimProgressBar(QWidget):
-    def __init__(self, color: str = PRIMARY, track: str = "#E5E7EB",
+    def __init__(self, color: str = PRIMARY, track: str = BORDER,
                  bar_height: int = 4, parent=None):
         super().__init__(parent)
         self._value = 0
@@ -207,9 +212,9 @@ class PipelineStrip(QWidget):
             if is_done:
                 bg, fg, dot = SUCCESS_BG, SUCCESS_DARK, SUCCESS
             elif is_active:
-                bg, fg, dot = "rgba(0,68,255,0.10)", PRIMARY, PRIMARY
+                bg, fg, dot = PRIMARY_TINT_8, PRIMARY, PRIMARY
             else:
-                bg, fg, dot = BG_ACCENT, FG_MUTED, BORDER
+                bg, fg, dot = BG_ACCENT, FG_MUTED, SURFACE_ALT
 
             pill = QWidget()
             pill.setToolTip(label)
@@ -224,13 +229,15 @@ class PipelineStrip(QWidget):
             dot_w.setFixedSize(6, 6)
             dot_w.setStyleSheet(
                 f"background:{dot}; border-radius:3px;"
-                + (f" border: 3px solid rgba(0,68,255,0.18);" if is_active else "")
+                + (f" border: 3px solid {PRIMARY_TINT_18};" if is_active else "")
             )
             pl.addWidget(dot_w)
 
             txt = QLabel(short if self._compact else label)
+            txt.setTextFormat(Qt.PlainText)
             txt.setStyleSheet(
-                f"color:{fg}; font-size:{'10' if self._compact else '11'}px; font-weight:500;"
+                f"color:{fg}; font-size:{'10' if self._compact else '11'}px; font-weight:500; "
+                "background:transparent; border:none; text-decoration:none;"
             )
             pl.addWidget(txt)
             pill.setStyleSheet(f"background:{bg}; border-radius:99px;")
@@ -263,7 +270,7 @@ class Field(QWidget):
 
         lbl = QLabel(label.upper())
         lbl.setStyleSheet(
-            f"font-size:11px; font-weight:500; color:{FG_MUTED}; letter-spacing:0.04em;"
+            f"font-size:{TEXT_XS}px; font-weight:500; color:{FG_MUTED}; letter-spacing:0.04em;"
         )
         if inline:
             lbl.setFixedWidth(100)
@@ -277,7 +284,7 @@ class Field(QWidget):
 
         if hint:
             hint_lbl = QLabel(hint)
-            hint_lbl.setStyleSheet(f"font-size:11px; color:{FG_MUTED};")
+            hint_lbl.setStyleSheet(f"font-size:{TEXT_SM}px; color:{FG_MUTED};")
             clay.addWidget(hint_lbl)
 
     def content_layout(self):
@@ -339,3 +346,111 @@ class Spinner(QWidget):
 
     def stop(self):
         self._timer.stop()
+
+
+# ── status_dot ────────────────────────────────────────────────────────────────
+def status_dot(color: str, size: int = 6) -> QLabel:
+    dot = QLabel()
+    dot.setFixedSize(size, size)
+    dot.setStyleSheet(f"background:{color}; border-radius:{size // 2}px;")
+    return dot
+
+
+# ── IconButton ────────────────────────────────────────────────────────────────
+def icon_button(icon_key: str, size: int = 28, icon_size: int = 14,
+                color: str = FG_MUTED) -> QPushButton:
+    btn = QPushButton()
+    btn.setIcon(QIcon(icon_pixmap(icon_key, icon_size, color)))
+    btn.setFixedSize(size, size)
+    btn.setCursor(Qt.PointingHandCursor)
+    btn.setStyleSheet(
+        f"QPushButton {{ background:{BG}; border:1px solid {BORDER}; border-radius:{RADIUS_MD}px; }}"
+        f"QPushButton:hover {{ background:{BG_MUTED}; }}"
+    )
+    return btn
+
+
+# ── field ─────────────────────────────────────────────────────────────────────
+def field(label: str, widget: QWidget) -> QWidget:
+    w = QWidget()
+    lay = QVBoxLayout(w)
+    lay.setContentsMargins(0, 0, 0, 0)
+    lay.setSpacing(SPACE_4)
+    lbl = QLabel(label.upper())
+    lbl.setStyleSheet(
+        f"font-size:{TEXT_XS}px; font-weight:500; color:{FG_MUTED}; letter-spacing:.04em;"
+    )
+    lay.addWidget(lbl)
+    lay.addWidget(widget)
+    return w
+
+
+# ── Checkbox ──────────────────────────────────────────────────────────────────
+class Checkbox(QWidget):
+    toggled = Signal(bool)
+
+    def __init__(self, checked: bool = False, color: str = PRIMARY, parent=None):
+        super().__init__(parent)
+        self._checked = checked
+        self._color = color
+        self.setFixedSize(16, 16)
+        self.setCursor(Qt.PointingHandCursor)
+
+    @property
+    def checked(self) -> bool:
+        return self._checked
+
+    @checked.setter
+    def checked(self, v: bool):
+        self._checked = v
+        self.update()
+
+    def paintEvent(self, _event):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        if self._checked:
+            p.setBrush(QColor(self._color))
+            p.setPen(Qt.NoPen)
+            p.drawRoundedRect(0, 0, 16, 16, RADIUS_SM, RADIUS_SM)
+            p.setPen(QPen(QColor("white"), 2, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+            p.drawLine(3, 8, 6, 11)
+            p.drawLine(6, 11, 13, 4)
+        else:
+            p.setBrush(Qt.NoBrush)
+            p.setPen(QPen(QColor(BORDER), 1.5))
+            p.drawRoundedRect(1, 1, 14, 14, RADIUS_SM - 1, RADIUS_SM - 1)
+
+    def mousePressEvent(self, _event):
+        self._checked = not self._checked
+        self.toggled.emit(self._checked)
+        self.update()
+
+
+# ── EmptyState ────────────────────────────────────────────────────────────────
+class EmptyState(QWidget):
+    def __init__(self, icon_key: str, title: str, subtitle: str = "", parent=None):
+        super().__init__(parent)
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(16, 30, 16, 30)
+        lay.setSpacing(SPACE_8)
+        lay.setAlignment(Qt.AlignHCenter | Qt.AlignTop)
+
+        icon_w = QWidget()
+        icon_w.setFixedSize(44, 44)
+        icon_w.setStyleSheet(f"background:{BG_SUBTLE}; border-radius:8px;")
+        i_lay = QHBoxLayout(icon_w)
+        i_lay.setContentsMargins(0, 0, 0, 0)
+        i_lay.addWidget(icon_label(icon_key, 20, FG_MUTED), alignment=Qt.AlignCenter)
+        lay.addWidget(icon_w, alignment=Qt.AlignHCenter)
+
+        t = QLabel(title)
+        t.setStyleSheet(f"font-size:{TEXT_MD + 1}px; font-weight:500; color:{FG};")
+        t.setAlignment(Qt.AlignHCenter)
+        lay.addWidget(t)
+
+        if subtitle:
+            sub = QLabel(subtitle)
+            sub.setStyleSheet(f"font-size:{TEXT_SM}px; color:{FG_MUTED};")
+            sub.setAlignment(Qt.AlignHCenter)
+            sub.setWordWrap(True)
+            lay.addWidget(sub)
