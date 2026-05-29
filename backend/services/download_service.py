@@ -71,10 +71,7 @@ class DownloadService:
         if self._stop.is_set():
             return
 
-        import os
-        from backend.commands.ytdlp import _safe
-        out_dir = os.path.join(self._root, f"{pl.prefix}_{_safe(pl.title)}")
-        self._log("info", f"Downloading {len(pl.videos)} videos → {out_dir}")
+        self._log("info", f"Downloading {len(pl.videos)} videos → {self._root}/{pl.prefix}_*")
         self._download(pl)
 
     def _fetch_info(self, url: str) -> tuple[list[Video], str]:
