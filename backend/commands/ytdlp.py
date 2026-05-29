@@ -1,40 +1,91 @@
 from __future__ import annotations
 import os
+import threading
 from typing import Callable
-from backend.models import Playlist
+
+from backend.models import Video
 
 
-def make_info_opts() -> dict:
-    """Options for flat playlist metadata fetch (no download)."""
-    return {
-        "quiet":        True,
-        "no_warnings":  True,
-        "extract_flat": True,
-    }
+class YtdlpClient:
+    """Single interface for all yt-dlp operations.
 
+    Only this file imports yt_dlp — everything else goes through this class.
+    """
 
-def make_download_opts(
-    playlist: Playlist,
-    output_dir: str,
-    on_progress: Callable[[dict], None],
-) -> dict:
-    out_tmpl = os.path.join(
-        output_dir,
-        f"{playlist.prefix}_%(playlist_index)02d_%(title).60s.%(ext)s",
-    )
-    return {
-        "format":          "bestaudio/best",
-        "postprocessors":  [
-            {
-                "key":              "FFmpegExtractAudio",
-                "preferredcodec":   "mp3",
-                "preferredquality": "0",
-            },
-        ],
-        "postprocessor_args": {"ffmpegextractaudio": ["-ac", "1"]},  # mono
-        "outtmpl":         out_tmpl,
-        "ignoreerrors":    True,
-        "quiet":           True,
-        "no_warnings":     True,
-        "progress_hooks":  [on_progress],
-    }
+    # ── Metadata ──────────────────────────────────────────────────────────────
+    def fetch_info(self, url: str) -> tuple[list[Video], str]:
+        """Flat playlist metadata fetch (no download).
+
+        Returns (videos, playlist_title).
+        """
+        import yt_dlp
+        videos: list[Video] = []
+        title = ""
+        opts = {
+            "quiet":        True,
+            "no_warnings":  True,
+            "extract_flat": True,
+        }
+        try:
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+                title = info.get("title") or ""
+                for entry in (info.get("entries") or []):
+                    if entry:
+                        videos.append(Video(
+                            title        = entry.get("title") or f"Video {len(videos)+1}",
+                            duration_sec = int(entry.get("duration") or 0),
+                            stage        = "queued",
+                        ))
+        except Exception as exc:
+            # caller decides how to surface the error
+            raise RuntimeError(f"fetch_info failed: {exc}") from exc
+        return videos, title
+
+    # ── Download ──────────────────────────────────────────────────────────────
+    def download(
+        self,
+        url: str,
+        output_template: str,
+        on_progress:      Callable[[dict], None],
+        on_postprocess:   Callable[[dict], None],
+        stop:             threading.Event,
+        pause:            threading.Event,
+    ) -> None:
+        """Download *url* using the given output template.
+
+        Calls *on_progress* for each yt-dlp progress event and
+        *on_postprocess* for each postprocessor completion.
+        Respects *stop* (terminates) and *pause* (blocks) threading events.
+        """
+        import yt_dlp
+
+        def _progress(d: dict) -> None:
+            pause.wait()
+            if stop.is_set():
+                raise yt_dlp.utils.DownloadCancelled("stopped by user")
+            on_progress(d)
+
+        opts = {
+            "format":          "bestaudio/best",
+            "postprocessors":  [
+                {
+                    "key":              "FFmpegExtractAudio",
+                    "preferredcodec":   "mp3",
+                    "preferredquality": "0",
+                },
+            ],
+            "postprocessor_args":  {"ffmpegextractaudio": ["-ac", "1"]},
+            "outtmpl":             output_template,
+            "ignoreerrors":        True,
+            "quiet":               True,
+            "no_warnings":         True,
+            "progress_hooks":      [_progress],
+            "postprocessor_hooks": [on_postprocess],
+        }
+
+        try:
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                ydl.download([url])
+        except yt_dlp.utils.DownloadCancelled:
+            pass   # normal stop — caller already set stop flag
