@@ -35,7 +35,7 @@ anees/
 | Module | Allowed? | Why |
 |--------|----------|-----|
 | `backend.models` | ✅ | Shared data structures (dataclasses only, no logic) |
-| `backend.api` | ✅ | The service gateway — the only way to call backend logic |
+| `backend.api` | ✅ | The API package (`backend/api/`) — the only way to call backend logic |
 | `backend.mock_data` | ✅ temporarily | Will be removed once real storage is wired |
 | `backend.services.*` | ❌ | Use `backend.api` instead |
 | `backend.commands.*` | ❌ | Implementation detail — never exposed to UI |
@@ -45,8 +45,11 @@ anees/
 
 ### Communication pattern
 ```
-ui/ → backend/api.py → backend/services/ → backend/commands/ → yt-dlp / ffmpeg
-         ↑ only entry point for ui
+ui/ → backend/api/      ← public contract (DownloadAPI, InfoAPI, …)
+         ↓
+      backend/services/ ← internal orchestration
+         ↓
+      backend/commands/ ← tool wrappers (yt-dlp, ffmpeg)
 ```
 
 ---

@@ -12,9 +12,9 @@ class InfoWorker(QThread):
         self._url         = url
 
     def run(self) -> None:
-        from backend.api import InfoService
+        from backend.api import InfoAPI
         try:
-            videos, title = InfoService().fetch_playlist(self._url)
+            videos, title = InfoAPI().fetch_playlist(self._url)
         except Exception as exc:
             print(f"[InfoWorker] {exc}", flush=True)
             return
