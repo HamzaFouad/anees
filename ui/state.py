@@ -11,6 +11,7 @@ class AppState(QObject):
     run_state_changed = Signal(RunState)
     playlists_changed = Signal()
     selection_changed = Signal(str)
+    video_row_changed = Signal(str, int)
     view_changed      = Signal(str)
     query_changed     = Signal(str)
     logs_changed      = Signal()
@@ -140,21 +141,20 @@ class AppState(QObject):
         if stage == "done":
             pl.completed = sum(1 for vv in pl.videos if vv.stage == "done")
             pl.status    = "done" if pl.completed >= pl.video_count else "active"
-        pl.active_stage = stage
-        # schedule refresh on any stage *transition* (not every progress %)
-        # so the detail panel shows DL→MP3→Done advancing per video
-        if stage_changed or stage == "done":
+            # sidebar needs updating when a video completes
             self._dirty_pids.add(pid)
             if not self._refresh_timer.isActive():
                 self._refresh_timer.start()
+        pl.active_stage = stage
+        # emit targeted row update on every stage transition (no throttle — it's a single row)
+        if stage_changed:
+            self.video_row_changed.emit(pid, idx)
 
     def _flush_ui(self) -> None:
-        """Batched UI refresh — runs at most every 300 ms via QTimer."""
+        """Batched sidebar refresh — runs at most every 300 ms via QTimer."""
         if not self._dirty_pids:
             return
         self.playlists_changed.emit()
-        if self._selected in self._dirty_pids:
-            self.selection_changed.emit(self._selected)
         self._dirty_pids.clear()
 
     def _on_video_meta(self, pid: str, idx: int, title: str, duration_sec: int) -> None:
@@ -166,6 +166,7 @@ class AppState(QObject):
             v.title = title
         if duration_sec > 0:
             v.duration_sec = duration_sec
+        self.video_row_changed.emit(pid, idx)
 
     def _on_run_complete(self) -> None:
         self._refresh_timer.stop()

@@ -43,6 +43,7 @@ class DetailPanel(QWidget):
         # (via _on_select_current) causing deleteLater/Spinner-timer segfaults.
         # The detail panel refreshes only on explicit selection_changed events.
         state.selection_changed.connect(self._on_select)
+        state.video_row_changed.connect(self._on_video_row_changed)
         self._on_select(state.selected_id)
 
     def _on_select(self, pid: str):
@@ -58,6 +59,14 @@ class DetailPanel(QWidget):
 
     def _on_select_current(self):
         self._on_select(self._state.selected_id)
+
+    def _on_video_row_changed(self, pid: str, idx: int):
+        if pid != self._state.selected_id or not self._detail.isVisible():
+            return
+        pl = self._state.selected_playlist()
+        if not pl or idx < 0 or idx >= len(pl.videos):
+            return
+        self._detail.update_row(idx, pl.videos[idx])
 
     def _on_retry(self, idx: int):
         v = self._videos[idx]
@@ -86,6 +95,7 @@ class _Detail(QWidget):
         super().__init__(parent)
         self._on_retry = on_retry
         self._on_retry_all = on_retry_all
+        self._video_rows: dict[int, VideoRow] = {}
         self.setStyleSheet(f"background:{BG};")
 
         root = QVBoxLayout(self)
@@ -117,6 +127,7 @@ class _Detail(QWidget):
     def set_playlist(self, pl: Playlist, videos: list[Video]):
         self._header.refresh(pl, videos)
         self._col_header.update(pl)
+        self._video_rows.clear()
 
         # stop all active spinners before destroying their parent rows —
         # the Spinner QTimer fires every 16ms and will paint on a deleted
@@ -131,13 +142,20 @@ class _Detail(QWidget):
                 w.hide()          # suppress any pending paint events
                 w.deleteLater()
 
+        rows = []
         for i, v in enumerate(videos):
             row = VideoRow(i, v, pl.split_enabled, self._on_retry)
+            rows.append(row)
             self._rows_lay.insertWidget(i * 2, row)
             sep = QFrame()
             sep.setFixedHeight(1)
             sep.setStyleSheet(f"background:{BORDER};")
             self._rows_lay.insertWidget(i * 2 + 1, sep)
+        self._video_rows = {i: row for i, row in enumerate(rows)}
+
+    def update_row(self, idx: int, video: Video) -> None:
+        if idx in self._video_rows:
+            self._video_rows[idx].refresh(video)
 
 
 class _DetailHeader(QWidget):
@@ -151,8 +169,8 @@ class _DetailHeader(QWidget):
         self._lay.setSpacing(0)
 
     def _clear(self):
-        # Must only add QWidget children to self._lay (not bare QHBoxLayouts)
-        # so that deleteLater() on the widget also destroys all nested children.
+        # Only QWidget children are added to self._lay (wrapped rows),
+        # so deleteLater() on each properly destroys all nested children.
         while self._lay.count():
             item = self._lay.takeAt(0)
             if item.widget():
@@ -165,7 +183,7 @@ class _DetailHeader(QWidget):
         failed_count = sum(1 for v in videos if v.stage == "failed")
         pct = int(pl.completed / pl.video_count * 100) if pl.video_count else 0
 
-        # ── top row (wrapped in QWidget so _clear can deleteLater it) ─────────
+        # ── top row (QWidget container so _clear can deleteLater it) ──────────
         top_w = QWidget(); top_w.setStyleSheet("background:transparent;")
         top = QHBoxLayout(top_w)
         top.setContentsMargins(0, 0, 0, 0)
@@ -222,7 +240,7 @@ class _DetailHeader(QWidget):
         self._lay.addWidget(top_w)
         self._lay.addSpacing(14)
 
-        # ── stats row (wrapped in QWidget) ────────────────────────────────────
+        # ── stats row (QWidget container) ─────────────────────────────────────
         stats_w = QWidget(); stats_w.setStyleSheet("background:transparent;")
         stats_row = QHBoxLayout(stats_w)
         stats_row.setContentsMargins(0, 0, 0, 0)
@@ -261,8 +279,7 @@ class _DetailHeader(QWidget):
         self._lay.addWidget(stats_w)
         self._lay.addSpacing(14)
 
-        # pipeline strip
-        # ── pipeline row (wrapped in QWidget) ────────────────────────────────
+        # ── pipeline strip (QWidget container) ────────────────────────────────
         pipe_w = QWidget(); pipe_w.setStyleSheet("background:transparent;")
         pipe_row = QHBoxLayout(pipe_w)
         pipe_row.setContentsMargins(0, 0, 0, 0)
@@ -337,7 +354,7 @@ class VideoRow(QWidget):
         self._idx = idx
         self._v = video
         self._split = split_enabled
-        self._on_retry = on_retry
+        self._on_retry_cb = on_retry
 
         is_failed = video.stage == "failed"
         self.setAttribute(Qt.WA_StyledBackground, True)
@@ -406,6 +423,7 @@ class VideoRow(QWidget):
         lay.addWidget(dur)
 
         # stage cells
+        self._stage_cells: list[QWidget] = []
         stage_idx = self.STAGE_ORDER.index(video.stage) if video.stage in self.STAGE_ORDER else -1
         failed_idx = self.STAGE_ORDER.index(video.failed_at) if (is_failed and video.failed_at in self.STAGE_ORDER) else -1
 
@@ -441,16 +459,23 @@ class VideoRow(QWidget):
 
             cell.setToolTip(label)
             lay.addWidget(cell)
+            self._stage_cells.append(cell)
 
         # state / retry
-        status_w = QWidget()
-        status_w.setFixedWidth(92)
-        status_w.setStyleSheet("background:transparent;")
-        s_lay = QHBoxLayout(status_w)
+        self._status_w = QWidget()
+        self._status_w.setFixedWidth(92)
+        self._status_w.setStyleSheet("background:transparent;")
+        s_lay = QHBoxLayout(self._status_w)
         s_lay.setContentsMargins(0, 0, 0, 0)
         s_lay.setSpacing(0)
         s_lay.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
+        self._build_status(video, s_lay)
+
+        lay.addWidget(self._status_w)
+
+    def _build_status(self, video: Video, s_lay: QHBoxLayout) -> None:
+        is_failed = video.stage == "failed"
         if video.stage == "done":
             b = Badge("Done", "success")
             b.setStyleSheet(b.styleSheet() + "font-size:10px; padding:1px 6px;")
@@ -470,7 +495,8 @@ class VideoRow(QWidget):
                     padding:0 8px; font-size:11px; font-weight:600; }}
                 QPushButton:hover {{ background:{ERROR_BG}; }}
             """)
-            r_btn.clicked.connect(lambda _=False, i=idx: on_retry(i))
+            idx = self._idx
+            r_btn.clicked.connect(lambda _=False, i=idx: self._on_retry_cb(i))
             s_lay.addWidget(r_btn)
         else:
             pct_lbl = QLabel(f"{int((video.progress or 0) * 100)}%")
@@ -480,7 +506,66 @@ class VideoRow(QWidget):
             )
             s_lay.addWidget(pct_lbl)
 
-        lay.addWidget(status_w)
+    def refresh(self, video: Video) -> None:
+        self._v = video
+        is_failed = video.stage == "failed"
+
+        # update row background style for failed state change
+        if is_failed:
+            self.setObjectName("videoRowFailed")
+            self.setStyleSheet(f"#videoRowFailed {{ background: {ERROR_TINT_10}; }}")
+        else:
+            self.setObjectName("videoRow")
+            self.setStyleSheet(f"#videoRow {{ background: transparent; border-bottom:1px solid {BORDER}; }}")
+
+        stage_idx = self.STAGE_ORDER.index(video.stage) if video.stage in self.STAGE_ORDER else -1
+        failed_idx = self.STAGE_ORDER.index(video.failed_at) if (is_failed and video.failed_at in self.STAGE_ORDER) else -1
+
+        for i, (key, label, short, _) in enumerate(PIPELINE_STAGES):
+            cell = self._stage_cells[i]
+            c_lay = cell.layout()
+
+            # stop and remove any active spinners before replacing cell content
+            for j in range(c_lay.count() - 1, -1, -1):
+                w = c_lay.itemAt(j).widget()
+                if w is not None:
+                    if isinstance(w, Spinner):
+                        w.stop()
+                    w.hide()
+                    w.deleteLater()
+                    c_lay.takeAt(j)
+
+            if key == "split" and not self._split:
+                lbl = QLabel("—")
+                lbl.setStyleSheet(f"color:{SURFACE_ALT}; font-size:12px;")
+                c_lay.addWidget(lbl)
+            elif is_failed and i == failed_idx:
+                c_lay.addWidget(icon_label("alert", 13, ERROR))
+            elif (not is_failed and (video.stage == "done" or stage_idx > i)) or \
+                 (is_failed and i < failed_idx):
+                c_lay.addWidget(icon_label("check", 12, SUCCESS))
+            elif is_failed and i > failed_idx:
+                lbl = QLabel("—")
+                lbl.setStyleSheet(f"color:{SURFACE_ALT}; font-size:12px;")
+                c_lay.addWidget(lbl)
+            elif not is_failed and stage_idx == i:
+                sp = Spinner(16, PRIMARY)
+                c_lay.addWidget(sp)
+            else:
+                dot = QLabel()
+                dot.setFixedSize(6, 6)
+                dot.setStyleSheet(f"background:{SURFACE_ALT}; border-radius:3px;")
+                c_lay.addWidget(dot)
+
+        # rebuild status widget content
+        s_lay = self._status_w.layout()
+        for j in range(s_lay.count() - 1, -1, -1):
+            w = s_lay.itemAt(j).widget()
+            if w is not None:
+                w.hide()
+                w.deleteLater()
+                s_lay.takeAt(j)
+        self._build_status(video, s_lay)
 
 
 class _NoSelection(QWidget):
