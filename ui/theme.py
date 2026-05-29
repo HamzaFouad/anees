@@ -52,7 +52,7 @@ LOG_BG_DARK  = "#0E142C"              # expandable log-detail background
 FG_ON_DARK   = "rgba(255,255,255,0.78)"
 
 # ── Typography ────────────────────────────────────────────────────────────────
-FONT_UI   = "'Inter','Segoe UI',system-ui,sans-serif"
+FONT_UI   = "'.AppleSystemUIFont','Segoe UI','Helvetica Neue',sans-serif"
 FONT_MONO = "'JetBrains Mono',monospace"
 TEXT_XS   = 10    # uppercase field labels, badge counts
 TEXT_SM   = 11    # timestamps, secondary labels, hints
@@ -156,7 +156,7 @@ def fmt_mb(mb: float | None) -> str:
 def apply_global_stylesheet(app: QApplication) -> None:
     app.setStyleSheet(f"""
         QWidget {{
-            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            font-family: {FONT_UI};
             font-size: 13px;
             color: {FG};
             border: 0;
