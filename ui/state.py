@@ -111,7 +111,7 @@ class AppState(QObject):
             self._set_run_state(state)
 
     # ── Worker callbacks (called on main thread via queued Signal) ────────────
-    def _on_videos_ready(self, pid: str, videos) -> None:
+    def _on_videos_ready(self, pid: str, videos, real_title: str = "") -> None:
         print(f"[state] videos_ready received — pid={pid} count={len(videos)}", flush=True)
         pl = self._playlist(pid)
         if not pl:
@@ -119,6 +119,8 @@ class AppState(QObject):
         pl.videos      = list(videos)
         pl.video_count = len(videos)
         pl.status      = "active"
+        if real_title:
+            pl.title = real_title
         self.playlists_changed.emit()
         if pid == self._selected:
             self.selection_changed.emit(pid)
@@ -156,13 +158,10 @@ class AppState(QObject):
         self._dirty_pids.clear()
 
     def _on_run_complete(self) -> None:
-        # do a final detail panel refresh so all Done badges show
-        if not self._dirty_pids:
-            self._dirty_pids.add(self._selected)
-        self._flush_ui()
-        if self._selected:
-            self.selection_changed.emit(self._selected)
+        self._refresh_timer.stop()
+        self._dirty_pids.clear()
         self._worker = None
+        self.playlists_changed.emit()        # sidebar update only
         self._set_run_state(RunState.COMPLETE)
 
     def _add_log(self, level: str, src: str, msg: str) -> None:

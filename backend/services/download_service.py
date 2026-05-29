@@ -61,24 +61,30 @@ class DownloadService:
 
         if not pl.videos or all(v.title.startswith("Video ") for v in pl.videos):
             self._log("info", f"Fetching video list from {pl.url} …")
-            videos = self._fetch_info(pl.url)
+            videos, real_title = self._fetch_info(pl.url)
             if not videos:
                 self._log("error", "Info fetch returned no videos — check the URL and network")
                 return
-            self._log("info", f"Found {len(videos)} videos")
-            self._on_videos_ready(pl.id, videos)
+            self._log("info", f"Found {len(videos)} videos — '{real_title}'")
+            self._on_videos_ready(pl.id, videos, real_title)
 
         if self._stop.is_set():
             return
 
-        self._log("info", f"Downloading {len(pl.videos)} videos …")
+        import os
+        from backend.commands.ytdlp import _safe
+        out_dir = os.path.join(self._root, f"{pl.prefix}_{_safe(pl.title)}")
+        self._log("info", f"Downloading {len(pl.videos)} videos → {out_dir}")
         self._download(pl)
 
-    def _fetch_info(self, url: str) -> list[Video]:
+    def _fetch_info(self, url: str) -> tuple[list[Video], str]:
+        """Returns (videos, playlist_title)."""
         videos: list[Video] = []
+        playlist_title = ""
         try:
             with yt_dlp.YoutubeDL(make_info_opts()) as ydl:
                 info = ydl.extract_info(url, download=False)
+                playlist_title = info.get("title") or ""
                 for entry in (info.get("entries") or []):
                     if entry:
                         videos.append(Video(
@@ -88,7 +94,7 @@ class DownloadService:
                         ))
         except Exception as exc:
             self._log("error", f"Metadata fetch failed: {exc}")
-        return videos
+        return videos, playlist_title
 
     def _download(self, pl: Playlist) -> None:
         self._current_idx = 0

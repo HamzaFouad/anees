@@ -5,7 +5,7 @@ from backend.services.download_service import DownloadService
 
 
 class DownloadWorker(QThread):
-    videos_ready = Signal(str, object)           # playlist_id, list[Video]
+    videos_ready = Signal(str, object, str)      # playlist_id, list[Video], real_title
     video_stage  = Signal(str, int, str, float)  # playlist_id, idx, stage, progress
     log_added    = Signal(str, str, str)          # level, src, msg
     run_complete = Signal()
