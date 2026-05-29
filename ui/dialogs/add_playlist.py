@@ -19,7 +19,7 @@ class AddPlaylistDialog(QDialog):
         super().__init__(parent)
         self._state = state
         self.setWindowTitle("Add Playlist")
-        self.setFixedWidth(520)
+        self.setFixedWidth(480)
         self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
         self.setStyleSheet(
             f"background:{BG}; border-radius:10px; border:1px solid {BORDER};"
@@ -37,20 +37,20 @@ class AddPlaylistDialog(QDialog):
         header.setStyleSheet(f"border-bottom:1px solid {BORDER};")
         h_lay = QHBoxLayout(header)
         h_lay.setContentsMargins(18, 0, 18, 0)
-        title = QLabel("Add Playlist")
-        title.setStyleSheet(f"font-size:14px; font-weight:600; color:{FG};")
-        h_lay.addWidget(title)
+        t = QLabel("Add Playlist")
+        t.setStyleSheet(f"font-size:14px; font-weight:600; color:{FG};")
+        h_lay.addWidget(t)
         h_lay.addStretch()
-        close_btn = QPushButton()
-        close_btn.setIcon(QIcon(icon_pixmap("x", 14, FG_MUTED)))
-        close_btn.setFixedSize(28, 28)
-        close_btn.setCursor(Qt.PointingHandCursor)
-        close_btn.setStyleSheet(
+        x_btn = QPushButton()
+        x_btn.setIcon(QIcon(icon_pixmap("x", 14, FG_MUTED)))
+        x_btn.setFixedSize(28, 28)
+        x_btn.setCursor(Qt.PointingHandCursor)
+        x_btn.setStyleSheet(
             f"QPushButton {{ background:transparent; border:none; border-radius:5px; }}"
             f"QPushButton:hover {{ background:{BG_SUBTLE}; }}"
         )
-        close_btn.clicked.connect(self.reject)
-        h_lay.addWidget(close_btn)
+        x_btn.clicked.connect(self.reject)
+        h_lay.addWidget(x_btn)
         root.addWidget(header)
 
         # ── body ──
@@ -60,10 +60,8 @@ class AddPlaylistDialog(QDialog):
         body_lay.setSpacing(14)
 
         self._url_input = StyledInput("https://youtube.com/playlist?list=…", mono=True)
-        self._url_input.textChanged.connect(self._update_preview)
         body_lay.addWidget(field("Playlist URL", self._url_input))
 
-        # prefix / speed / split row
         mid_row = QWidget()
         mid_lay = QHBoxLayout(mid_row)
         mid_lay.setContentsMargins(0, 0, 0, 0)
@@ -72,7 +70,6 @@ class AddPlaylistDialog(QDialog):
         self._prefix_input = StyledInput(next_prefix, mono=True)
         self._prefix_input.setText(next_prefix)
         self._prefix_input.setAlignment(Qt.AlignCenter)
-        self._prefix_input.textChanged.connect(self._update_preview)
         pfx_w = field("Prefix", self._prefix_input)
         pfx_w.setFixedWidth(80)
         mid_lay.addWidget(pfx_w)
@@ -91,7 +88,6 @@ class AddPlaylistDialog(QDialog):
         self._speed_spin.setEnabled(False)
         self._speed_spin.setFixedHeight(32)
         self._speed_spin.setStyleSheet(self._spin_style(False))
-        self._speed_spin.valueChanged.connect(self._update_preview)
         speed_lay.addWidget(self._speed_toggle)
         speed_lay.addWidget(self._speed_spin, 1)
         mid_lay.addWidget(field("Speed", speed_w), 1)
@@ -114,17 +110,6 @@ class AddPlaylistDialog(QDialog):
         split_lay.addWidget(self._split_spin, 1)
         mid_lay.addWidget(field("Split (min)", split_w), 1)
         body_lay.addWidget(mid_row)
-
-        # command preview
-        self._preview = QLabel()
-        self._preview.setWordWrap(True)
-        self._preview.setStyleSheet(
-            f"background:{BG_SUBTLE}; border:1px solid {BORDER}; border-radius:6px; "
-            f"padding:8px 10px; font-family:'JetBrains Mono',monospace; "
-            f"font-size:10.5px; color:{FG_MUTED}; line-height:1.6;"
-        )
-        self._update_preview()
-        body_lay.addWidget(self._preview)
         root.addWidget(body)
 
         # ── footer ──
@@ -165,8 +150,8 @@ class AddPlaylistDialog(QDialog):
         root.addWidget(footer)
 
     def _spin_style(self, enabled: bool) -> str:
-        bg = BG if enabled else BG_SUBTLE
-        color = FG if enabled else FG_MUTED
+        bg    = BG       if enabled else BG_SUBTLE
+        color = FG       if enabled else FG_MUTED
         return (
             f"QDoubleSpinBox, QSpinBox {{ "
             f"background:{bg}; color:{color}; border:1px solid {BORDER}; "
@@ -174,55 +159,37 @@ class AddPlaylistDialog(QDialog):
             f"font-family:'JetBrains Mono',monospace; font-size:12px; }}"
         )
 
-    def _on_speed_toggle(self, checked: bool):
+    def _on_speed_toggle(self, checked: bool) -> None:
         self._speed_spin.setEnabled(checked)
         self._speed_spin.setStyleSheet(self._spin_style(checked))
-        self._update_preview()
 
-    def _on_split_toggle(self, checked: bool):
+    def _on_split_toggle(self, checked: bool) -> None:
         self._split_spin.setEnabled(checked)
         self._split_spin.setStyleSheet(self._spin_style(checked))
 
-    def _update_preview(self):
-        url = self._url_input.text().strip() or "<url>"
-        prefix = self._prefix_input.text().strip() or "00"
-        speed_on = self._speed_toggle._checked
-        speed = self._speed_spin.value() if speed_on else None
-
-        lines = [
-            "# preview",
-            "yt-dlp -x --audio-format mp3 \\",
-            '  --postprocessor-args "-ac 1" \\',
-            f'  --output "{prefix}_%(playlist_index)s_%(title)s.%(ext)s" \\',
-        ]
-        if speed_on and speed and speed != 1.0:
-            lines.append(f"  # speed: {speed:.2f}× (atempo) \\")
-        lines.append(f"  {url}")
-        self._preview.setText("\n".join(lines))
-
-    def _on_add(self):
+    def _on_add(self) -> None:
         url = self._url_input.text().strip()
         if not url:
             return
-        prefix = self._prefix_input.text().strip() or str(len(self._state.playlists)).zfill(2)
-        speed = self._speed_spin.value() if self._speed_toggle._checked else 1.0
-        split_enabled = self._split_toggle._checked
-        split_min = self._split_spin.value()
+        prefix       = self._prefix_input.text().strip() or str(len(self._state.playlists)).zfill(2)
+        speed        = self._speed_spin.value() if self._speed_toggle._checked else 1.0
+        split_on     = self._split_toggle._checked
+        split_min    = self._split_spin.value()
 
         pl = Playlist(
-            id=str(uuid.uuid4()),
-            prefix=prefix,
-            title=url,
-            url=url,
-            video_count=0,
-            completed=0,
-            status="queued",
-            active_stage="download",
-            speed=speed,
-            split_enabled=split_enabled,
-            split_min=split_min,
-            size_mb=None,
-            added_at=datetime.datetime.now().strftime("%b %d, %-H:%M"),
+            id           = str(uuid.uuid4()),
+            prefix       = prefix,
+            title        = url,           # updated to real title after metadata fetch
+            url          = url,
+            video_count  = 0,
+            completed    = 0,
+            status       = "queued",
+            active_stage = "download",
+            speed        = speed,
+            split_enabled= split_on,
+            split_min    = split_min,
+            size_mb      = None,
+            added_at     = datetime.datetime.now().strftime("%b %d, %-H:%M"),
         )
         self._state.add_playlist(pl)
         self.accept()
