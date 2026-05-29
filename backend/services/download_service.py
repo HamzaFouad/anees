@@ -1,6 +1,5 @@
 from __future__ import annotations
 import threading
-from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
@@ -19,46 +18,60 @@ class DownloadService:
         on_log:          Callable[[str, str, str], None] | None = None,
         on_complete:     Callable[[], None] | None = None,
     ):
-        self._root           = output_root or str(Path.home() / "Downloads" / "Anees")
+        self._root            = output_root or str(Path.home() / "Downloads" / "Anees")
         self._on_videos_ready = on_videos_ready or (lambda *_: None)
         self._on_video_stage  = on_video_stage  or (lambda *_: None)
         self._on_log          = on_log          or (lambda *_: None)
         self._on_complete     = on_complete     or (lambda: None)
         self._stop  = threading.Event()
         self._pause = threading.Event()
-        self._pause.set()        # not paused initially
-        self._current_idx = 0    # 0-based index of video being downloaded
+        self._pause.set()
+        self._current_idx = 0
 
     # ── Public control ────────────────────────────────────────────────────────
     def execute(self, playlists: list[Playlist]) -> None:
         self._stop.clear()
         Path(self._root).mkdir(parents=True, exist_ok=True)
+        self._log("info", f"Run started — output: {self._root}")
 
         for pl in playlists:
             if self._stop.is_set():
                 break
             if pl.status == "done":
+                self._log("info", f"Skipping (already done): {pl.title}")
                 continue
             self._run_playlist(pl)
 
         if not self._stop.is_set():
+            self._log("info", "All playlists complete")
             self._on_complete()
 
     def stop(self)   -> None: self._stop.set();  self._pause.set()
     def pause(self)  -> None: self._pause.clear()
     def resume(self) -> None: self._pause.set()
 
+    # ── Helpers ───────────────────────────────────────────────────────────────
+    def _log(self, level: str, msg: str) -> None:
+        print(f"[anees/{level}] {msg}", flush=True)
+        self._on_log(level, "anees", msg)
+
     # ── Per-playlist ──────────────────────────────────────────────────────────
     def _run_playlist(self, pl: Playlist) -> None:
-        # Fetch metadata if videos are still placeholder
+        self._log("info", f"Processing: {pl.title}")
+
         if not pl.videos or all(v.title.startswith("Video ") for v in pl.videos):
+            self._log("info", f"Fetching video list from {pl.url} …")
             videos = self._fetch_info(pl.url)
-            if videos:
-                self._on_videos_ready(pl.id, videos)
+            if not videos:
+                self._log("error", "Info fetch returned no videos — check the URL and network")
+                return
+            self._log("info", f"Found {len(videos)} videos")
+            self._on_videos_ready(pl.id, videos)
 
         if self._stop.is_set():
             return
 
+        self._log("info", f"Downloading {len(pl.videos)} videos …")
         self._download(pl)
 
     def _fetch_info(self, url: str) -> list[Video]:
@@ -69,17 +82,17 @@ class DownloadService:
                 for entry in (info.get("entries") or []):
                     if entry:
                         videos.append(Video(
-                            title       = entry.get("title") or f"Video {len(videos)+1}",
-                            duration_sec= int(entry.get("duration") or 0),
-                            stage       = "queued",
+                            title        = entry.get("title") or f"Video {len(videos)+1}",
+                            duration_sec = int(entry.get("duration") or 0),
+                            stage        = "queued",
                         ))
         except Exception as exc:
-            self._on_log("warn", "yt-dlp", f"Metadata fetch failed: {exc}")
+            self._log("error", f"Metadata fetch failed: {exc}")
         return videos
 
     def _download(self, pl: Playlist) -> None:
         self._current_idx = 0
-        _done_ids: set[str] = set()   # dedup: hook fires once per postprocessor
+        _done_ids: set[str] = set()
 
         def hook(d: dict) -> None:
             self._pause.wait()
@@ -100,13 +113,15 @@ class DownloadService:
         def postprocess_hook(d: dict) -> None:
             if d.get("status") != "finished":
                 return
-            info  = d.get("info_dict") or {}
-            # unique key per video — deduplicate across multiple postprocessors
-            key   = str(info.get("id", "")) + str(info.get("playlist_index", ""))
+            info = d.get("info_dict") or {}
+            key  = str(info.get("id", "")) + str(info.get("playlist_index", ""))
             if not key or key in _done_ids:
                 return
             _done_ids.add(key)
-            self._on_video_stage(pl.id, self._current_idx, "done", 1.0)
+            idx = self._current_idx
+            title = info.get("title", f"video {idx+1}")
+            self._log("info", f"Done [{idx+1}] {title}")
+            self._on_video_stage(pl.id, idx, "done", 1.0)
             self._current_idx += 1
 
         opts = make_download_opts(pl, self._root, hook)
@@ -116,6 +131,6 @@ class DownloadService:
             with yt_dlp.YoutubeDL(opts) as ydl:
                 ydl.download([pl.url])
         except yt_dlp.utils.DownloadCancelled:
-            self._on_log("info", "yt-dlp", f"Download stopped: {pl.title}")
+            self._log("info", f"Stopped: {pl.title}")
         except Exception as exc:
-            self._on_log("error", "yt-dlp", f"Download failed: {pl.title} — {exc}")
+            self._log("error", f"Download failed: {pl.title} — {exc}")

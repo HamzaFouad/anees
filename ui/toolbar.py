@@ -87,6 +87,7 @@ class Toolbar(QWidget):
         lay.addWidget(s_btn)
 
         state.run_state_changed.connect(self._on_run_state)
+        state.playlists_changed.connect(self._run_controls.refresh)
         state.view_changed.connect(self._on_view)
         self._on_run_state(state.run_state)
 
