@@ -79,11 +79,10 @@ class DownloadService:
 
     def _download(self, pl: Playlist) -> None:
         self._current_idx = 0
-        self._pl_id = pl.id
-        out_dir = self._root
+        _done_ids: set[str] = set()   # dedup: hook fires once per postprocessor
 
         def hook(d: dict) -> None:
-            self._pause.wait()                   # block while paused
+            self._pause.wait()
             if self._stop.is_set():
                 raise yt_dlp.utils.DownloadCancelled("stopped by user")
 
@@ -93,20 +92,24 @@ class DownloadService:
             if status == "downloading":
                 total = d.get("total_bytes") or d.get("total_bytes_estimate") or 1
                 done  = d.get("downloaded_bytes") or 0
-                pct   = min(done / total, 0.99)
-                self._on_video_stage(pl.id, idx, "download", pct)
+                self._on_video_stage(pl.id, idx, "download", min(done / total, 0.99))
 
             elif status == "finished":
-                # download done, post-processor (mp3 conversion) starting
                 self._on_video_stage(pl.id, idx, "mp3", 0.5)
 
         def postprocess_hook(d: dict) -> None:
-            if d.get("status") == "finished":
-                idx = self._current_idx
-                self._on_video_stage(pl.id, idx, "done", 1.0)
-                self._current_idx += 1
+            if d.get("status") != "finished":
+                return
+            info  = d.get("info_dict") or {}
+            # unique key per video — deduplicate across multiple postprocessors
+            key   = str(info.get("id", "")) + str(info.get("playlist_index", ""))
+            if not key or key in _done_ids:
+                return
+            _done_ids.add(key)
+            self._on_video_stage(pl.id, self._current_idx, "done", 1.0)
+            self._current_idx += 1
 
-        opts = make_download_opts(pl, out_dir, hook)
+        opts = make_download_opts(pl, self._root, hook)
         opts["postprocessor_hooks"] = [postprocess_hook]
 
         try:

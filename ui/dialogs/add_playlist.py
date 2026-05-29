@@ -1,5 +1,10 @@
 import uuid
-import datetime
+from datetime import datetime as _dt
+
+
+def _fmt_now() -> str:
+    n = _dt.now()
+    return f"{n.strftime('%b')} {n.day}, {n.hour}:{n.strftime('%M')}"
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
@@ -189,7 +194,7 @@ class AddPlaylistDialog(QDialog):
             split_enabled= split_on,
             split_min    = split_min,
             size_mb      = None,
-            added_at     = datetime.datetime.now().strftime("%b %d, %-H:%M"),
+            added_at     = _fmt_now(),
         )
         self._state.add_playlist(pl)
         self.accept()
