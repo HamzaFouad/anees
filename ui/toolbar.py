@@ -112,11 +112,17 @@ class RunControls(QWidget):
         self._lay.setSpacing(8)
         self.refresh()
 
-    # ── stable slots (no lambdas — lambdas can be silently GC'd) ─────────────
-    def _do_start(self)  -> None: self._state.set_run_state(RunState.RUNNING)
+    # ── stable slots ──────────────────────────────────────────────────────────
+    def _do_start(self)  -> None:
+        print("[toolbar] _do_start called", flush=True)
+        self._state.set_run_state(RunState.RUNNING)
     def _do_pause(self)  -> None: self._state.set_run_state(RunState.PAUSED)
     def _do_resume(self) -> None: self._state.set_run_state(RunState.RUNNING)
     def _do_stop(self)   -> None: self._state.set_run_state(RunState.IDLE)
+
+    def mousePressEvent(self, event) -> None:
+        print(f"[RunControls] mouse press {event.position()}", flush=True)
+        super().mousePressEvent(event)
 
     def _clear(self):
         while self._lay.count():
@@ -131,6 +137,7 @@ class RunControls(QWidget):
 
         if rs == RunState.IDLE:
             can_start = c["queued"] > 0
+            print(f"[toolbar] refresh IDLE queued={c['queued']} can_start={can_start}", flush=True)
             start_btn = QPushButton("  Start run")
             start_btn.setIcon(QIcon(icon_pixmap("play", 13, ON_PRIMARY if can_start else FG_MUTED)))
             start_btn.setFixedHeight(32)
