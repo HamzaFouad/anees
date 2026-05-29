@@ -8,24 +8,10 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
 
-from ui.theme import PRIMARY, FG, FG_MUTED, BG, BG_MUTED, BG_SUBTLE, BORDER
-from ui.widgets import Toggle, StyledInput, icon_pixmap
+from ui.theme import PRIMARY, ON_PRIMARY, PRIMARY_HOVER, FG, FG_MUTED, BG, BG_MUTED, BG_SUBTLE, BORDER
+from ui.widgets import Toggle, StyledInput, icon_pixmap, field
 from ui.state import AppState
 from backend.models import Playlist
-
-
-def _field(label: str, widget: QWidget) -> QWidget:
-    w = QWidget()
-    lay = QVBoxLayout(w)
-    lay.setContentsMargins(0, 0, 0, 0)
-    lay.setSpacing(4)
-    lbl = QLabel(label.upper())
-    lbl.setStyleSheet(
-        f"font-size:11px; font-weight:500; color:{FG_MUTED}; letter-spacing:.04em;"
-    )
-    lay.addWidget(lbl)
-    lay.addWidget(widget)
-    return w
 
 
 class AddPlaylistDialog(QDialog):
@@ -75,7 +61,7 @@ class AddPlaylistDialog(QDialog):
 
         self._url_input = StyledInput("https://youtube.com/playlist?list=…", mono=True)
         self._url_input.textChanged.connect(self._update_preview)
-        body_lay.addWidget(_field("Playlist URL", self._url_input))
+        body_lay.addWidget(field("Playlist URL", self._url_input))
 
         # prefix / speed / split row
         mid_row = QWidget()
@@ -87,7 +73,7 @@ class AddPlaylistDialog(QDialog):
         self._prefix_input.setText(next_prefix)
         self._prefix_input.setAlignment(Qt.AlignCenter)
         self._prefix_input.textChanged.connect(self._update_preview)
-        pfx_w = _field("Prefix", self._prefix_input)
+        pfx_w = field("Prefix", self._prefix_input)
         pfx_w.setFixedWidth(80)
         mid_lay.addWidget(pfx_w)
 
@@ -108,7 +94,7 @@ class AddPlaylistDialog(QDialog):
         self._speed_spin.valueChanged.connect(self._update_preview)
         speed_lay.addWidget(self._speed_toggle)
         speed_lay.addWidget(self._speed_spin, 1)
-        mid_lay.addWidget(_field("Speed", speed_w), 1)
+        mid_lay.addWidget(field("Speed", speed_w), 1)
 
         # split
         split_w = QWidget()
@@ -126,7 +112,7 @@ class AddPlaylistDialog(QDialog):
         self._split_spin.setStyleSheet(self._spin_style(False))
         split_lay.addWidget(self._split_toggle)
         split_lay.addWidget(self._split_spin, 1)
-        mid_lay.addWidget(_field("Split (min)", split_w), 1)
+        mid_lay.addWidget(field("Split (min)", split_w), 1)
         body_lay.addWidget(mid_row)
 
         # command preview
@@ -164,15 +150,15 @@ class AddPlaylistDialog(QDialog):
         f_lay.addWidget(cancel_btn)
 
         add_btn = QPushButton("  Add to Queue")
-        add_btn.setIcon(QIcon(icon_pixmap("plus", 13, "#fff")))
+        add_btn.setIcon(QIcon(icon_pixmap("plus", 13, ON_PRIMARY)))
         add_btn.setFixedHeight(32)
         add_btn.setCursor(Qt.PointingHandCursor)
         add_btn.setStyleSheet(f"""
             QPushButton {{
-                background:{PRIMARY}; color:#fff; border:none;
+                background:{PRIMARY}; color:{ON_PRIMARY}; border:none;
                 border-radius:6px; padding:0 16px; font-size:13px; font-weight:600;
             }}
-            QPushButton:hover {{ background:#0039D9; }}
+            QPushButton:hover {{ background:{PRIMARY_HOVER}; }}
         """)
         add_btn.clicked.connect(self._on_add)
         f_lay.addWidget(add_btn)

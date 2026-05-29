@@ -6,10 +6,11 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
 
 from ui.theme import (
-    PRIMARY, FG, FG_MUTED, FG_SUBTLE, BG, BG_MUTED, BG_SUBTLE, BORDER,
-    SUCCESS_BG, SUCCESS_DARK, ERROR_BG, ERROR_DARK,
+    PRIMARY, PRIMARY_HOVER, ON_PRIMARY,
+    FG, FG_MUTED, FG_SUBTLE, BG, BG_MUTED, BG_SUBTLE, BORDER,
+    SUCCESS_BG, SUCCESS_DARK, ERROR_BG, ERROR_DARK, ERROR_TINT_4,
 )
-from ui.widgets import icon_pixmap, icon_label
+from ui.widgets import icon_pixmap, icon_label, Checkbox
 from backend.mock_data import MOCK_LOGS
 from backend.models import LogEntry
 
@@ -98,12 +99,12 @@ class DiagnosticsDialog(QDialog):
         if self._err_count > 0:
             banner = QWidget()
             banner.setStyleSheet(
-                f"background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.18); border-radius:6px;"
+                f"background:{ERROR_TINT_4}; border:1px solid {ERROR_BG}; border-radius:6px;"
             )
             b_lay = QHBoxLayout(banner)
             b_lay.setContentsMargins(12, 10, 12, 10)
             b_lay.setSpacing(10)
-            b_lay.addWidget(icon_label("alert_circle", 15, "#EF4444"))
+            b_lay.addWidget(icon_label("alert", 15, ERROR_DARK))
             errs = f"<b>{self._err_count} error{'s' if self._err_count != 1 else ''}</b>"
             warns = f"<b>{self._warn_count} warning{'s' if self._warn_count != 1 else ''}</b>"
             msg = QLabel(
@@ -236,15 +237,15 @@ class DiagnosticsDialog(QDialog):
         lay.addWidget(cancel_btn)
 
         send_btn = QPushButton("  Send report")
-        send_btn.setIcon(QIcon(icon_pixmap("send", 13, "#fff")))
+        send_btn.setIcon(QIcon(icon_pixmap("send", 13, ON_PRIMARY)))
         send_btn.setFixedHeight(32)
         send_btn.setCursor(Qt.PointingHandCursor)
         send_btn.setStyleSheet(f"""
             QPushButton {{
-                background:{PRIMARY}; color:#fff; border:none;
+                background:{PRIMARY}; color:{ON_PRIMARY}; border:none;
                 border-radius:6px; padding:0 16px; font-size:13px; font-weight:600;
             }}
-            QPushButton:hover {{ background:#0039D9; }}
+            QPushButton:hover {{ background:{PRIMARY_HOVER}; }}
         """)
         send_btn.clicked.connect(self._on_send)
         lay.addWidget(send_btn)
@@ -332,7 +333,7 @@ class _BundleRow(QWidget):
         lay.setContentsMargins(12, 10, 12, 10)
         lay.setSpacing(10)
 
-        self._box = _CheckBoxBlue(checked)
+        self._box = Checkbox(checked)
         lay.addWidget(self._box)
 
         text = QWidget()
@@ -354,36 +355,7 @@ class _BundleRow(QWidget):
 
     def mousePressEvent(self, event):
         self._checked = not self._checked
-        self._box.set_checked(self._checked)
+        self._box.checked = self._checked
         self.toggled.emit(self._checked)
         super().mousePressEvent(event)
-
-
-class _CheckBoxBlue(QWidget):
-    def __init__(self, checked: bool, parent=None):
-        super().__init__(parent)
-        self.setFixedSize(16, 16)
-        self._checked = checked
-
-    def set_checked(self, val: bool):
-        self._checked = val
-        self.update()
-
-    def paintEvent(self, _):
-        from PySide6.QtGui import QPainter, QColor, QPen, QPainterPath
-        p = QPainter(self)
-        p.setRenderHint(QPainter.Antialiasing)
-        if self._checked:
-            p.setBrush(QColor(PRIMARY))
-            p.setPen(Qt.NoPen)
-            p.drawRoundedRect(0, 0, 16, 16, 4, 4)
-            p.setPen(QPen(QColor("#fff"), 1.5))
-            path = QPainterPath()
-            path.moveTo(3, 8)
-            path.lineTo(6.5, 11.5)
-            path.lineTo(13, 5)
-            p.drawPath(path)
-        else:
-            p.setBrush(QColor(BG))
-            p.setPen(QPen(QColor(BORDER), 1))
             p.drawRoundedRect(0, 0, 16, 16, 4, 4)

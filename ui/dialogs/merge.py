@@ -6,26 +6,13 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QIcon
 
 from ui.theme import (
-    PRIMARY, FG, FG_MUTED, FG_SUBTLE, BG, BG_MUTED, BG_SUBTLE, BORDER,
+    PRIMARY, PRIMARY_HOVER, ON_PRIMARY, PRIMARY_TINT_4,
+    FG, FG_MUTED, FG_SUBTLE, BG, BG_MUTED, BG_SUBTLE, BORDER,
     SUCCESS, SUCCESS_BG, SUCCESS_DARK,
 )
-from ui.widgets import Toggle, Badge, StyledInput, icon_pixmap, icon_label
+from ui.widgets import Toggle, Badge, StyledInput, icon_pixmap, icon_label, field, Checkbox
 from ui.state import AppState
 from backend.models import Playlist
-
-
-def _field(label: str, widget: QWidget) -> QWidget:
-    w = QWidget()
-    lay = QVBoxLayout(w)
-    lay.setContentsMargins(0, 0, 0, 0)
-    lay.setSpacing(4)
-    lbl = QLabel(label.upper())
-    lbl.setStyleSheet(
-        f"font-size:11px; font-weight:500; color:{FG_MUTED}; letter-spacing:.04em;"
-    )
-    lay.addWidget(lbl)
-    lay.addWidget(widget)
-    return w
 
 
 class MergeDialog(QDialog):
@@ -124,14 +111,14 @@ class MergeDialog(QDialog):
             QPushButton:hover {{ background:{BG_SUBTLE}; }}
         """)
         dest_lay.addWidget(browse_btn)
-        lay.addWidget(_field("Destination folder", dest_row))
+        lay.addWidget(field("Destination folder", dest_row))
 
         # playlists checklist
         eligible = [p for p in self._state.playlists]
         n_sel = sum(1 for p in eligible if p.id in self._selected)
         self._pl_list = _PlaylistChecklist(eligible, self._selected, self)
         self._pl_list.selection_changed.connect(self._update_footer_totals)
-        lay.addWidget(_field(
+        lay.addWidget(field(
             f"Playlists to include ({n_sel}/{len(eligible)} selected)",
             self._pl_list,
         ))
@@ -191,15 +178,15 @@ class MergeDialog(QDialog):
         lay.addWidget(cancel_btn)
 
         self._merge_btn = QPushButton("  Merge playlists")
-        self._merge_btn.setIcon(QIcon(icon_pixmap("merge", 13, "#fff")))
+        self._merge_btn.setIcon(QIcon(icon_pixmap("merge", 13, ON_PRIMARY)))
         self._merge_btn.setFixedHeight(32)
         self._merge_btn.setCursor(Qt.PointingHandCursor)
         self._merge_btn.setStyleSheet(f"""
             QPushButton {{
-                background:{PRIMARY}; color:#fff; border:none;
+                background:{PRIMARY}; color:{ON_PRIMARY}; border:none;
                 border-radius:6px; padding:0 16px; font-size:13px; font-weight:600;
             }}
-            QPushButton:hover {{ background:#0039D9; }}
+            QPushButton:hover {{ background:{PRIMARY_HOVER}; }}
         """)
         self._merge_btn.clicked.connect(self.accept)
         lay.addWidget(self._merge_btn)
@@ -235,7 +222,7 @@ class _PlaylistChecklist(QWidget):
                 )
             border = f"border-bottom:1px solid #EAECF0;" if i < len(playlists) - 1 else ""
             row.setStyleSheet(
-                f"background:{'rgba(0,68,255,0.04)' if p.id in selected else BG}; {border}"
+                f"background:{PRIMARY_TINT_4 if p.id in selected else BG}; {border}"
             )
             lay.addWidget(row)
 
@@ -263,7 +250,7 @@ class _CheckRow(QWidget):
         lay.setContentsMargins(10, 8, 10, 8)
         lay.setSpacing(8)
 
-        self._check = _CheckBox(checked)
+        self._check = Checkbox(checked)
         lay.addWidget(self._check)
 
         pfx = QLabel(pl.prefix)
@@ -291,39 +278,9 @@ class _CheckRow(QWidget):
     def mousePressEvent(self, event):
         if self._eligible:
             self._checked = not self._checked
-            self._check.set_checked(self._checked)
+            self._check.checked = self._checked
             self.toggled.emit(self._checked)
         super().mousePressEvent(event)
-
-
-class _CheckBox(QWidget):
-    def __init__(self, checked: bool, parent=None):
-        super().__init__(parent)
-        self.setFixedSize(14, 14)
-        self._checked = checked
-
-    def set_checked(self, val: bool):
-        self._checked = val
-        self.update()
-
-    def paintEvent(self, _):
-        from PySide6.QtGui import QPainter, QColor, QPen, QPainterPath
-        p = QPainter(self)
-        p.setRenderHint(QPainter.Antialiasing)
-        if self._checked:
-            p.setBrush(QColor(PRIMARY))
-            p.setPen(Qt.NoPen)
-            p.drawRoundedRect(0, 0, 14, 14, 3, 3)
-            p.setPen(QPen(QColor("#fff"), 1.5))
-            path = QPainterPath()
-            path.moveTo(2.5, 7)
-            path.lineTo(5.5, 10)
-            path.lineTo(11.5, 4)
-            p.drawPath(path)
-        else:
-            p.setBrush(QColor(BG))
-            p.setPen(QPen(QColor(BORDER), 1))
-            p.drawRoundedRect(0, 0, 14, 14, 3, 3)
 
 
 class _SplitterSection(QWidget):
