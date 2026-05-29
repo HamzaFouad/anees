@@ -2,7 +2,7 @@ from __future__ import annotations
 import copy
 from datetime import datetime
 from pathlib import Path
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, Signal, QTimer
 from backend.models import Playlist, Video, LogEntry, RunState
 from backend.mock_data import MOCK_LOGS
 
@@ -25,6 +25,12 @@ class AppState(QObject):
         self._logs: list[LogEntry] = copy.deepcopy(MOCK_LOGS)
         self._worker    = None
         self._output_root = str(Path.home() / "Downloads" / "Anees")
+        # throttle: batch UI refreshes during active downloads
+        self._dirty_pids: set[str] = set()
+        self._refresh_timer = QTimer(self)
+        self._refresh_timer.setSingleShot(True)
+        self._refresh_timer.setInterval(300)
+        self._refresh_timer.timeout.connect(self._flush_ui)
 
     # ── Accessors ─────────────────────────────────────────────────────────────
     @property
@@ -131,11 +137,22 @@ class AppState(QObject):
             pl.completed = sum(1 for vv in pl.videos if vv.stage == "done")
             pl.status    = "done" if pl.completed >= pl.video_count else "active"
         pl.active_stage = stage
+        # schedule a batched UI refresh instead of emitting on every tick
+        self._dirty_pids.add(pid)
+        if not self._refresh_timer.isActive():
+            self._refresh_timer.start()
+
+    def _flush_ui(self) -> None:
+        """Emit batched UI refresh signals (runs at most every 300 ms)."""
+        if not self._dirty_pids:
+            return
         self.playlists_changed.emit()
-        if pid == self._selected:
-            self.selection_changed.emit(pid)
+        if self._selected in self._dirty_pids:
+            self.selection_changed.emit(self._selected)
+        self._dirty_pids.clear()
 
     def _on_run_complete(self) -> None:
+        self._flush_ui()   # ensure final state is reflected
         self._worker = None
         self._set_run_state(RunState.COMPLETE)
 
