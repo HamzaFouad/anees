@@ -6,10 +6,11 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QIcon
 
 from ui.theme import (
-    PRIMARY, FG, FG_MUTED, BG, BG_MUTED, BG_SUBTLE, BORDER,
-    SUCCESS,
+    PRIMARY, PRIMARY_TINT_8, FG, FG_MUTED, BG, BG_MUTED, BG_SUBTLE, BORDER,
+    DISABLED_BG, DISABLED_FG, INACTIVE,
+    SUCCESS, TEXT_MD,
 )
-from ui.widgets import Btn, SlimProgressBar, icon_pixmap
+from ui.widgets import Btn, SlimProgressBar, icon_pixmap, status_dot, EmptyState
 from ui.state import AppState
 from backend.models import Playlist, RunState
 
@@ -77,7 +78,7 @@ class QueueList(QWidget):
                 border-radius:6px; font-size:12px; font-weight:500;
             }}
             QPushButton:hover {{ background:{BG_MUTED}; }}
-            QPushButton:disabled {{ background:#F3F4F6; color:{FG_MUTED}; }}
+            QPushButton:disabled {{ background:{DISABLED_BG}; color:{DISABLED_FG}; }}
         """)
         f_lay.addWidget(self._add_btn)
         root.addWidget(footer)
@@ -113,7 +114,7 @@ class QueueList(QWidget):
         self._count_lbl.setText(f"Playlists ({len(pls)})")
 
         if not pls:
-            empty = _EmptyState()
+            empty = EmptyState("list", "Queue is empty", "Add a YouTube playlist to begin.")
             self._list_layout.insertWidget(0, empty)
         else:
             for i, pl in enumerate(pls):
@@ -124,15 +125,16 @@ class QueueList(QWidget):
 
         # update add button style
         has_items = bool(self._state.playlists)
+        from ui.theme import PRIMARY_HOVER, ON_PRIMARY
         self._add_btn.setStyleSheet(f"""
             QPushButton {{
-                background:{'#0044FF' if not has_items else BG};
-                color:{'#fff' if not has_items else FG};
+                background:{PRIMARY if not has_items else BG};
+                color:{ON_PRIMARY if not has_items else FG};
                 border:{'none' if not has_items else f'1px solid {BORDER}'};
-                border-radius:6px; font-size:12px; font-weight:500;
+                border-radius:6px; font-size:{TEXT_MD}px; font-weight:500;
             }}
-            QPushButton:hover {{ background:{'#0039D9' if not has_items else BG_MUTED}; }}
-            QPushButton:disabled {{ background:#F3F4F6; color:{FG_MUTED}; }}
+            QPushButton:hover {{ background:{PRIMARY_HOVER if not has_items else BG_MUTED}; }}
+            QPushButton:disabled {{ background:{DISABLED_BG}; color:{DISABLED_FG}; }}
         """)
 
     def _refresh_selection(self, pid: str):
@@ -158,10 +160,8 @@ class PlaylistRow(QWidget):
         outer.setSpacing(0)
 
         # main clickable area
-        self._main = QPushButton()
-        self._main.setFlat(True)
+        self._main = QWidget()
         self._main.setCursor(Qt.PointingHandCursor)
-        self._main.clicked.connect(self.selected)
 
         m_lay = QHBoxLayout(self._main)
         m_lay.setContentsMargins(12, 10, 4, 10)
@@ -189,11 +189,8 @@ class PlaylistRow(QWidget):
         top_lay.setContentsMargins(0, 0, 0, 0)
         top_lay.setSpacing(6)
 
-        dot_color = SUCCESS if pl.status == "done" else (PRIMARY if pl.status == "active" else "#D6D3D1")
-        dot = QLabel()
-        dot.setFixedSize(6, 6)
-        dot.setStyleSheet(f"background:{dot_color}; border-radius:3px;")
-        top_lay.addWidget(dot)
+        dot_color = SUCCESS if pl.status == "done" else (PRIMARY if pl.status == "active" else INACTIVE)
+        top_lay.addWidget(status_dot(dot_color))
 
         title = QLabel(pl.title)
         title.setStyleSheet(
@@ -243,25 +240,28 @@ class PlaylistRow(QWidget):
 
         self._apply_style()
 
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.selected.emit(True)
+        super().mousePressEvent(event)
+
     def set_selected(self, sel: bool):
         self._selected = sel
         self._apply_style()
 
     def _apply_style(self):
         if self._selected:
-            bg = "rgba(0,68,255,0.08)"
+            bg = PRIMARY_TINT_8
             border_left = f"border-left:2px solid {PRIMARY};"
         else:
             bg = BG_SUBTLE
             border_left = "border-left:2px solid transparent;"
         self.setStyleSheet(f"background:{bg}; {border_left}")
-        self._main.setStyleSheet(
-            f"QPushButton {{ background:transparent; border:none; text-align:left; }}"
-        )
+        self._main.setStyleSheet("background:transparent;")
 
     def enterEvent(self, event):
         if not self._selected:
-            self.setStyleSheet(f"background:{BG_SUBTLE}; border-left:2px solid transparent;")
+            self.setStyleSheet(f"background:{BG_MUTED}; border-left:2px solid transparent;")
         if not self._locked and hasattr(self, "_rm_btn"):
             self._rm_btn.setVisible(True)
         super().enterEvent(event)
@@ -271,32 +271,3 @@ class PlaylistRow(QWidget):
         if not self._locked and hasattr(self, "_rm_btn"):
             self._rm_btn.setVisible(False)
         super().leaveEvent(event)
-
-
-class _EmptyState(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        lay = QVBoxLayout(self)
-        lay.setContentsMargins(16, 30, 16, 30)
-        lay.setSpacing(8)
-        lay.setAlignment(Qt.AlignHCenter | Qt.AlignTop)
-
-        icon_w = QWidget()
-        icon_w.setFixedSize(44, 44)
-        icon_w.setStyleSheet(f"background:#E5E7EB; border-radius:8px;")
-        i_lay = QHBoxLayout(icon_w)
-        i_lay.setContentsMargins(0, 0, 0, 0)
-        from ui.widgets import icon_label
-        i_lay.addWidget(icon_label("list", 20, FG_MUTED), alignment=Qt.AlignCenter)
-        lay.addWidget(icon_w, alignment=Qt.AlignHCenter)
-
-        t = QLabel("Queue is empty")
-        t.setStyleSheet(f"font-size:13px; font-weight:500; color:{FG};")
-        t.setAlignment(Qt.AlignHCenter)
-        lay.addWidget(t)
-
-        sub = QLabel("Add a YouTube playlist to begin.")
-        sub.setStyleSheet(f"font-size:11px; color:{FG_MUTED};")
-        sub.setAlignment(Qt.AlignHCenter)
-        sub.setWordWrap(True)
-        lay.addWidget(sub)
