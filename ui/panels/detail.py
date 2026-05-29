@@ -151,9 +151,12 @@ class _DetailHeader(QWidget):
         self._lay.setSpacing(0)
 
     def _clear(self):
+        # Must only add QWidget children to self._lay (not bare QHBoxLayouts)
+        # so that deleteLater() on the widget also destroys all nested children.
         while self._lay.count():
             item = self._lay.takeAt(0)
             if item.widget():
+                item.widget().hide()
                 item.widget().deleteLater()
 
     def refresh(self, pl: Playlist, videos: list[Video]):
@@ -162,8 +165,10 @@ class _DetailHeader(QWidget):
         failed_count = sum(1 for v in videos if v.stage == "failed")
         pct = int(pl.completed / pl.video_count * 100) if pl.video_count else 0
 
-        # top row: prefix badge + title/url + optional retry-all button
-        top = QHBoxLayout()
+        # ── top row (wrapped in QWidget so _clear can deleteLater it) ─────────
+        top_w = QWidget(); top_w.setStyleSheet("background:transparent;")
+        top = QHBoxLayout(top_w)
+        top.setContentsMargins(0, 0, 0, 0)
         top.setSpacing(10)
 
         pfx = QLabel(pl.prefix)
@@ -174,24 +179,22 @@ class _DetailHeader(QWidget):
         )
         top.addWidget(pfx)
 
-        title_col = QVBoxLayout()
+        title_w = QWidget(); title_w.setStyleSheet("background:transparent;")
+        title_col = QVBoxLayout(title_w)
+        title_col.setContentsMargins(0, 0, 0, 0)
         title_col.setSpacing(2)
         t = QLabel(pl.title)
         t.setTextFormat(Qt.PlainText)
-        t.setStyleSheet(
-            f"font-size:16px; font-weight:600; letter-spacing:-0.01em; color:{FG}; "
-            "background:transparent; border:none; text-decoration:none;"
-        )
+        t.setStyleSheet(f"font-size:16px; font-weight:600; letter-spacing:-0.01em; color:{FG};")
         title_col.addWidget(t)
         url_lbl = QLabel(pl.url)
         url_lbl.setTextFormat(Qt.PlainText)
         url_lbl.setStyleSheet(
-            f"font-size:11px; color:{FG_MUTED}; font-family:'JetBrains Mono',monospace; "
-            "background:transparent; border:none; text-decoration:none;"
+            f"font-size:11px; color:{FG_MUTED}; font-family:'JetBrains Mono',monospace;"
         )
         url_lbl.setMaximumWidth(500)
         title_col.addWidget(url_lbl)
-        top.addLayout(title_col, 1)
+        top.addWidget(title_w, 1)
 
         if failed_count > 0:
             retry_all_btn = QPushButton(f"  Retry {failed_count} failed")
@@ -200,7 +203,7 @@ class _DetailHeader(QWidget):
             retry_all_btn.setCursor(Qt.PointingHandCursor)
             retry_all_btn.setStyleSheet(f"""
                 QPushButton {{ background:{BG}; color:{ERROR_DARK};
-                    border:1px solid #FCA5A5; border-radius:6px;
+                    border:1px solid {ERROR_BORDER}; border-radius:6px;
                     padding:0 10px; font-size:12px; font-weight:600; }}
                 QPushButton:hover {{ background:{ERROR_BG}; }}
             """)
@@ -216,12 +219,13 @@ class _DetailHeader(QWidget):
             QPushButton:hover {{ background:{BG_MUTED}; }}
         """)
         top.addWidget(more_btn)
-
-        self._lay.addLayout(top)
+        self._lay.addWidget(top_w)
         self._lay.addSpacing(14)
 
-        # stats row
-        stats_row = QHBoxLayout()
+        # ── stats row (wrapped in QWidget) ────────────────────────────────────
+        stats_w = QWidget(); stats_w.setStyleSheet("background:transparent;")
+        stats_row = QHBoxLayout(stats_w)
+        stats_row.setContentsMargins(0, 0, 0, 0)
         stats_row.setSpacing(0)
         stats = [
             ("Progress", f"{pl.completed}/{pl.video_count}", f"{pct}%", False),
@@ -232,52 +236,47 @@ class _DetailHeader(QWidget):
             ("Failed",   str(failed_count), "none" if failed_count == 0 else "see below", True),
         ]
         for label, val, sub, is_fail in stats:
-            col = QVBoxLayout()
-            col.setSpacing(1)
             lc = ERROR_DARK if is_fail and failed_count > 0 else FG_MUTED
             vc = ERROR_DARK if is_fail and failed_count > 0 else FG
             sc = ERROR_DARK if is_fail and failed_count > 0 else FG_MUTED
+            col_w = QWidget(); col_w.setStyleSheet("background:transparent;")
+            col = QVBoxLayout(col_w)
+            col.setContentsMargins(0, 0, 0, 0)
+            col.setSpacing(1)
             lbl = QLabel(label.upper())
             lbl.setTextFormat(Qt.PlainText)
-            lbl.setStyleSheet(
-                f"font-size:10px; color:{lc}; font-weight:500; letter-spacing:0.04em; "
-                "background:transparent; border:none; text-decoration:none;"
-            )
+            lbl.setStyleSheet(f"font-size:10px; color:{lc}; font-weight:500; letter-spacing:0.04em;")
             col.addWidget(lbl)
             val_lbl = QLabel(val)
             val_lbl.setTextFormat(Qt.PlainText)
-            val_lbl.setStyleSheet(
-                f"font-size:14px; font-weight:600; color:{vc}; "
-                "background:transparent; border:none; text-decoration:none;"
-            )
+            val_lbl.setStyleSheet(f"font-size:14px; font-weight:600; color:{vc};")
             col.addWidget(val_lbl)
             sub_lbl = QLabel(sub)
             sub_lbl.setTextFormat(Qt.PlainText)
-            sub_lbl.setStyleSheet(
-                f"font-size:10px; color:{sc}; background:transparent; border:none; text-decoration:none;"
-            )
+            sub_lbl.setStyleSheet(f"font-size:10px; color:{sc};")
             col.addWidget(sub_lbl)
-            stats_row.addLayout(col)
+            stats_row.addWidget(col_w)
             stats_row.addSpacing(24)
         stats_row.addStretch()
-        self._lay.addLayout(stats_row)
+        self._lay.addWidget(stats_w)
         self._lay.addSpacing(14)
 
         # pipeline strip
-        pipe_row = QHBoxLayout()
+        # ── pipeline row (wrapped in QWidget) ────────────────────────────────
+        pipe_w = QWidget(); pipe_w.setStyleSheet("background:transparent;")
+        pipe_row = QHBoxLayout(pipe_w)
+        pipe_row.setContentsMargins(0, 0, 0, 0)
         pipe_row.setSpacing(10)
         pl_lbl = QLabel("Pipeline")
         pl_lbl.setTextFormat(Qt.PlainText)
         pl_lbl.setStyleSheet(
-            f"font-size:10px; color:{FG_MUTED}; font-weight:500; "
-            f"letter-spacing:0.04em; text-transform:uppercase; "
-            "background:transparent; border:none; text-decoration:none;"
+            f"font-size:10px; color:{FG_MUTED}; font-weight:500; letter-spacing:0.04em;"
         )
         pipe_row.addWidget(pl_lbl)
         pipe = PipelineStrip(pl.active_stage, pl.split_enabled)
         pipe_row.addWidget(pipe)
         pipe_row.addStretch()
-        self._lay.addLayout(pipe_row)
+        self._lay.addWidget(pipe_w)
 
 
 class _ColHeader(QWidget):

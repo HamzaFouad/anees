@@ -163,7 +163,9 @@ class AppState(QObject):
         self._refresh_timer.stop()
         self._dirty_pids.clear()
         self._worker = None
-        self.playlists_changed.emit()        # sidebar update only
+        self.playlists_changed.emit()             # sidebar update
+        if self._selected:
+            self.selection_changed.emit(self._selected)   # final detail panel refresh
         self._set_run_state(RunState.COMPLETE)
 
     def _add_log(self, level: str, src: str, msg: str) -> None:
