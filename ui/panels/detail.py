@@ -114,13 +114,27 @@ class _Detail(QWidget):
     def set_playlist(self, pl: Playlist, videos: list[Video]):
         self._header.refresh(pl, videos)
         self._col_header.update(pl)
+
+        # stop all active spinners before destroying their parent rows —
+        # the Spinner QTimer fires every 16ms and will paint on a deleted
+        # widget if we only use deleteLater() without stopping it first
+        for sp in self._rows_widget.findChildren(Spinner):
+            sp.stop()
+
         while self._rows_lay.count() > 1:
             item = self._rows_lay.takeAt(0)
             if item.widget():
-                item.widget().deleteLater()
+                w = item.widget()
+                w.hide()          # suppress any pending paint events
+                w.deleteLater()
+
         for i, v in enumerate(videos):
             row = VideoRow(i, v, pl.split_enabled, self._on_retry)
-            self._rows_lay.insertWidget(i, row)
+            self._rows_lay.insertWidget(i * 2, row)
+            sep = QFrame()
+            sep.setFixedHeight(1)
+            sep.setStyleSheet(f"background:{BORDER};")
+            self._rows_lay.insertWidget(i * 2 + 1, sep)
 
 
 class _DetailHeader(QWidget):
