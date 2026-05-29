@@ -159,6 +159,7 @@ def apply_global_stylesheet(app: QApplication) -> None:
             font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
             font-size: 13px;
             color: {FG};
+            border: 0;
         }}
         QScrollBar:vertical {{
             width: 6px; background: transparent; margin: 0;
