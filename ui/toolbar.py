@@ -70,7 +70,9 @@ class Toolbar(QWidget):
             }}
             QLineEdit:focus {{ border-color:{PRIMARY}; }}
         """)
-        self._search.textChanged.connect(state.set_query)
+        from ui.api import QueueAPI
+        self._queue_api = QueueAPI(state)
+        self._search.textChanged.connect(self._queue_api.search)
         lay.addWidget(self._search)
 
         # settings
@@ -114,6 +116,8 @@ class RunControls(QWidget):
     def __init__(self, state: AppState, parent=None):
         super().__init__(parent)
         self._state = state
+        from ui.api import RunAPI
+        self._api = RunAPI(state)
         self._lay = QHBoxLayout(self)
         self._lay.setContentsMargins(0, 0, 0, 0)
         self._lay.setSpacing(8)
@@ -122,10 +126,10 @@ class RunControls(QWidget):
     # ── stable slots ──────────────────────────────────────────────────────────
     def _do_start(self)  -> None:
         print("[toolbar] _do_start called", flush=True)
-        self._state.set_run_state(RunState.RUNNING)
-    def _do_pause(self)  -> None: self._state.set_run_state(RunState.PAUSED)
-    def _do_resume(self) -> None: self._state.set_run_state(RunState.RUNNING)
-    def _do_stop(self)   -> None: self._state.set_run_state(RunState.IDLE)
+        self._api.start()
+    def _do_pause(self)  -> None: self._api.pause()
+    def _do_resume(self) -> None: self._api.resume()
+    def _do_stop(self)   -> None: self._api.stop()
 
     def mousePressEvent(self, event) -> None:
         print(f"[RunControls] mouse press {event.position()}", flush=True)

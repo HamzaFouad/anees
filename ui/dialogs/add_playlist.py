@@ -196,5 +196,6 @@ class AddPlaylistDialog(QDialog):
             size_mb      = None,
             added_at     = _fmt_now(),
         )
-        self._state.add_playlist(pl)
+        from ui.api import QueueAPI
+        QueueAPI(self._state).add(pl)
         self.accept()

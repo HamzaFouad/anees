@@ -97,7 +97,8 @@ class MainWindow(QWidget):
         pass
 
     def _on_rerun(self):
-        self._state.set_view("queue")
+        from ui.api import NavAPI
+        NavAPI(self._state).go_queue()
 
     def _on_send_diagnostics(self):
         from ui.dialogs.diagnostics import DiagnosticsDialog

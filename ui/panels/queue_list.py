@@ -88,6 +88,8 @@ class QueueList(QWidget):
         state.selection_changed.connect(self._refresh_selection)
         state.run_state_changed.connect(self._on_run_state)
         state.query_changed.connect(self._rebuild)
+        from ui.api import QueueAPI
+        self._api = QueueAPI(state)
         self._rebuild()
 
     def _on_add(self):
@@ -119,8 +121,8 @@ class QueueList(QWidget):
         else:
             for i, pl in enumerate(pls):
                 row = PlaylistRow(pl, pl.id == self._state.selected_id, self._state.locked)
-                row.selected.connect(lambda _, pid=pl.id: self._state.set_selected(pid))
-                row.remove_clicked.connect(lambda _, pid=pl.id: self._state.remove_playlist(pid))
+                row.selected.connect(lambda _, pid=pl.id: self._api.select(pid))
+                row.remove_clicked.connect(lambda _, pid=pl.id: self._api.remove(pid))
                 self._list_layout.insertWidget(i, row)
 
         # update add button style
