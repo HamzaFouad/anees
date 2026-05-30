@@ -14,7 +14,12 @@ class YtdlpClient:
 
     # ── Metadata ──────────────────────────────────────────────────────────────
     def fetch_info(self, url: str) -> tuple[list[Video], str]:
-        """Flat playlist metadata fetch (no download).
+        """Fetch full playlist metadata including duration (no download).
+
+        Does NOT use extract_flat so that duration is available for all
+        video types (including Shorts). The YouTube browse API returns
+        duration for all entries in the same round-trip, so this is still
+        a single network request for most playlists.
 
         Returns (videos, playlist_title).
         """
@@ -22,9 +27,8 @@ class YtdlpClient:
         videos: list[Video] = []
         title = ""
         opts = {
-            "quiet":        True,
-            "no_warnings":  True,
-            "extract_flat": True,
+            "quiet":       True,
+            "no_warnings": True,
         }
         try:
             with yt_dlp.YoutubeDL(opts) as ydl:
@@ -38,7 +42,6 @@ class YtdlpClient:
                             stage        = "queued",
                         ))
         except Exception as exc:
-            # caller decides how to surface the error
             raise RuntimeError(f"fetch_info failed: {exc}") from exc
         return videos, title
 
