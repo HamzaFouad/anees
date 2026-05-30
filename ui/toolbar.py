@@ -6,7 +6,7 @@ from ui.theme import (
     PRIMARY, PRIMARY_HOVER, ON_PRIMARY,
     FG, FG_MUTED, BG, BG_MUTED, BORDER,
     DISABLED_BG, DISABLED_FG,
-    SUCCESS_DARK, ERROR_DARK, ERROR_BORDER, ERROR_BG,
+    SUCCESS_DARK, ERROR_DARK, ERROR_BORDER,
     WARN_DARK, TEXT_MD, TEXT_LG,
     EQUALIZER_SVG, fmt_mb,
 )
@@ -162,18 +162,14 @@ class RunControls(QWidget):
         c  = self._state.counts()
 
         if rs == RunState.IDLE:
-            has_queued = c["queued"] > 0
-            disk_ok, required_mb, free_mb = (
-                self._state.disk_space_ok() if has_queued else (True, 0.0, 0.0)
-            )
-            can_start = has_queued and disk_ok
+            can_start = c["queued"] > 0
             print(f"[toolbar] refresh IDLE queued={c['queued']} can_start={can_start}", flush=True)
 
             start_btn = QPushButton("  Start run")
             start_btn.setIcon(QIcon(icon_pixmap("play", 13, ON_PRIMARY if can_start else FG_MUTED)))
             start_btn.setFixedHeight(32)
             start_btn.setEnabled(can_start)
-            start_btn.setCursor(Qt.PointingHandCursor if can_start else Qt.ArrowCursor)
+            start_btn.setCursor(Qt.PointingHandCursor)
             start_btn.setStyleSheet(f"""
                 QPushButton {{
                     background:{PRIMARY if can_start else BORDER};
@@ -181,31 +177,23 @@ class RunControls(QWidget):
                     border:none; border-radius:6px;
                     padding:0 16px; font-size:13px; font-weight:600;
                 }}
-                QPushButton:hover {{ background:{PRIMARY_HOVER if can_start else BORDER}; }}
+                QPushButton:hover {{ background:{PRIMARY_HOVER}; }}
                 QPushButton:disabled {{ color:{DISABLED_FG}; }}
             """)
             start_btn.clicked.connect(self._do_start)
             self._lay.addWidget(start_btn)
 
-            if not has_queued:
-                hint_text = "Add a playlist to begin"
-                hint_color = FG_MUTED
-            elif not disk_ok:
-                hint_text = (
-                    f"⚠  Not enough space — need {fmt_mb(required_mb)}, "
-                    f"only {fmt_mb(free_mb)} free"
-                )
-                hint_color = ERROR_DARK
-            else:
+            if can_start:
                 est = self._state.total_estimate_mb()
                 hint_text = (
                     f"{c['queued']} playlist{'s' if c['queued']!=1 else ''} queued"
                     + (f"  ·  ~{fmt_mb(est)}" if est > 0 else "")
                 )
-                hint_color = FG_MUTED
+            else:
+                hint_text = "Add a playlist to begin"
 
             hint = QLabel(hint_text)
-            hint.setStyleSheet(f"font-size:{TEXT_MD}px; color:{hint_color};")
+            hint.setStyleSheet(f"font-size:{TEXT_MD}px; color:{FG_MUTED};")
             self._lay.addWidget(hint)
 
         elif rs == RunState.RUNNING:
