@@ -35,3 +35,26 @@ def get_output_root() -> str:
 
 def set_output_root(path: str) -> None:
     set("output_root", path)
+
+
+def check_disk_space(
+    estimated_mb: float,
+    output_root: str,
+    margin: float = 1.20,
+) -> tuple[bool, float, float]:
+    """Check whether the output folder has enough free space.
+
+    Applies a 20 % safety margin on top of the raw estimate to account
+    for temp files, metadata, and CBR overhead variation.
+
+    Returns (has_space, required_mb, free_mb).
+    """
+    import shutil
+    from pathlib import Path
+    try:
+        Path(output_root).mkdir(parents=True, exist_ok=True)
+        free_mb = shutil.disk_usage(output_root).free / 1024 / 1024
+    except Exception:
+        return True, 0.0, 0.0   # can't check — let it proceed
+    required_mb = estimated_mb * margin
+    return free_mb >= required_mb, required_mb, free_mb

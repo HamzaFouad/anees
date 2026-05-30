@@ -54,6 +54,19 @@ class AppState(QObject):
     def selected_playlist(self) -> Playlist | None:
         return next((p for p in self._playlists if p.id == self._selected), None)
 
+    def total_estimate_mb(self) -> float:
+        from backend.api import playlist_size_estimate
+        return sum(
+            playlist_size_estimate(pl)
+            for pl in self._playlists
+            if pl.status != "done"
+        )
+
+    def disk_space_ok(self) -> tuple[bool, float, float]:
+        """Returns (ok, required_mb, free_mb) with 20 % safety margin."""
+        from backend.api.config import check_disk_space
+        return check_disk_space(self.total_estimate_mb(), self._output_root)
+
     def counts(self) -> dict:
         queued = sum(1 for p in self._playlists if p.status in ("queued", "active"))
         done   = sum(1 for p in self._playlists if p.status == "done")
