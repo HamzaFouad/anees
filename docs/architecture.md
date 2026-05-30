@@ -15,8 +15,8 @@
           │                │  (only backend.models and backend.api allowed)
           ▼                ▼
 ┌─────────────────────────────────────────────────────┐
-│  backend/api/      ← public contract                │
-│  DownloadAPI · InfoAPI · SplitAPI · stats · config  │
+│  backend/api/      ← public contract                         │
+│  DownloadAPI · InfoAPI · SplitAPI · SpeedAPI · stats · config │
 └────────────────────┬────────────────────────────────┘
                      │
           ┌──────────▼──────────┐
@@ -24,6 +24,7 @@
           │  DownloadService    │
           │  InfoService        │
           │  SplitService       │
+          │  SpeedService       │
           └──────────┬──────────┘
                      │
           ┌──────────▼──────────┐
@@ -79,10 +80,13 @@ User clicks Start run
                        │    yt-dlp starts next video download ↓
                        └─ else: video_stage.emit("done")
 
-  _do_split() — runs in ThreadPoolExecutor(max_workers=1)
-       └─ SplitService.split_file()   ← concurrent with next video download
-             └─ FfmpegClient.split()  ← subprocess, killed on stop
-       └─ video_stage.emit("done")    ← when split finishes
+  _do_postprocess() — runs in ThreadPoolExecutor(max_workers=1)
+       ├─ SplitService.split_file()     ← concurrent with next video download
+       │     └─ FfmpegClient.split()    ← subprocess, killed on stop
+       ├─ [if speed != 1.0] video_stage.emit("speed")
+       │     └─ SpeedService.apply_speed()
+       │           └─ FfmpegClient.speed()  ← atempo re-encode, killed on stop
+       └─ video_stage.emit("done")    ← when all post-processing finishes
 
   ↓ (all signals are queued connections → main thread)
 AppState._on_video_stage() → video_row_changed.emit(pid, idx)
@@ -92,7 +96,7 @@ AppState._on_video_stage() → video_row_changed.emit(pid, idx)
                           VideoRow.refresh(video)   ← in-place, no rebuild
 ```
 
-**Concurrency model:** yt-dlp runs one download at a time (sequential per playlist). Split runs concurrently with the *next* video's download in a single background thread. `executor.shutdown(wait=True)` drains all pending splits before `_download()` returns.
+**Concurrency model:** yt-dlp runs one download at a time (sequential per playlist). Post-processing (split + speed) runs concurrently with the *next* video's download in a single background thread. `executor.shutdown(wait=True)` drains all pending work before `_download()` returns.
 
 ## UI refresh throttling
 

@@ -1,4 +1,5 @@
 from __future__ import annotations
+import math
 import os
 import sys
 import subprocess
@@ -42,6 +43,58 @@ class FfmpegClient:
             "-c", "copy",
             "-reset_timestamps", "1",
             output_pattern,
+            "-y",
+        ]
+
+        kwargs: dict = dict(
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        if sys.platform == "win32":
+            kwargs["creationflags"] = 0x08000000   # CREATE_NO_WINDOW
+
+        try:
+            proc = subprocess.Popen(cmd, **kwargs)
+            for line in proc.stdout:
+                if stop.is_set():
+                    proc.terminate()
+                    proc.wait(timeout=5)
+                    return False
+                on_log(line.rstrip())
+            return proc.wait() == 0
+        except Exception as exc:
+            on_log(f"ffmpeg error: {exc}")
+            return False
+
+    def speed(
+        self,
+        input_path: str,
+        output_path: str,
+        speed: float,
+        on_log: Callable[[str], None],
+        stop: threading.Event,
+    ) -> bool:
+        """Re-encode *input_path* with atempo speed filter to *output_path*.
+
+        For speed > 2.0 chains two identical factors (atempo max is 2.0 per filter).
+        """
+        if speed > 2.0:
+            factor = math.sqrt(speed)
+            af = f"atempo={factor:.4f},atempo={factor:.4f}"
+        else:
+            af = f"atempo={speed:.4f}"
+
+        cmd = [
+            _find_ffmpeg(),
+            "-i", input_path,
+            "-af", af,
+            "-codec:a", "libmp3lame",
+            "-b:a", "192k",
+            "-ac", "1",
+            output_path,
             "-y",
         ]
 

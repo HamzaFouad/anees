@@ -9,6 +9,7 @@ from typing import Callable
 from backend.models import Playlist, Video
 from backend.commands.ytdlp import YtdlpClient
 from backend.services.split_service import SplitService
+from backend.services.speed_service import SpeedService
 
 # Lines from ffmpeg that carry no actionable information for the user
 _FFMPEG_NOISE = re.compile(
@@ -144,21 +145,37 @@ class DownloadService:
                 self._on_video_stage(pl.id, idx, "mp3", 0.5)
                 self._log("debug", f"[{idx+1}] converting to mono MP3…")
 
-        def _do_split(idx: int, title: str, filepath: str) -> None:
-            """Runs in the thread pool — concurrent with the NEXT video's download."""
+        def _do_postprocess(idx: int, title: str, filepath: str) -> None:
+            """Runs in the thread pool — concurrent with the NEXT video's download.
+
+            Handles split → speed in sequence. Either or both may be skipped
+            depending on playlist settings.
+            """
             if self._stop.is_set():
                 self._on_video_stage(pl.id, idx, "done", 1.0)
                 return
-            try:
-                parts = SplitService(on_log=_ffmpeg_log).split_file(
-                    filepath, pl.split_min, self._stop
-                )
-                self._log("info", f"[{idx+1}] {title}  → {len(parts)} part(s)")
-            except Exception as exc:
-                self._log("error", f"[{idx+1}] split failed: {exc}")
-            finally:
-                # Always advance to "done" — even if split failed the original MP3 exists
-                self._on_video_stage(pl.id, idx, "done", 1.0)
+
+            files = [filepath]
+
+            if pl.split_enabled:
+                try:
+                    files = SplitService(on_log=_ffmpeg_log).split_file(
+                        filepath, pl.split_min, self._stop
+                    )
+                    self._log("info", f"[{idx+1}] {title}  → {len(files)} part(s)")
+                except Exception as exc:
+                    self._log("error", f"[{idx+1}] split failed: {exc}")
+
+            if pl.speed != 1.0 and not self._stop.is_set():
+                self._on_video_stage(pl.id, idx, "speed", 0.1)
+                try:
+                    SpeedService(on_log=_ffmpeg_log).apply_speed(files, pl.speed, self._stop)
+                    self._log("info", f"[{idx+1}] ×{pl.speed} applied to {len(files)} file(s)")
+                except Exception as exc:
+                    self._log("error", f"[{idx+1}] speed failed: {exc}")
+
+            # Always advance to "done" — even if a step failed the files still exist
+            self._on_video_stage(pl.id, idx, "done", 1.0)
 
         def on_postprocess(d: dict) -> None:
             if d.get("status") != "finished":
@@ -181,12 +198,14 @@ class DownloadService:
 
             self._on_video_meta(pl.id, idx, title, duration)
 
-            if pl.split_enabled and not self._stop.is_set():
-                # Advance UI to "split" immediately, then return so yt-dlp
-                # starts downloading the NEXT video right away.
-                # _do_split() runs in the thread pool and emits "done" when finished.
-                self._on_video_stage(pl.id, idx, "split", 0.1)
-                executor.submit(_do_split, idx, title, filepath)
+            needs_postproc = (pl.split_enabled or pl.speed != 1.0) and not self._stop.is_set()
+            if needs_postproc:
+                # Advance UI to the first active post-processing stage immediately,
+                # then return so yt-dlp starts downloading the NEXT video right away.
+                # _do_postprocess() runs in the thread pool and emits "done" when finished.
+                first_stage = "split" if pl.split_enabled else "speed"
+                self._on_video_stage(pl.id, idx, first_stage, 0.1)
+                executor.submit(_do_postprocess, idx, title, filepath)
             else:
                 self._log("info", f"[{idx+1}] {title}  ({size_mb:.1f} MB)")
                 self._on_video_stage(pl.id, idx, "done", 1.0)

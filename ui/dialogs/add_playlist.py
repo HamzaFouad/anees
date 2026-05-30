@@ -9,6 +9,7 @@ def _fmt_now() -> str:
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QWidget, QSpinBox,
+    QDoubleSpinBox,
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
@@ -101,6 +102,27 @@ class AddPlaylistDialog(QDialog):
         split_lay.addWidget(self._split_toggle)
         split_lay.addWidget(self._split_spin, 1)
         mid_lay.addWidget(field("Split chunks", split_w), 1)
+
+        # speed toggle + spinbox
+        speed_w = QWidget()
+        speed_lay = QHBoxLayout(speed_w)
+        speed_lay.setContentsMargins(0, 0, 0, 0)
+        speed_lay.setSpacing(8)
+        self._speed_toggle = Toggle(False)
+        self._speed_toggle.toggled.connect(self._on_speed_toggle)
+        self._speed_spin = QDoubleSpinBox()
+        self._speed_spin.setRange(0.5, 3.0)
+        self._speed_spin.setSingleStep(0.25)
+        self._speed_spin.setValue(1.5)
+        self._speed_spin.setSuffix("×")
+        self._speed_spin.setDecimals(2)
+        self._speed_spin.setEnabled(False)
+        self._speed_spin.setFixedHeight(32)
+        self._speed_spin.setStyleSheet(self._spin_style(False))
+        speed_lay.addWidget(self._speed_toggle)
+        speed_lay.addWidget(self._speed_spin, 1)
+        mid_lay.addWidget(field("Speed up", speed_w), 1)
+
         body_lay.addWidget(mid)
         root.addWidget(body)
 
@@ -154,6 +176,10 @@ class AddPlaylistDialog(QDialog):
         self._split_spin.setEnabled(checked)
         self._split_spin.setStyleSheet(self._spin_style(checked))
 
+    def _on_speed_toggle(self, checked: bool) -> None:
+        self._speed_spin.setEnabled(checked)
+        self._speed_spin.setStyleSheet(self._spin_style(checked))
+
     def _on_add(self) -> None:
         url = self._url_input.text().strip()
         if not url:
@@ -161,6 +187,8 @@ class AddPlaylistDialog(QDialog):
         prefix      = self._prefix_input.text().strip() or str(len(self._state.playlists)).zfill(2)
         split_on    = self._split_toggle._checked
         split_min   = self._split_spin.value()
+        speed_on    = self._speed_toggle._checked
+        speed       = self._speed_spin.value() if speed_on else 1.0
 
         pl = Playlist(
             id           = str(uuid.uuid4()),
@@ -171,7 +199,7 @@ class AddPlaylistDialog(QDialog):
             completed    = 0,
             status       = "queued",
             active_stage = "download",
-            speed        = 1.0,
+            speed        = speed,
             split_enabled= split_on,
             split_min    = split_min,
             size_mb      = None,

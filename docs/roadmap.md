@@ -127,16 +127,18 @@ Pipeline: **DL → MP3 → /Split**
 
 ---
 
-### Phase 6 · Speed Processing
+### Phase 6 · Speed Processing ✅
 
 | File | Purpose |
 |------|---------|
-| `backend/commands/ffmpeg.py` | `build_atempo_filter(speed: float) → str` — chains filters when speed > 2.0 |
-| `backend/services/speed_service.py` | Runs atempo pass after split; advances stage: split → speed |
+| `backend/commands/ffmpeg.py` | `FfmpegClient.speed()` — atempo filter, chains two factors when speed > 2.0 |
+| `backend/services/speed_service.py` | `SpeedService.apply_speed(paths, speed, stop)` — applies filter in-place per file |
+| `backend/api/speed.py` | `SpeedAPI` — public facade |
 
-- Speed value set per-playlist in Add Playlist dialog
-- Default speed from Settings (Phase 13)
-- For speed > 2.0: chains `atempo` filters (`atempo=sqrt(N),atempo=sqrt(N)`)
+- Speed toggle + spinner (0.5×–3.0×, step 0.25×) in Add Playlist dialog
+- For speed > 2.0: chains `atempo=sqrt(N),atempo=sqrt(N)` (ffmpeg max per filter is 2.0)
+- Runs in the same background thread as split — fully concurrent with the next download
+- Speed=1.0 skips the step entirely (no ffmpeg invocation)
 
 Pipeline: **DL → MP3 → /Split → ×Speed**
 

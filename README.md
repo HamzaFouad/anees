@@ -64,7 +64,7 @@ anees/
 
 ## Status
 
-**Phase 5 complete** — download + split working end-to-end.
+**Phase 6 complete** — download + split + speed working end-to-end.
 
 | Feature | Status |
 |---------|--------|
@@ -78,7 +78,7 @@ anees/
 | Estimated size + disk space check before run | ✅ |
 | Download console (collapsible terminal panel) | ✅ |
 | PyInstaller Windows .exe + macOS .app via GitHub Actions CI | ✅ |
-| Speed processing (atempo filter) | 🔜 Phase 6 |
+| Speed processing (atempo filter) | ✅ Phase 6 |
 | Merge to folder | 🔜 Phase 7 |
 | SQLite history | 🔜 Phase 9 |
 

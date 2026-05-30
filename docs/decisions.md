@@ -120,6 +120,20 @@
 
 ---
 
+## Speed processing: chained atempo for speed > 2.0
+
+**Decision:** `atempo=sqrt(N),atempo=sqrt(N)` for speeds above 2.0; single `atempo=N` for ≤ 2.0.
+
+**Why:**
+- ffmpeg's `atempo` filter is clamped to [0.5, 2.0] per filter instance.
+- Chaining two identical factors whose product equals the target speed is exact: `sqrt(N) * sqrt(N) = N`.
+- This covers the entire user-facing range of 0.5×–3.0× with at most two filter passes.
+- Output is re-encoded at the same settings (libmp3lame 192k CBR mono) to preserve file format consistency.
+
+**Where:** `backend/commands/ffmpeg.py` — `FfmpegClient.speed()`, `backend/services/speed_service.py`.
+
+---
+
 ## Config in `~/.anees/config.json`
 
 **Decision:** Simple JSON, not a database or platform settings API.
