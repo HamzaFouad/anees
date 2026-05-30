@@ -221,7 +221,7 @@ class RunControls(QWidget):
             self._lay.addWidget(pulse)
             info = QLabel(
                 f"Running · <b style='color:{PRIMARY}'>{c['videos_done']}/{c['videos_total']}</b>"
-                f" videos · ~12 min remaining"
+                f" videos"
             )
             info.setTextFormat(Qt.RichText)
             info.setStyleSheet(f"font-size:{TEXT_MD}px; color:{FG}; font-weight:500;")
