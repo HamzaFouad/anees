@@ -10,6 +10,7 @@ from ui.panels.queue_list import QueueList
 from ui.panels.detail import DetailPanel
 from ui.panels.history import HistoryPanel
 from ui.panels.logs import LogsPanel
+from ui.panels.console import ConsolePanel, ConsoleToggleBar
 
 
 class MainWindow(QWidget):
@@ -74,6 +75,12 @@ class MainWindow(QWidget):
         self._logs = LogsPanel(self._state)
         self._logs.send_diagnostics_clicked.connect(self._on_send_diagnostics)
         self._content.addWidget(self._logs)
+
+        # global console (full-width; outside tab content)
+        self._console = ConsolePanel(self._state, self)
+        self._console_toggle = ConsoleToggleBar(self._console, self)
+        root.addWidget(self._console)
+        root.addWidget(self._console_toggle)
 
         # full-width separator + status bar
         from ui.theme import BORDER
