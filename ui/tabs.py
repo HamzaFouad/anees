@@ -21,13 +21,14 @@ class TabBar(QWidget):
 
         self._btns: dict[str, QPushButton] = {}
         tabs = [
-            ("queue",   "Queue",   "list",     lambda: 0),
-            ("history", "History", "clock",    lambda: 0),
-            ("logs",    "Logs",    "terminal", lambda: self._log_errors()),
+            ("queue",   "Queue",   "list",     lambda: 0,                    True),
+            ("history", "History", "clock",    lambda: 0,                    False),
+            ("logs",    "Logs",    "terminal", lambda: self._log_errors(),   False),
         ]
-        for key, label, icon, count_fn in tabs:
-            btn = _TabBtn(key, label, icon, count_fn)
-            btn.clicked.connect(lambda _=False, k=key: state.set_view(k))
+        for key, label, icon, count_fn, enabled in tabs:
+            btn = _TabBtn(key, label, icon, count_fn, enabled=enabled)
+            if enabled:
+                btn.clicked.connect(lambda _=False, k=key: state.set_view(k))
             self._btns[key] = btn
             lay.addWidget(btn)
 
@@ -64,16 +65,22 @@ class TabBar(QWidget):
 
 
 class _TabBtn(QPushButton):
-    def __init__(self, key: str, label: str, icon: str, count_fn, parent=None):
+    def __init__(self, key: str, label: str, icon: str, count_fn,
+                 enabled: bool = True, parent=None):
         super().__init__(parent)
         self._key = key
         self._label = label
         self._icon = icon
         self._count_fn = count_fn
+        self._enabled = enabled
         self._active = False
         self._count = 0
         self.setFixedHeight(36)
-        self.setCursor(Qt.PointingHandCursor)
+        if enabled:
+            self.setCursor(Qt.PointingHandCursor)
+        else:
+            self.setCursor(Qt.ArrowCursor)
+            self.setToolTip("Coming soon")
         self._refresh_style()
 
     def set_active(self, active: bool):
@@ -87,6 +94,19 @@ class _TabBtn(QPushButton):
     def _refresh_style(self):
         from ui.widgets import icon_pixmap
         from PySide6.QtGui import QIcon
+        from ui.theme import DISABLED_FG
+
+        if not self._enabled:
+            self.setIcon(QIcon(icon_pixmap(self._icon, 12, DISABLED_FG)))
+            self.setText(f" {self._label}")
+            self.setStyleSheet(f"""
+                QPushButton {{
+                    background:transparent; color:{DISABLED_FG}; border:none;
+                    font-size:12px; font-weight:500; padding:0 14px; opacity:0.5;
+                }}
+            """)
+            return
+
         is_err = self._key == "logs" and self._count_fn() > 0
         color  = PRIMARY if self._active else (ERROR_DARK if is_err else FG_MUTED)
         weight = "600" if self._active else "500"
