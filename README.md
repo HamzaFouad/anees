@@ -110,9 +110,6 @@ build.bat              # → dist\Anees\Anees.exe
 
 ### User requirements
 
-Anees bundles Python and all dependencies. The only external requirement is **ffmpeg**:
+The Windows `.exe` bundles ffmpeg — no extra install needed.
 
-| Platform | Install |
-|----------|---------|
-| macOS | `brew install ffmpeg` |
-| Windows | `choco install ffmpeg` or [ffmpeg.org](https://ffmpeg.org/download.html) |
+macOS `.app` requires ffmpeg separately: `brew install ffmpeg`

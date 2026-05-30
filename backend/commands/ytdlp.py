@@ -1,9 +1,24 @@
 from __future__ import annotations
 import os
+import sys
 import threading
 from typing import Callable
 
 from backend.models import Video
+
+
+def _find_ffmpeg() -> str | None:
+    """Return the ffmpeg binary path when running from a PyInstaller bundle.
+
+    When frozen, ffmpeg.exe / ffmpeg is extracted alongside the app in the
+    _MEIPASS temp directory.  Returns None when running from source so that
+    yt-dlp falls back to searching PATH (developer machines have ffmpeg installed).
+    """
+    if not getattr(sys, "frozen", False):
+        return None
+    name = "ffmpeg.exe" if sys.platform == "win32" else "ffmpeg"
+    path = os.path.join(sys._MEIPASS, name)  # type: ignore[attr-defined]
+    return path if os.path.exists(path) else None
 
 
 class YtdlpClient:
@@ -72,11 +87,10 @@ class YtdlpClient:
                 raise yt_dlp.utils.DownloadCancelled("stopped by user")
             on_progress(d)
 
+        ffmpeg = _find_ffmpeg()
         opts = {
-            # bestaudio picks the highest-quality stream available; if the
-            # source is below 192 kbps the CBR target is simply unreachable
-            # and ffmpeg encodes at whatever the source provides.
             "format":          "bestaudio/best",
+            **({"ffmpeg_location": ffmpeg} if ffmpeg else {}),
             "postprocessors":  [
                 {
                     "key":              "FFmpegExtractAudio",

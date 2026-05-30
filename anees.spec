@@ -10,17 +10,25 @@ in YtdlpClient before packaging for a fully self-contained build).
 """
 
 import sys
+import os
 from PyInstaller.utils.hooks import collect_all, collect_submodules
 
 # yt-dlp ships many dynamic extractors — collect everything
 yt_dlp_datas, yt_dlp_binaries, yt_dlp_hiddenimports = collect_all("yt_dlp")
+
+# Bundle the platform-specific ffmpeg binary so users don't need to install it
+_ffmpeg_bin = []
+if sys.platform == "win32" and os.path.exists("vendor/win-x64/ffmpeg.exe"):
+    _ffmpeg_bin = [("vendor/win-x64/ffmpeg.exe", ".")]
+elif sys.platform == "darwin" and os.path.exists("vendor/macos/ffmpeg"):
+    _ffmpeg_bin = [("vendor/macos/ffmpeg", ".")]
 
 block_cipher = None
 
 a = Analysis(
     ["main.py"],
     pathex=[],
-    binaries=yt_dlp_binaries,
+    binaries=yt_dlp_binaries + _ffmpeg_bin,
     datas=yt_dlp_datas,
     hiddenimports=yt_dlp_hiddenimports + [
         "PySide6.QtSvg",

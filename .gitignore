@@ -216,3 +216,5 @@ __marimo__/
 .streamlit/secrets.toml
 .DS_Store
 .claude/
+vendor/win-x64/*.exe
+vendor/macos/ffmpeg
