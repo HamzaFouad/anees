@@ -1,11 +1,11 @@
 from __future__ import annotations
 import os
+import re
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Callable
 
-import re
-import re
 from backend.models import Playlist, Video
 from backend.commands.ytdlp import YtdlpClient
 from backend.services.split_service import SplitService
@@ -105,8 +105,13 @@ class DownloadService:
 
     def _download(self, pl: Playlist) -> None:
         self._current_idx = 0
-        _done_fps: set[str] = set()   # dedup by MP3 filepath (robust vs postprocessor name)
-        _logged_pct: list[int] = [-1]  # last milestone logged (per-video, reset on new video)
+        _done_fps: set[str] = set()    # dedup by MP3 filepath
+        _logged_pct: list[int] = [-1]  # last milestone logged (reset per video)
+
+        # One background worker: split of video N runs concurrently with the
+        # download of video N+1.  max_workers=1 keeps CPU pressure predictable
+        # while still fully overlapping network I/O with ffmpeg split work.
+        executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="split")
 
         def _ffmpeg_log(m: str) -> None:
             if _FFMPEG_NOISE.match(m.strip()):
@@ -127,7 +132,6 @@ class DownloadService:
                 total = d.get("total_bytes") or d.get("total_bytes_estimate") or 1
                 done  = d.get("downloaded_bytes") or 0
                 pct   = min(int(done / total * 100), 99)
-                # Log at 0 / 25 / 50 / 75 % milestones
                 milestone = (pct // 25) * 25
                 if milestone > _logged_pct[0]:
                     _logged_pct[0] = milestone
@@ -136,9 +140,25 @@ class DownloadService:
                     self._log("debug", f"[{idx+1}] downloading {pct}%{spd}")
                 self._on_video_stage(pl.id, idx, "download", min(done / total, 0.99))
             elif status == "finished":
-                _logged_pct[0] = -1   # reset for next video
+                _logged_pct[0] = -1
                 self._on_video_stage(pl.id, idx, "mp3", 0.5)
                 self._log("debug", f"[{idx+1}] converting to mono MP3…")
+
+        def _do_split(idx: int, title: str, filepath: str) -> None:
+            """Runs in the thread pool — concurrent with the NEXT video's download."""
+            if self._stop.is_set():
+                self._on_video_stage(pl.id, idx, "done", 1.0)
+                return
+            try:
+                parts = SplitService(on_log=_ffmpeg_log).split_file(
+                    filepath, pl.split_min, self._stop
+                )
+                self._log("info", f"[{idx+1}] {title}  → {len(parts)} part(s)")
+            except Exception as exc:
+                self._log("error", f"[{idx+1}] split failed: {exc}")
+            finally:
+                # Always advance to "done" — even if split failed the original MP3 exists
+                self._on_video_stage(pl.id, idx, "done", 1.0)
 
         def on_postprocess(d: dict) -> None:
             if d.get("status") != "finished":
@@ -146,8 +166,8 @@ class DownloadService:
             info     = d.get("info_dict") or {}
             filepath = info.get("filepath") or ""
 
-            # Wait for an actual MP3 file on disk — avoids depending on the
-            # exact postprocessor key name which differs between yt-dlp versions
+            # Check the file directly — avoids depending on postprocessor key
+            # name which differs between yt-dlp versions
             if not filepath.lower().endswith(".mp3") or not os.path.exists(filepath):
                 return
             if filepath in _done_fps:
@@ -161,19 +181,18 @@ class DownloadService:
 
             self._on_video_meta(pl.id, idx, title, duration)
 
-            # ── split pass ────────────────────────────────────────────────────
             if pl.split_enabled and not self._stop.is_set():
-                self._on_video_stage(pl.id, idx, "split", 0.3)
-                parts = SplitService(on_log=_ffmpeg_log).split_file(
-                    filepath, pl.split_min, self._stop
-                )
-                self._log("info",
-                    f"[{idx+1}] {title}  → {len(parts)} part(s)")
+                # Advance UI to "split" immediately, then return so yt-dlp
+                # starts downloading the NEXT video right away.
+                # _do_split() runs in the thread pool and emits "done" when finished.
+                self._on_video_stage(pl.id, idx, "split", 0.1)
+                executor.submit(_do_split, idx, title, filepath)
             else:
-                self._log("info",
-                    f"[{idx+1}] {title}  ({size_mb:.1f} MB)")
+                self._log("info", f"[{idx+1}] {title}  ({size_mb:.1f} MB)")
+                self._on_video_stage(pl.id, idx, "done", 1.0)
 
-            self._on_video_stage(pl.id, idx, "done", 1.0)
+            # Increment immediately — yt-dlp uses this to attribute the next
+            # video's progress to the correct index
             self._current_idx += 1
 
         try:
@@ -185,3 +204,7 @@ class DownloadService:
             )
         except Exception as exc:
             self._log("error", f"Download failed: {pl.title} — {exc}")
+        finally:
+            # Drain all pending/running splits before _download() returns.
+            # When _stop is set, split threads exit quickly (ffmpeg is killed).
+            executor.shutdown(wait=True)
