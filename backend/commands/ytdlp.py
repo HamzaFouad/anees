@@ -73,12 +73,15 @@ class YtdlpClient:
             on_progress(d)
 
         opts = {
+            # bestaudio picks the highest-quality stream available; if the
+            # source is below 192 kbps the CBR target is simply unreachable
+            # and ffmpeg encodes at whatever the source provides.
             "format":          "bestaudio/best",
             "postprocessors":  [
                 {
                     "key":              "FFmpegExtractAudio",
                     "preferredcodec":   "mp3",
-                    "preferredquality": "0",
+                    "preferredquality": "192",   # CBR 192 kbps; VBR "0" gave ~190 kbps anyway
                 },
             ],
             "postprocessor_args":  {"ffmpegextractaudio": ["-ac", "1"]},
