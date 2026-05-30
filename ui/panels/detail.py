@@ -1,15 +1,16 @@
 from __future__ import annotations
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QScrollArea, QFrame, QSizePolicy,
+    QScrollArea, QFrame, QSizePolicy, QTextEdit,
 )
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QIcon, QColor
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QIcon, QColor, QTextCursor
 
 from ui.theme import (
     PRIMARY, FG, FG_MUTED, FG_SUBTLE, BG, BG_MUTED, BG_SUBTLE, BG_ACCENT, BORDER,
     SUCCESS, SUCCESS_DARK, SUCCESS_BG, ERROR, ERROR_DARK, ERROR_BG, ERROR_BORDER,
-    SURFACE_ALT, ERROR_TINT_10,
+    SURFACE_ALT, ERROR_TINT_10, LOG_BG_DARK, FG_ON_DARK, FONT_MONO, TEXT_SM,
+    WARN_DARK,
     PIPELINE_STAGES, fmt_dur, fmt_mb,
 )
 from ui.widgets import Badge, Btn, PipelineStrip, SlimProgressBar, Spinner, icon_pixmap, icon_label
@@ -44,6 +45,7 @@ class DetailPanel(QWidget):
         # The detail panel refreshes only on explicit selection_changed events.
         state.selection_changed.connect(self._on_select)
         state.video_row_changed.connect(self._on_video_row_changed)
+        state.logs_changed.connect(self._detail.console.on_logs_changed)
         self._on_select(state.selected_id)
 
     def _on_select(self, pid: str):
@@ -122,7 +124,39 @@ class _Detail(QWidget):
         self._rows_lay.addStretch()
         scroll.setWidget(self._rows_widget)
         scroll.viewport().setStyleSheet(f"background:{BG};")
-        root.addWidget(scroll)
+        root.addWidget(scroll, 1)
+
+        # ── console toggle bar ────────────────────────────────────────────────
+        self._console_bar = QWidget()
+        self._console_bar.setFixedHeight(28)
+        self._console_bar.setStyleSheet(
+            f"background:{BG_MUTED}; border-top:1px solid {BORDER};"
+        )
+        bar_lay = QHBoxLayout(self._console_bar)
+        bar_lay.setContentsMargins(12, 0, 12, 0)
+        bar_lay.setSpacing(6)
+        self._console_toggle = QPushButton("▶  Console")
+        self._console_toggle.setCursor(Qt.PointingHandCursor)
+        self._console_toggle.setStyleSheet(
+            f"QPushButton {{ background:transparent; border:none; "
+            f"font-size:{TEXT_SM}px; font-weight:500; color:{FG_MUTED}; "
+            f"font-family:{FONT_MONO}; }}"
+            f"QPushButton:hover {{ color:{FG}; }}"
+        )
+        self._console_toggle.clicked.connect(self._toggle_console)
+        bar_lay.addWidget(self._console_toggle)
+        bar_lay.addStretch()
+        root.addWidget(self._console_bar)
+
+        # ── console panel (hidden by default) ────────────────────────────────
+        self.console = _Console()
+        self.console.setVisible(False)
+        root.addWidget(self.console)
+
+    def _toggle_console(self) -> None:
+        visible = not self.console.isVisible()
+        self.console.setVisible(visible)
+        self._console_toggle.setText("▼  Console" if visible else "▶  Console")
 
     def set_playlist(self, pl: Playlist, videos: list[Video]):
         self._header.refresh(pl, videos)
@@ -575,6 +609,101 @@ class VideoRow(QWidget):
                 w.deleteLater()
                 s_lay.takeAt(j)
         self._build_status(video, s_lay)
+
+
+class _Console(QWidget):
+    """Collapsible terminal panel — shows live yt-dlp / ffmpeg log output."""
+
+    _LEVEL_COLOR = {
+        "error": "#FF6B6B",
+        "warn":  "#FFD93D",
+        "info":  FG_ON_DARK,
+        "debug": "#6B7280",
+    }
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedHeight(200)
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+
+        # toolbar
+        toolbar = QWidget()
+        toolbar.setFixedHeight(26)
+        toolbar.setStyleSheet(f"background:{LOG_BG_DARK}; border-bottom:1px solid #1e2a40;")
+        tb_lay = QHBoxLayout(toolbar)
+        tb_lay.setContentsMargins(10, 0, 10, 0)
+        tb_lay.setSpacing(10)
+        lbl = QLabel("OUTPUT")
+        lbl.setStyleSheet(
+            f"font-size:9px; font-weight:600; letter-spacing:.08em; "
+            f"color:#4B5563; font-family:{FONT_MONO};"
+        )
+        tb_lay.addWidget(lbl)
+        tb_lay.addStretch()
+        clear_btn = QPushButton("Clear")
+        clear_btn.setCursor(Qt.PointingHandCursor)
+        clear_btn.setStyleSheet(
+            f"QPushButton {{ background:transparent; border:none; "
+            f"font-size:9px; color:#4B5563; font-family:{FONT_MONO}; }}"
+            f"QPushButton:hover {{ color:{FG_ON_DARK}; }}"
+        )
+        clear_btn.clicked.connect(self._clear)
+        tb_lay.addWidget(clear_btn)
+        root.addWidget(toolbar)
+
+        # text area
+        self._text = QTextEdit()
+        self._text.setReadOnly(True)
+        self._text.setFrameShape(QFrame.NoFrame)
+        self._text.setStyleSheet(
+            f"QTextEdit {{ background:{LOG_BG_DARK}; color:{FG_ON_DARK}; "
+            f"font-family:{FONT_MONO}; font-size:{TEXT_SM}px; "
+            f"padding:6px 10px; border:none; }}"
+        )
+        root.addWidget(self._text)
+
+        self._auto_scroll = True
+        self._last_count  = 0
+
+    def on_logs_changed(self) -> None:
+        """Called by state.logs_changed — append only new entries."""
+        from ui.state import AppState
+        # access state via parent chain
+        state = self._find_state()
+        if not state:
+            return
+        logs = state.logs
+        new_entries = logs[self._last_count:]
+        if not new_entries:
+            return
+        self._last_count = len(logs)
+        cursor = self._text.textCursor()
+        cursor.movePosition(QTextCursor.End)
+        for entry in new_entries:
+            color = self._LEVEL_COLOR.get(entry.lvl, FG_ON_DARK)
+            line = f'<span style="color:#4B5563">{entry.t}</span> ' \
+                   f'<span style="color:{color}">{entry.msg}</span><br>'
+            cursor.insertHtml(line)
+        if self._auto_scroll:
+            self._text.verticalScrollBar().setValue(
+                self._text.verticalScrollBar().maximum()
+            )
+
+    def _clear(self) -> None:
+        self._text.clear()
+        self._last_count = 0
+
+    def _find_state(self):
+        """Walk up the widget tree to find DetailPanel which holds state."""
+        w = self.parent()
+        while w:
+            if hasattr(w, '_state'):
+                return w._state
+            w = w.parent() if hasattr(w, 'parent') else None
+        return None
 
 
 class _NoSelection(QWidget):

@@ -209,7 +209,7 @@ Pipeline: **DL → MP3 → ×Speed → /Split**
 
 ---
 
-### Phase 11.5 · Download Console
+### Phase 11.5 · Download Console ✅
 
 **Shippable as:** Users can see exactly what yt-dlp and ffmpeg are doing in real time — like Postman's Console panel, toggleable without leaving the download view.
 
