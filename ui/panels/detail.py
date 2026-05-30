@@ -396,10 +396,13 @@ class VideoRow(QWidget):
         # title + error
         col_w = QWidget()
         col_w.setStyleSheet("background:transparent;")
+        col_w.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         title_col = QVBoxLayout(col_w)
         title_col.setContentsMargins(0, 0, 0, 0)
         title_col.setSpacing(2)
         self._title_lbl = QLabel(video.title)
+        self._title_lbl.setWordWrap(True)
+        self._title_lbl.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         self._title_lbl.setStyleSheet(f"font-size:12px; color:{FG};")
         title_col.addWidget(self._title_lbl)
         if is_failed and video.error:
