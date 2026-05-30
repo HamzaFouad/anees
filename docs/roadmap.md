@@ -86,16 +86,17 @@ All state transitions work with mock data:
 
 ---
 
-### Phase 4 · ffmpeg MP3 Conversion
+### Phase 4 · ffmpeg MP3 Conversion ✅
 
 **Shippable as:** Downloaded audio is transcoded to mono MP3.
 
-| File | Purpose |
-|------|---------|
-| `backend/commands/ffmpeg.py` | `build_mp3_cmd(input, output, mono) → list[str]` |
-| `backend/services/mp3_service.py` | Runs ffmpeg after each download; advances Video.stage: download → mp3 |
-
-Pipeline strip in the UI advances correctly: **DL → MP3**.
+> **Subsumed into Phase 3.** The original plan assumed a separate ffmpeg subprocess after each yt-dlp download. Switching to the yt-dlp Python SDK made this unnecessary — `FFmpegExtractAudio` runs as a built-in postprocessor inside `YtdlpClient.download()`, producing CBR 192 kbps mono MP3 in a single pass.
+>
+> What is already implemented in `backend/commands/ytdlp.py`:
+> - `FFmpegExtractAudio` postprocessor with `preferredcodec: "mp3"` and `preferredquality: "192"`
+> - `-ac 1` postprocessor arg for mono downmix
+> - `Video.stage` advances `download → mp3 → done` via `on_progress` and `postprocessor_hooks`
+> - Pipeline strip shows **DL → MP3 → Done** correctly
 
 ---
 

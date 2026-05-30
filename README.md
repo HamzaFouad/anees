@@ -66,7 +66,7 @@ anees/
 | Feature | Status |
 |---------|--------|
 | Frameless UI shell — all panels, dialogs, run states | ✅ |
-| yt-dlp download + mono MP3 conversion | ✅ |
+| yt-dlp download + mono MP3 conversion (Phase 3 + 4) | ✅ |
 | Playlist info fetch on add (titles + durations) | ✅ |
 | Per-video live stage progress (DL → MP3 → Done) | ✅ |
 | Estimated size in stats header | ✅ |
