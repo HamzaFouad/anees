@@ -114,6 +114,10 @@ class _Detail(QWidget):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.NoFrame)
+        # hide the vertical scrollbar so the viewport is always the same width
+        # as _ColHeader above it — prevents column misalignment when content
+        # overflows; wheel/touch scrolling still works without a visible bar
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         scroll.setStyleSheet(f"QScrollArea {{ background:{BG}; border:none; }}")
         self._rows_widget = QWidget()
         self._rows_widget.setStyleSheet(f"background:{BG};")
