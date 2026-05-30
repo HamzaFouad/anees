@@ -100,44 +100,45 @@ All state transitions work with mock data:
 
 ---
 
-## Milestone 2 — Speed Control
-
-> Goal: Each playlist has a configurable playback speed multiplier; processed files play back faster.
-
----
-
-### Phase 5 · Speed Processing
-
-| File | Purpose |
-|------|---------|
-| `backend/commands/ffmpeg.py` | `build_atempo_filter(speed: float) → str` — chains filters when speed > 2.0 |
-| `backend/services/speed_service.py` | Runs atempo pass after MP3; advances stage: mp3 → speed |
-
-- Speed value set per-playlist in Add Playlist dialog (already wired in Phase 2)
-- Default speed from Settings (Phase 13)
-- For speed > 2.0: chains `atempo` filters (`atempo=sqrt(N),atempo=sqrt(N)`)
-
-Pipeline: **DL → MP3 → ×Speed**
-
----
-
-## Milestone 3 — Audio Splitting
+## Milestone 2 — Audio Splitting
 
 > Goal: Long tracks (> N minutes) are split into N-minute chunks.
 
 ---
 
-### Phase 6 · Split Processing
+### Phase 5 · Split Processing
 
 | File | Purpose |
 |------|---------|
 | `backend/commands/ffmpeg.py` | `build_split_cmd(input, output_dir, chunk_min) → list[str]` (uses `-f segment -segment_time`) |
-| `backend/services/split_service.py` | Runs split pass after speed; advances stage: speed → split |
+| `backend/services/split_service.py` | Runs split pass after MP3; advances stage: mp3 → split |
 
 - Split toggle + chunk length set per-playlist in Add Playlist dialog
 - Output naming: `00_01_Title_part01.mp3`, `00_01_Title_part02.mp3`, …
+- Split before speed so the atempo filter runs on shorter files (faster)
 
-Pipeline: **DL → MP3 → ×Speed → /Split**
+Pipeline: **DL → MP3 → /Split**
+
+---
+
+## Milestone 3 — Speed Control
+
+> Goal: Each playlist has a configurable playback speed multiplier; processed files play back faster.
+
+---
+
+### Phase 6 · Speed Processing
+
+| File | Purpose |
+|------|---------|
+| `backend/commands/ffmpeg.py` | `build_atempo_filter(speed: float) → str` — chains filters when speed > 2.0 |
+| `backend/services/speed_service.py` | Runs atempo pass after split; advances stage: split → speed |
+
+- Speed value set per-playlist in Add Playlist dialog
+- Default speed from Settings (Phase 13)
+- For speed > 2.0: chains `atempo` filters (`atempo=sqrt(N),atempo=sqrt(N)`)
+
+Pipeline: **DL → MP3 → /Split → ×Speed**
 
 ---
 
