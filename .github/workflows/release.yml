@@ -97,12 +97,19 @@ jobs:
         with:
           name: "Anees ${{ github.ref_name }}"
           body: |
-            ## What's included
-            - **Anees-Windows.zip** — extract and run `Anees.exe` (ffmpeg bundled, no install needed)
-            - **Anees-macOS.zip** — drag `Anees.app` to `/Applications`
+            ## Installation
 
-            ### macOS requirement
-            ffmpeg must be installed: `brew install ffmpeg`
+            ### Windows
+            1. Download **Anees-Windows.zip**
+            2. **Extract All** to a folder (Desktop, Documents, etc.) — do not run from inside the zip
+            3. Open the extracted `Anees` folder → double-click **Anees.exe**
+
+            ffmpeg is bundled — no extra install needed.
+
+            ### macOS
+            1. Download **Anees-macOS.zip** and extract
+            2. Drag **Anees.app** to `/Applications`
+            3. Install ffmpeg if you haven't: `brew install ffmpeg`
           files: |
             artifacts/Anees-macOS.zip
             artifacts/Anees-Windows.zip
