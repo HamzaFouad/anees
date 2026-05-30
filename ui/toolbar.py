@@ -215,24 +215,11 @@ class RunControls(QWidget):
             self._lay.addWidget(paused_lbl)
 
         elif rs == RunState.COMPLETE:
-            merge_btn = QPushButton("  Merge to folder")
-            merge_btn.setIcon(QIcon(icon_pixmap("merge", 13, ON_PRIMARY)))
-            merge_btn.setFixedHeight(32)
-            merge_btn.setCursor(Qt.PointingHandCursor)
-            merge_btn.setStyleSheet(f"""
-                QPushButton {{ background:{PRIMARY}; color:{ON_PRIMARY}; border:none;
-                    border-radius:6px; padding:0 14px; font-size:13px; font-weight:600; }}
-                QPushButton:hover {{ background:{PRIMARY_HOVER}; }}
-            """)
-            from ui.dialogs.merge import MergeDialog
-            merge_btn.clicked.connect(lambda: MergeDialog(self._state, self.window()).exec())
-            self._lay.addWidget(merge_btn)
-
             new_btn = self._ctrl_btn("refresh", "New run", FG, BG, BORDER)
             new_btn.clicked.connect(self._do_stop)
             self._lay.addWidget(new_btn)
 
-            done_lbl = QLabel(f"✓  Complete · {c['videos_total']} videos · 1.2 GB")
+            done_lbl = QLabel(f"✓  Complete · {c['videos_total']} videos downloaded")
             done_lbl.setStyleSheet(f"font-size:{TEXT_MD}px; color:{SUCCESS_DARK};")
             self._lay.addWidget(done_lbl)
 
