@@ -344,10 +344,10 @@ class _ColHeader(QWidget):
         self._lay.addWidget(h("Dur", Qt.AlignRight, 50))
         self._lay.addWidget(h("DL",  Qt.AlignHCenter, 28))
         self._lay.addWidget(h("MP3", Qt.AlignHCenter, 28))
+        split_val = f"/{pl.split_min}m" if (pl and pl.split_enabled) else "/–"
+        self._lay.addWidget(h(split_val, Qt.AlignHCenter, 28))
         spd = f"×{pl.speed}" if pl else "×"
         self._lay.addWidget(h(spd, Qt.AlignHCenter, 28))
-        split_val = f"/{pl.split_min}" if (pl and pl.split_enabled) else "/–"
-        self._lay.addWidget(h(split_val, Qt.AlignHCenter, 28))
         self._lay.addWidget(h("State", Qt.AlignRight, 92))
 
     def update(self, pl):

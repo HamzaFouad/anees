@@ -6,11 +6,12 @@ Never import backend.services.*, backend.commands.*, or backend.storage.* from u
 
 from backend.api.download import DownloadAPI
 from backend.api.info import InfoAPI
+from backend.api.split import SplitAPI
 from backend.api.stats import playlist_size_estimate, playlist_total_duration
 from backend.api.config import get_output_root, set_output_root
 
 __all__ = [
-    "DownloadAPI", "InfoAPI",
+    "DownloadAPI", "InfoAPI", "SplitAPI",
     "playlist_size_estimate", "playlist_total_duration",
     "get_output_root", "set_output_root",
 ]

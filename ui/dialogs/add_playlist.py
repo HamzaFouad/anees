@@ -8,7 +8,7 @@ def _fmt_now() -> str:
 
 
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QWidget,
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QWidget, QSpinBox,
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
@@ -17,7 +17,7 @@ from ui.theme import (
     PRIMARY, ON_PRIMARY, PRIMARY_HOVER,
     FG, FG_MUTED, BG, BG_MUTED, BG_SUBTLE, BORDER,
 )
-from ui.widgets import StyledInput, icon_pixmap, field
+from ui.widgets import Toggle, StyledInput, icon_pixmap, field
 from ui.state import AppState
 from backend.models import Playlist
 
@@ -71,12 +71,37 @@ class AddPlaylistDialog(QDialog):
         self._url_input = StyledInput("https://youtube.com/playlist?list=…", mono=True)
         body_lay.addWidget(field("Playlist URL", self._url_input))
 
+        # prefix + split row
+        mid = QWidget()
+        mid_lay = QHBoxLayout(mid)
+        mid_lay.setContentsMargins(0, 0, 0, 0)
+        mid_lay.setSpacing(10)
+
         self._prefix_input = StyledInput(next_prefix, mono=True)
         self._prefix_input.setText(next_prefix)
         self._prefix_input.setAlignment(Qt.AlignCenter)
         pfx_w = field("Prefix", self._prefix_input)
         pfx_w.setFixedWidth(80)
-        body_lay.addWidget(pfx_w)
+        mid_lay.addWidget(pfx_w)
+
+        # split toggle + spinbox
+        split_w = QWidget()
+        split_lay = QHBoxLayout(split_w)
+        split_lay.setContentsMargins(0, 0, 0, 0)
+        split_lay.setSpacing(8)
+        self._split_toggle = Toggle(False)
+        self._split_toggle.toggled.connect(self._on_split_toggle)
+        self._split_spin = QSpinBox()
+        self._split_spin.setRange(5, 120)
+        self._split_spin.setValue(30)
+        self._split_spin.setSuffix(" min")
+        self._split_spin.setEnabled(False)
+        self._split_spin.setFixedHeight(32)
+        self._split_spin.setStyleSheet(self._spin_style(False))
+        split_lay.addWidget(self._split_toggle)
+        split_lay.addWidget(self._split_spin, 1)
+        mid_lay.addWidget(field("Split chunks", split_w), 1)
+        body_lay.addWidget(mid)
         root.addWidget(body)
 
         # ── footer ──
@@ -116,11 +141,26 @@ class AddPlaylistDialog(QDialog):
         f_lay.addWidget(add_btn)
         root.addWidget(footer)
 
+    def _spin_style(self, enabled: bool) -> str:
+        bg    = BG       if enabled else BG_SUBTLE
+        color = FG       if enabled else FG_MUTED
+        return (
+            f"QSpinBox {{ background:{bg}; color:{color}; border:1px solid {BORDER}; "
+            f"border-radius:6px; padding:0 8px; "
+            f"font-family:'JetBrains Mono',monospace; font-size:12px; }}"
+        )
+
+    def _on_split_toggle(self, checked: bool) -> None:
+        self._split_spin.setEnabled(checked)
+        self._split_spin.setStyleSheet(self._spin_style(checked))
+
     def _on_add(self) -> None:
         url = self._url_input.text().strip()
         if not url:
             return
-        prefix = self._prefix_input.text().strip() or str(len(self._state.playlists)).zfill(2)
+        prefix      = self._prefix_input.text().strip() or str(len(self._state.playlists)).zfill(2)
+        split_on    = self._split_toggle._checked
+        split_min   = self._split_spin.value()
 
         pl = Playlist(
             id           = str(uuid.uuid4()),
@@ -132,8 +172,8 @@ class AddPlaylistDialog(QDialog):
             status       = "queued",
             active_stage = "download",
             speed        = 1.0,
-            split_enabled= False,
-            split_min    = 30,
+            split_enabled= split_on,
+            split_min    = split_min,
             size_mb      = None,
             added_at     = _fmt_now(),
         )

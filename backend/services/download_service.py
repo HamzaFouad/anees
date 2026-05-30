@@ -7,6 +7,7 @@ from typing import Callable
 import re
 from backend.models import Playlist, Video
 from backend.commands.ytdlp import YtdlpClient
+from backend.services.split_service import SplitService
 
 
 def _safe_name(s: str, maxlen: int = 60) -> str:
@@ -122,9 +123,20 @@ class DownloadService:
             idx      = self._current_idx
             title    = info.get("title") or f"Video {idx+1}"
             duration = int(info.get("duration") or 0)
+            filepath = info.get("filepath") or info.get("filename", "")
+
+            self._on_video_meta(pl.id, idx, title, duration)
+
+            # ── split pass ────────────────────────────────────────────────────
+            if pl.split_enabled and filepath and not self._stop.is_set():
+                self._on_video_stage(pl.id, idx, "split", 0.3)
+                parts = SplitService(
+                    on_log=lambda m: self._log("debug", m)
+                ).split_file(filepath, pl.split_min, self._stop)
+                self._log("info", f"Split [{idx+1}] {title} → {len(parts)} part(s)")
+
             self._log("info", f"Done [{idx+1}] {title}")
             self._on_video_stage(pl.id, idx, "done", 1.0)
-            self._on_video_meta(pl.id, idx, title, duration)
             self._current_idx += 1
 
         try:

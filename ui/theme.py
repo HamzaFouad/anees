@@ -125,8 +125,8 @@ ICONS: dict[str, str] = {
 PIPELINE_STAGES = [
     ("download", "Download", "DL",  "download"),
     ("mp3",      "Mono MP3", "MP3", "music"),
-    ("speed",    "Speed up", "×",   "gauge"),
     ("split",    "Split",    "/",   "scissors"),
+    ("speed",    "Speed up", "×",   "gauge"),
 ]
 
 
