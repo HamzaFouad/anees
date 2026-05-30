@@ -102,6 +102,24 @@
 
 ---
 
+## Concurrent split pipeline — `ThreadPoolExecutor(max_workers=1)`
+
+**Decision:** Split runs in a background thread so the next video's download starts immediately after the current video's MP3 conversion finishes.
+
+**Why:**
+- Previously `on_postprocess` called `SplitService.split_file()` synchronously. yt-dlp waits for the callback to return before fetching the next video, so CPU-bound split work blocked network-bound download work.
+- With `max_workers=1`, one split runs while the next video downloads. This fully overlaps I/O with CPU without saturating the machine (no multiple parallel ffmpeg processes).
+
+**How it works:**
+- `on_postprocess` marks the video as "split" (0.1), submits `_do_split()` to the thread pool, and **returns immediately** so yt-dlp starts the next download.
+- `_do_split()` runs ffmpeg in the background, then emits `"done"` when it finishes.
+- `executor.shutdown(wait=True)` in the `finally` block of `_download()` ensures all splits complete before `execute()` fires `on_complete`.
+- `_current_idx` and `_done_fps` are only accessed from the yt-dlp thread (not the split thread) — no race conditions.
+
+**Where:** `backend/services/download_service.py` — `_download()`, `_do_split()`.
+
+---
+
 ## Config in `~/.anees/config.json`
 
 **Decision:** Simple JSON, not a database or platform settings API.

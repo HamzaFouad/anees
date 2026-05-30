@@ -67,19 +67,32 @@ User clicks Start run
   → AppState.start_run()
   → DownloadWorker(QThread).start()
        └─ DownloadAPI → DownloadService.execute()
-            ├─ InfoService.fetch_playlist()      → videos_ready.emit()
-            │       └─ YtdlpClient.fetch_info()         ↓
-            └─ YtdlpClient.download()            → video_stage.emit()   (per-video)
-                 ├─ on_progress hook             → video_meta.emit()    (on MP3 ready)
-                 └─ on_postprocess hook          → log_added.emit()
-                       └─ SplitService (if enabled)
-  ↓ (queued connections back to main thread)
+            ├─ InfoService.fetch_playlist()           → videos_ready.emit()
+            │       └─ YtdlpClient.fetch_info()
+            └─ YtdlpClient.download()  ← yt-dlp thread
+                 ├─ on_progress hook   → video_stage.emit()  (download %)
+                 └─ on_postprocess hook (fires when MP3 is ready)
+                       ├─ video_meta.emit()
+                       ├─ if split_enabled:
+                       │    video_stage.emit("split")
+                       │    executor.submit(_do_split)  ← returns immediately!
+                       │    yt-dlp starts next video download ↓
+                       └─ else: video_stage.emit("done")
+
+  _do_split() — runs in ThreadPoolExecutor(max_workers=1)
+       └─ SplitService.split_file()   ← concurrent with next video download
+             └─ FfmpegClient.split()  ← subprocess, killed on stop
+       └─ video_stage.emit("done")    ← when split finishes
+
+  ↓ (all signals are queued connections → main thread)
 AppState._on_video_stage() → video_row_changed.emit(pid, idx)
                                    ↓
                           DetailPanel._on_video_row_changed()
                                    ↓
                           VideoRow.refresh(video)   ← in-place, no rebuild
 ```
+
+**Concurrency model:** yt-dlp runs one download at a time (sequential per playlist). Split runs concurrently with the *next* video's download in a single background thread. `executor.shutdown(wait=True)` drains all pending splits before `_download()` returns.
 
 ## UI refresh throttling
 
