@@ -14,12 +14,14 @@ class YtdlpClient:
 
     # ── Metadata ──────────────────────────────────────────────────────────────
     def fetch_info(self, url: str) -> tuple[list[Video], str]:
-        """Fetch full playlist metadata including duration (no download).
+        """Fetch playlist metadata in a single network request (no download).
 
-        Does NOT use extract_flat so that duration is available for all
-        video types (including Shorts). The YouTube browse API returns
-        duration for all entries in the same round-trip, so this is still
-        a single network request for most playlists.
+        Uses extract_flat so the playlist page is fetched once rather than
+        making a separate request per video. Duration is populated for
+        regular YouTube videos from the playlist API response (lengthText).
+        YouTube Shorts omit lengthText in the playlist API, so their
+        duration stays 0 and is filled in later via on_video_meta when
+        each Short finishes downloading.
 
         Returns (videos, playlist_title).
         """
@@ -27,8 +29,9 @@ class YtdlpClient:
         videos: list[Video] = []
         title = ""
         opts = {
-            "quiet":       True,
-            "no_warnings": True,
+            "quiet":        True,
+            "no_warnings":  True,
+            "extract_flat": True,
         }
         try:
             with yt_dlp.YoutubeDL(opts) as ydl:
