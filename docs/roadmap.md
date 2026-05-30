@@ -23,7 +23,7 @@ Each phase is independently shippable and delivers end-to-end value before the n
 
 ---
 
-### Phase 2 · UI Shell (mock data, no backend)
+### Phase 2 · UI Shell (mock data, no backend) ✅
 
 **Shippable as:** Interactive design prototype — validates the UI and all workflows before any backend work.
 
@@ -69,7 +69,7 @@ All state transitions work with mock data:
 
 ---
 
-### Phase 3 · yt-dlp Download Integration
+### Phase 3 · yt-dlp Download Integration ✅
 
 **Shippable as:** User can download a real YouTube playlist to disk.
 

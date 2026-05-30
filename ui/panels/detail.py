@@ -180,8 +180,10 @@ class _DetailHeader(QWidget):
     def refresh(self, pl: Playlist, videos: list[Video]):
         self._clear()
 
+        from backend.api import playlist_size_estimate
         failed_count = sum(1 for v in videos if v.stage == "failed")
         pct = int(pl.completed / pl.video_count * 100) if pl.video_count else 0
+        est_mb = playlist_size_estimate(pl)
 
         # ── top row (QWidget container so _clear can deleteLater it) ──────────
         top_w = QWidget(); top_w.setStyleSheet("background:transparent;")
@@ -250,7 +252,9 @@ class _DetailHeader(QWidget):
             ("Speed",    f"{pl.speed}×", "override" if pl.speed != 1.5 else "default", False),
             ("Split",    f"{pl.split_min}m" if pl.split_enabled else "off",
              "enabled" if pl.split_enabled else "—", False),
-            ("Size",     fmt_mb(pl.size_mb), pl.added_at, False),
+            ("Size",
+             fmt_mb(pl.size_mb) if pl.size_mb else (f"~{est_mb} MB" if est_mb else "—"),
+             pl.added_at, False),
             ("Failed",   str(failed_count), "none" if failed_count == 0 else "see below", True),
         ]
         for label, val, sub, is_fail in stats:
