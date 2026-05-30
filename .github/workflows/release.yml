@@ -1,0 +1,106 @@
+name: Release
+
+# Triggered when you push a version tag like v0.1.0
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write   # needed to create the GitHub release
+
+jobs:
+  # ── macOS .app ────────────────────────────────────────────────────────────
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pyinstaller
+
+      - name: Build .app
+        run: pyinstaller anees.spec --clean --noconfirm
+
+      - name: Zip the app bundle
+        run: |
+          cd dist
+          zip -r Anees-macOS.zip Anees.app
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Anees-macOS
+          path: dist/Anees-macOS.zip
+
+  # ── Windows .exe ──────────────────────────────────────────────────────────
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pyinstaller
+
+      - name: Install ffmpeg
+        run: choco install ffmpeg -y
+
+      - name: Build .exe
+        run: pyinstaller anees.spec --clean --noconfirm
+
+      - name: Zip the Windows folder
+        run: |
+          cd dist
+          Compress-Archive -Path Anees -DestinationPath Anees-Windows.zip
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Anees-Windows
+          path: dist/Anees-Windows.zip
+
+  # ── Create GitHub Release ─────────────────────────────────────────────────
+  release:
+    needs: [build-macos, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: Anees-macOS
+          path: artifacts
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: Anees-Windows
+          path: artifacts
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Anees ${{ github.ref_name }}"
+          body: |
+            ## What's included
+            - **Anees-macOS.zip** — drag `Anees.app` to `/Applications`
+            - **Anees-Windows.zip** — extract and run `Anees.exe`
+
+            ### Requirements
+            - **ffmpeg** must be installed and in PATH
+              - macOS: `brew install ffmpeg`
+              - Windows: `choco install ffmpeg` or download from https://ffmpeg.org
+          files: |
+            artifacts/Anees-macOS.zip
+            artifacts/Anees-Windows.zip
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') }}
