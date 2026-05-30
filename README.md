@@ -56,23 +56,29 @@ anees/
     utils/           # pure utilities (audio size estimation, …)
     models.py        # Playlist, Video, RunState, … dataclasses
   docs/
-    roadmap.md
+    roadmap.md        # milestone/phase plan
+    architecture.md   # layer diagram and signal flow
+    decisions.md      # why key technical decisions were made
+    backend-api.md    # backend API reference for ui/ callers
 ```
 
 ## Status
 
-**Phase 3 complete** — real downloads working end-to-end.
+**Phase 5 complete** — download + split working end-to-end.
 
 | Feature | Status |
 |---------|--------|
 | Frameless UI shell — all panels, dialogs, run states | ✅ |
-| yt-dlp download + mono MP3 conversion (Phase 3 + 4) | ✅ |
+| yt-dlp download + CBR 192 kbps mono MP3 (Phase 3 + 4) | ✅ |
 | Playlist info fetch on add (titles + durations) | ✅ |
-| Per-video live stage progress (DL → MP3 → Done) | ✅ |
-| Estimated size in stats header | ✅ |
-| Stop / Pause / Resume | ✅ |
-| Speed processing (atempo) | 🔜 Phase 5 |
-| Split processing | 🔜 Phase 6 |
+| Per-video live stage progress (DL → MP3 → Split → Done) | ✅ |
+| Split into N-minute chunks via ffmpeg stream copy (Phase 5) | ✅ |
+| Configurable output folder + per-playlist subfolders | ✅ |
+| Drag-and-drop queue reorder with prefix renumbering | ✅ |
+| Estimated size + disk space check before run | ✅ |
+| Download console (collapsible terminal panel) | ✅ |
+| PyInstaller Windows .exe + macOS .app via GitHub Actions CI | ✅ |
+| Speed processing (atempo filter) | 🔜 Phase 6 |
 | Merge to folder | 🔜 Phase 7 |
 | SQLite history | 🔜 Phase 9 |
 

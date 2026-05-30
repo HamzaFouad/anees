@@ -1,0 +1,90 @@
+# Anees — Architecture
+
+## Layer diagram
+
+```
+┌─────────────────────────────────────────────────────┐
+│  ui/                                                │
+│  ┌─────────────┐  ┌──────────────┐  ┌───────────┐  │
+│  │  ui/api/    │  │ ui/workers/  │  │ ui/panels │  │
+│  │  RunAPI     │  │ DownloadWorker│  │ dialogs   │  │
+│  │  QueueAPI   │  │ InfoWorker   │  │ state.py  │  │
+│  │  NavAPI     │  └──────┬───────┘  └───────────┘  │
+│  └──────┬──────┘         │                          │
+└─────────┼────────────────┼──────────────────────────┘
+          │                │  (only backend.models and backend.api allowed)
+          ▼                ▼
+┌─────────────────────────────────────────────────────┐
+│  backend/api/      ← public contract                │
+│  DownloadAPI · InfoAPI · SplitAPI · stats · config  │
+└────────────────────┬────────────────────────────────┘
+                     │
+          ┌──────────▼──────────┐
+          │  backend/services/  │  ← internal orchestration
+          │  DownloadService    │
+          │  InfoService        │
+          │  SplitService       │
+          └──────────┬──────────┘
+                     │
+          ┌──────────▼──────────┐
+          │  backend/commands/  │  ← tool wrappers
+          │  YtdlpClient        │  (only file importing yt_dlp)
+          │  FfmpegClient       │  (subprocess to ffmpeg binary)
+          └─────────────────────┘
+```
+
+## Packages
+
+### `ui/`
+PySide6 only. No file I/O, no subprocess, no SQLite.
+
+| Sub-package | Responsibility |
+|-------------|----------------|
+| `ui/api/` | All state mutations — `RunAPI.start()`, `QueueAPI.add()`, `NavAPI.go()`. Panels never call `state.*` directly except read access. |
+| `ui/workers/` | `QThread` subclasses that wrap backend API calls and emit Qt Signals back to the main thread. |
+| `ui/panels/` | Display widgets. Read `AppState` properties; call `ui/api/` for mutations. |
+| `ui/dialogs/` | Modal dialogs. Same rules as panels. |
+| `ui/state.py` | `AppState(QObject)` — owns all PySide6 Signals, throttles UI refreshes, manages `DownloadWorker` lifecycle. |
+| `ui/theme.py` | Design tokens: colors, typography, spacing, `PIPELINE_STAGES`. |
+| `ui/widgets.py` | Shared primitives: `Btn`, `Badge`, `Toggle`, `Spinner`, `EmptyState`, `Checkbox`, `field()`, `status_dot()`, `icon_button()`. |
+
+### `backend/`
+Pure Python. No PySide6 imports anywhere.
+
+| Sub-package | Responsibility |
+|-------------|----------------|
+| `backend/api/` | Public gateway. `ui/` imports only from here (plus `backend.models`). Each module is a thin facade delegating to services. |
+| `backend/services/` | Orchestration. `DownloadService` drives the queue; `SplitService` runs ffmpeg; `InfoService` fetches metadata. Never imported by `ui/`. |
+| `backend/commands/` | Tool wrappers. `YtdlpClient` (only file importing `yt_dlp`); `FfmpegClient` (subprocess wrapper). |
+| `backend/utils/` | Pure functions: `audio.estimate_size_mb()`, `config.get/set_output_root()`, `config.check_disk_space()`. |
+| `backend/models.py` | `@dataclass` definitions: `Playlist`, `Video`, `RunState`, `LogEntry`, …. Shared between `ui/` and `backend/`. |
+
+## Signal flow during a download
+
+```
+User clicks Start run
+  → ui/api/RunAPI.start()
+  → AppState.start_run()
+  → DownloadWorker(QThread).start()
+       └─ DownloadAPI → DownloadService.execute()
+            ├─ InfoService.fetch_playlist()      → videos_ready.emit()
+            │       └─ YtdlpClient.fetch_info()         ↓
+            └─ YtdlpClient.download()            → video_stage.emit()   (per-video)
+                 ├─ on_progress hook             → video_meta.emit()    (on MP3 ready)
+                 └─ on_postprocess hook          → log_added.emit()
+                       └─ SplitService (if enabled)
+  ↓ (queued connections back to main thread)
+AppState._on_video_stage() → video_row_changed.emit(pid, idx)
+                                   ↓
+                          DetailPanel._on_video_row_changed()
+                                   ↓
+                          VideoRow.refresh(video)   ← in-place, no rebuild
+```
+
+## UI refresh throttling
+
+During a run, `_on_video_stage` is called on every progress tick (50–100 times per video). To prevent flooding the main thread:
+
+- **Sidebar** (`playlists_changed`): only emitted when `stage == "done"` (once per video). Throttled via a 300ms `QTimer`.
+- **Detail panel** (`video_row_changed`): emitted on every stage *transition* (queued → download → mp3 → done) — direct, no throttle. Updates a single row in-place via `VideoRow.refresh()` without rebuilding the panel.
+- **`selection_changed`**: emitted only at structural moments (playlist selected, videos loaded, run complete). Never during a download.
