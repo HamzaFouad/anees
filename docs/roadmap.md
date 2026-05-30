@@ -260,7 +260,7 @@ Pipeline: **DL → MP3 → ×Speed → /Split**
 
 ---
 
-### Phase 15 · PyInstaller Packaging
+### Phase 15 · PyInstaller Packaging ✅
 
 | File | Purpose |
 |------|---------|
