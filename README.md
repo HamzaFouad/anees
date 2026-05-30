@@ -77,3 +77,42 @@ anees/
 | SQLite history | 🔜 Phase 9 |
 
 See [`docs/roadmap.md`](docs/roadmap.md) for the full milestone plan.
+
+---
+
+## Releasing
+
+Releases are built automatically by GitHub Actions when a version tag is pushed. Both macOS `.app` and Windows `.exe` are produced and attached to the GitHub release.
+
+### Create a release
+
+```bash
+# 1. Make sure prod is up to date
+git checkout prod
+git merge main          # or cherry-pick specific commits
+
+# 2. Tag with a version and push — CI does the rest
+git tag v0.2.0 -m "short release notes here"
+git push origin prod v0.2.0
+```
+
+The `release.yml` workflow triggers, builds both platforms in parallel, and publishes a draft-free release at `github.com/HamzaFouad/anees/releases`.
+
+### Local build (without CI)
+
+```bash
+# macOS
+./build.sh             # → dist/Anees.app
+
+# Windows
+build.bat              # → dist\Anees\Anees.exe
+```
+
+### User requirements
+
+Anees bundles Python and all dependencies. The only external requirement is **ffmpeg**:
+
+| Platform | Install |
+|----------|---------|
+| macOS | `brew install ffmpeg` |
+| Windows | `choco install ffmpeg` or [ffmpeg.org](https://ffmpeg.org/download.html) |
