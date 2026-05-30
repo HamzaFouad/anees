@@ -68,10 +68,11 @@ class YtdlpClient:
         self,
         url: str,
         output_template: str,
-        on_progress:      Callable[[dict], None],
-        on_postprocess:   Callable[[dict], None],
-        stop:             threading.Event,
-        pause:            threading.Event,
+        on_progress:    Callable[[dict], None],
+        on_postprocess: Callable[[dict], None],
+        stop:           threading.Event,
+        pause:          threading.Event,
+        on_log:         Callable[[str, str], None] | None = None,
     ) -> None:
         """Download *url* using the given output template.
 
@@ -87,6 +88,21 @@ class YtdlpClient:
                 raise yt_dlp.utils.DownloadCancelled("stopped by user")
             on_progress(d)
 
+        # yt-dlp logger — surfaces warnings/errors and [download] progress lines
+        # when on_log is provided; quiet stays True so raw output goes nowhere else
+        if on_log:
+            class _Logger:
+                def debug(self, msg):
+                    # [download] lines carry speed / ETA / progress text
+                    if msg.startswith("[download]") or msg.startswith("[info]"):
+                        on_log("debug", msg)
+                def info(self, msg):   on_log("info",  msg)
+                def warning(self, msg): on_log("warn", msg)
+                def error(self, msg):  on_log("error", msg)
+            logger = _Logger()
+        else:
+            logger = None
+
         ffmpeg = _find_ffmpeg()
         opts = {
             "format":          "bestaudio/best",
@@ -95,13 +111,14 @@ class YtdlpClient:
                 {
                     "key":              "FFmpegExtractAudio",
                     "preferredcodec":   "mp3",
-                    "preferredquality": "192",   # CBR 192 kbps; VBR "0" gave ~190 kbps anyway
+                    "preferredquality": "192",
                 },
             ],
             "postprocessor_args":  {"ffmpegextractaudio": ["-ac", "1"]},
             "outtmpl":             output_template,
             "ignoreerrors":        True,
             "quiet":               True,
+            **({"logger": logger} if logger else {}),
             "no_warnings":         True,
             "progress_hooks":      [_progress],
             "postprocessor_hooks": [on_postprocess],

@@ -105,9 +105,10 @@ class DownloadService:
 
     def _download(self, pl: Playlist) -> None:
         self._current_idx = 0
+        _done_fps: set[str] = set()   # dedup by MP3 filepath (robust vs postprocessor name)
+        _logged_pct: list[int] = [-1]  # last milestone logged (per-video, reset on new video)
 
         def _ffmpeg_log(m: str) -> None:
-            """Pass through ffmpeg lines — skip verbose build/codec banner."""
             if _FFMPEG_NOISE.match(m.strip()):
                 return
             lvl = "error" if m.strip().lower().startswith("error") else "debug"
@@ -125,43 +126,53 @@ class DownloadService:
             if status == "downloading":
                 total = d.get("total_bytes") or d.get("total_bytes_estimate") or 1
                 done  = d.get("downloaded_bytes") or 0
+                pct   = min(int(done / total * 100), 99)
+                # Log at 0 / 25 / 50 / 75 % milestones
+                milestone = (pct // 25) * 25
+                if milestone > _logged_pct[0]:
+                    _logged_pct[0] = milestone
+                    speed = d.get("speed")
+                    spd   = f"  {speed/1024/1024:.1f} MB/s" if speed else ""
+                    self._log("debug", f"[{idx+1}] downloading {pct}%{spd}")
                 self._on_video_stage(pl.id, idx, "download", min(done / total, 0.99))
             elif status == "finished":
+                _logged_pct[0] = -1   # reset for next video
                 self._on_video_stage(pl.id, idx, "mp3", 0.5)
+                self._log("debug", f"[{idx+1}] converting to mono MP3…")
 
         def on_postprocess(d: dict) -> None:
             if d.get("status") != "finished":
                 return
-            # Only act after FFmpegExtractAudio — that is when the MP3 file
-            # actually exists on disk.  Other postprocessors fire first with the
-            # original .webm file; if we split those we get
-            # "Invalid audio stream" because webm/opus ≠ MP3.
-            if d.get("postprocessor") != "FFmpegExtractAudio":
-                return
-
             info     = d.get("info_dict") or {}
             filepath = info.get("filepath") or ""
 
-            if not filepath.lower().endswith(".mp3"):
-                self._log("error",
-                    f"Expected .mp3 after audio extraction, got: {filepath!r}")
+            # Wait for an actual MP3 file on disk — avoids depending on the
+            # exact postprocessor key name which differs between yt-dlp versions
+            if not filepath.lower().endswith(".mp3") or not os.path.exists(filepath):
                 return
+            if filepath in _done_fps:
+                return
+            _done_fps.add(filepath)
 
             idx      = self._current_idx
             title    = info.get("title") or f"Video {idx+1}"
             duration = int(info.get("duration") or 0)
+            size_mb  = os.path.getsize(filepath) / 1024 / 1024
 
             self._on_video_meta(pl.id, idx, title, duration)
 
             # ── split pass ────────────────────────────────────────────────────
-            if pl.split_enabled and os.path.exists(filepath) and not self._stop.is_set():
+            if pl.split_enabled and not self._stop.is_set():
                 self._on_video_stage(pl.id, idx, "split", 0.3)
-                parts = SplitService(
-                    on_log=_ffmpeg_log
-                ).split_file(filepath, pl.split_min, self._stop)
-                self._log("info", f"Split [{idx+1}] {title} → {len(parts)} part(s)")
+                parts = SplitService(on_log=_ffmpeg_log).split_file(
+                    filepath, pl.split_min, self._stop
+                )
+                self._log("info",
+                    f"[{idx+1}] {title}  → {len(parts)} part(s)")
+            else:
+                self._log("info",
+                    f"[{idx+1}] {title}  ({size_mb:.1f} MB)")
 
-            self._log("info", f"Done [{idx+1}] {title}")
             self._on_video_stage(pl.id, idx, "done", 1.0)
             self._current_idx += 1
 
@@ -170,6 +181,7 @@ class DownloadService:
                 pl.url, out_tmpl,
                 on_progress, on_postprocess,
                 self._stop, self._pause,
+                on_log=lambda lvl, msg: self._log(lvl, msg),
             )
         except Exception as exc:
             self._log("error", f"Download failed: {pl.title} — {exc}")
