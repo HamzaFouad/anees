@@ -168,7 +168,7 @@ class RunControls(QWidget):
             self._lay.addWidget(start_btn)
 
             hint = QLabel(
-                f"{c['queued']} playlist{'s' if c['queued']!=1 else ''} queued · ~{c['queued']*8} min"
+                f"{c['queued']} playlist{'s' if c['queued']!=1 else ''} queued"
                 if c["queued"] > 0 else "Add a playlist to begin"
             )
             hint.setStyleSheet(f"font-size:{TEXT_MD}px; color:{FG_MUTED};")

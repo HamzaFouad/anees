@@ -30,8 +30,9 @@ class MergeDialog(QDialog):
         self.setWindowTitle("Merge to single folder")
         self.setFixedWidth(620)
         self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
+        self.setObjectName("mergeDialog")
         self.setStyleSheet(
-            f"background:{BG}; border-radius:10px; border:1px solid {BORDER};"
+            f"#mergeDialog {{ background:{BG}; border-radius:10px; border:1px solid {BORDER}; }}"
         )
 
         root = QVBoxLayout(self)

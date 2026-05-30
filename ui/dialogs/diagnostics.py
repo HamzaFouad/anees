@@ -35,8 +35,9 @@ class DiagnosticsDialog(QDialog):
         self.setWindowTitle("Send diagnostics")
         self.setFixedWidth(580)
         self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
+        self.setObjectName("diagnosticsDialog")
         self.setStyleSheet(
-            f"background:{BG}; border-radius:10px; border:1px solid {BORDER};"
+            f"#diagnosticsDialog {{ background:{BG}; border-radius:10px; border:1px solid {BORDER}; }}"
         )
 
         self._root = QVBoxLayout(self)

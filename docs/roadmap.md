@@ -209,6 +209,22 @@ Pipeline: **DL → MP3 → ×Speed → /Split**
 
 ---
 
+### Phase 11.5 · Download Console
+
+**Shippable as:** Users can see exactly what yt-dlp and ffmpeg are doing in real time — like Postman's Console panel, toggleable without leaving the download view.
+
+| File | Purpose |
+|------|---------|
+| `ui/panels/console.py` | Collapsible dark terminal panel embedded below the video rows in the detail panel |
+
+- Toggle button (▶ Console) in the detail panel header shows/hides the panel
+- Streams raw yt-dlp and ffmpeg output lines with timestamps and colour-coded severity (INFO · WARN · ERROR)
+- Auto-scrolls during active downloads; can be paused and cleared
+- Lines are sourced from `AppState.logs` filtered to the selected playlist
+- Closed by default; state persists per session
+
+---
+
 ### Phase 12 · Send Diagnostics
 
 | File | Purpose |

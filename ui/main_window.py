@@ -21,8 +21,11 @@ class MainWindow(QWidget):
         self.setAttribute(Qt.WA_TranslucentBackground, False)
         self.setMinimumSize(1100, 720)
         self.resize(1100, 720)
-        from ui.theme import BG
-        self.setStyleSheet(f"background:{BG};")
+        self.setObjectName("mainWindow")
+        from ui.theme import BG, BORDER
+        self.setStyleSheet(
+            f"#mainWindow {{ background:{BG}; border:1px solid {BORDER}; }}"
+        )
 
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)

@@ -150,7 +150,11 @@ def fmt_dur(sec: int) -> str:
 
 
 def fmt_mb(mb: float | None) -> str:
-    return "—" if mb is None else f"{mb:.1f} MB"
+    if mb is None:
+        return "—"
+    if mb >= 1024:
+        return f"{mb / 1024:.2f} GB"
+    return f"{mb:.1f} MB"
 
 
 def apply_global_stylesheet(app: QApplication) -> None:

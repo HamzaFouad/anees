@@ -29,8 +29,9 @@ class AddPlaylistDialog(QDialog):
         self.setWindowTitle("Add Playlist")
         self.setFixedWidth(480)
         self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
+        self.setObjectName("addPlaylistDialog")
         self.setStyleSheet(
-            f"background:{BG}; border-radius:10px; border:1px solid {BORDER};"
+            f"#addPlaylistDialog {{ background:{BG}; border-radius:10px; border:1px solid {BORDER}; }}"
         )
 
         next_prefix = str(len(state.playlists)).zfill(2)
