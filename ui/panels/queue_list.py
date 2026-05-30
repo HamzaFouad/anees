@@ -3,7 +3,8 @@ from PySide6.QtWidgets import (
     QScrollArea, QFrame,
 )
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QIcon
+from PySide6.QtCore import QMimeData
+from PySide6.QtGui import QIcon, QDrag, QPainter, QColor, QPen
 
 from ui.theme import (
     PRIMARY, PRIMARY_TINT_8, FG, FG_MUTED, BG, BG_MUTED, BG_SUBTLE, BORDER,
@@ -52,8 +53,11 @@ class QueueList(QWidget):
         scroll.setFrameShape(QFrame.NoFrame)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         scroll.setStyleSheet(f"QScrollArea {{ background:{BG_SUBTLE}; border:none; }}")
-        self._list_widget = QWidget()
+        self._list_widget = _DroppableList()
         self._list_widget.setStyleSheet(f"background:{BG_SUBTLE};")
+        self._list_widget.reorder_requested.connect(
+            lambda pid, idx: self._api.reorder(pid, idx)
+        )
         self._list_layout = QVBoxLayout(self._list_widget)
         self._list_layout.setContentsMargins(0, 0, 0, 0)
         self._list_layout.setSpacing(0)
@@ -244,8 +248,25 @@ class PlaylistRow(QWidget):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
+            self._drag_start = event.position().toPoint()
             self.selected.emit(True)
         super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if not (event.buttons() & Qt.LeftButton) or self._locked:
+            return
+        if not hasattr(self, '_drag_start'):
+            return
+        if (event.position().toPoint() - self._drag_start).manhattanLength() < 12:
+            return
+        drag = QDrag(self)
+        mime = QMimeData()
+        mime.setText(self._pl.id)
+        drag.setMimeData(mime)
+        px = self.grab()
+        drag.setPixmap(px)
+        drag.setHotSpot(self._drag_start)
+        drag.exec(Qt.MoveAction)
 
     def set_selected(self, sel: bool):
         self._selected = sel
@@ -272,3 +293,75 @@ class PlaylistRow(QWidget):
         if not self._locked and hasattr(self, "_rm_btn"):
             self._rm_btn.setVisible(False)
         super().leaveEvent(event)
+
+
+class _DroppableList(QWidget):
+    """Inner list widget that accepts playlist drag-drops and shows a drop indicator."""
+    reorder_requested = Signal(str, int)   # playlist_id, target_index
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAcceptDrops(True)
+        self._drop_idx = -1
+
+    # ── drag/drop events ──────────────────────────────────────────────────────
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasText():
+            event.acceptProposedAction()
+
+    def dragMoveEvent(self, event):
+        if event.mimeData().hasText():
+            self._drop_idx = self._index_at(int(event.position().y()))
+            self.update()
+            event.acceptProposedAction()
+
+    def dragLeaveEvent(self, event):
+        self._drop_idx = -1
+        self.update()
+
+    def dropEvent(self, event):
+        if event.mimeData().hasText():
+            pid = event.mimeData().text()
+            idx = self._index_at(int(event.position().y()))
+            self._drop_idx = -1
+            self.update()
+            self.reorder_requested.emit(pid, idx)
+            event.acceptProposedAction()
+
+    # ── drop indicator ────────────────────────────────────────────────────────
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        if self._drop_idx < 0:
+            return
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        pen = QPen(QColor(PRIMARY), 2)
+        pen.setCapStyle(Qt.RoundCap)
+        p.setPen(pen)
+        y = self._indicator_y(self._drop_idx)
+        p.drawLine(4, y, self.width() - 4, y)
+
+    # ── helpers ───────────────────────────────────────────────────────────────
+    def _row_widgets(self) -> list[QWidget]:
+        lay = self.layout()
+        rows = []
+        for i in range(lay.count()):
+            item = lay.itemAt(i)
+            if item and item.widget() and isinstance(item.widget(), PlaylistRow):
+                rows.append(item.widget())
+        return rows
+
+    def _index_at(self, y: int) -> int:
+        for i, w in enumerate(self._row_widgets()):
+            if y < w.y() + w.height() // 2:
+                return i
+        return len(self._row_widgets())
+
+    def _indicator_y(self, idx: int) -> int:
+        rows = self._row_widgets()
+        if not rows:
+            return 0
+        if idx >= len(rows):
+            w = rows[-1]
+            return w.y() + w.height()
+        return rows[idx].y()

@@ -203,6 +203,21 @@ class AppState(QObject):
         self._query = q
         self.query_changed.emit(q)
 
+    def reorder_playlist(self, pid: str, target_index: int) -> None:
+        pls = list(self._playlists)
+        src = next((i for i, p in enumerate(pls) if p.id == pid), None)
+        if src is None or src == target_index:
+            return
+        pl = pls.pop(src)
+        if src < target_index:
+            target_index -= 1
+        target_index = max(0, min(target_index, len(pls)))
+        pls.insert(target_index, pl)
+        for i, p in enumerate(pls):
+            p.prefix = str(i).zfill(2)
+        self._playlists = pls
+        self.playlists_changed.emit()
+
     def set_output_root(self, path: str) -> None:
         self._output_root = path
         from backend.api import set_output_root

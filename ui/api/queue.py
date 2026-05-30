@@ -19,3 +19,6 @@ class QueueAPI:
 
     def search(self, query: str) -> None:
         self._state.set_query(query)
+
+    def reorder(self, playlist_id: str, target_index: int) -> None:
+        self._state.reorder_playlist(playlist_id, target_index)
