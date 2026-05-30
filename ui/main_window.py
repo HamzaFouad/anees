@@ -104,7 +104,8 @@ class MainWindow(QWidget):
             AddPlaylistDialog(self._state, self).exec()
 
     def _on_settings(self):
-        pass
+        from ui.dialogs.settings import SettingsDialog
+        SettingsDialog(self._state, self).exec()
 
     def _on_rerun(self):
         from ui.api import NavAPI

@@ -4,8 +4,18 @@ import threading
 from pathlib import Path
 from typing import Callable
 
+import re
 from backend.models import Playlist, Video
 from backend.commands.ytdlp import YtdlpClient
+
+
+def _safe_name(s: str, maxlen: int = 60) -> str:
+    return re.sub(r'[^\w\s-]', '_', s).strip('_ ')[:maxlen].strip()
+
+
+def _playlist_folder(pl: Playlist) -> str:
+    """e.g. '00_Andrew Huberman Sleep Toolkit'"""
+    return f"{pl.prefix}_{_safe_name(pl.title)}"
 
 
 class DownloadService:
@@ -77,7 +87,8 @@ class DownloadService:
         if self._stop.is_set():
             return
 
-        self._log("info", f"Downloading {len(pl.videos)} videos → {self._root}/{pl.prefix}_*")
+        folder = _playlist_folder(pl)
+        self._log("info", f"Downloading {len(pl.videos)} videos → {self._root}/{folder}/")
         self._download(pl)
 
     def _download(self, pl: Playlist) -> None:
@@ -86,7 +97,8 @@ class DownloadService:
 
         out_tmpl = os.path.join(
             self._root,
-            f"{pl.prefix}_%(playlist_index)02d_%(title).60s.%(ext)s",
+            _playlist_folder(pl),
+            "%(playlist_index)02d_%(title).60s.%(ext)s",
         )
 
         def on_progress(d: dict) -> None:

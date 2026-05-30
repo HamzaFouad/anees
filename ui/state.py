@@ -25,7 +25,8 @@ class AppState(QObject):
         self._query     = ""
         self._logs: list[LogEntry] = copy.deepcopy(MOCK_LOGS)
         self._worker    = None
-        self._output_root = str(Path.home() / "Downloads" / "Anees")
+        from backend.api import get_output_root
+        self._output_root = get_output_root()
         # throttle: batch UI refreshes during active downloads
         self._dirty_pids: set[str] = set()
         self._refresh_timer = QTimer(self)
@@ -201,6 +202,11 @@ class AppState(QObject):
     def set_query(self, q: str) -> None:
         self._query = q
         self.query_changed.emit(q)
+
+    def set_output_root(self, path: str) -> None:
+        self._output_root = path
+        from backend.api import set_output_root
+        set_output_root(path)
 
     def add_playlist(self, pl: Playlist) -> None:
         self._playlists.append(pl)
