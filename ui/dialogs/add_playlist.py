@@ -6,15 +6,18 @@ def _fmt_now() -> str:
     n = _dt.now()
     return f"{n.strftime('%b')} {n.day}, {n.hour}:{n.strftime('%M')}"
 
+
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QDoubleSpinBox, QSpinBox, QWidget,
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QWidget,
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
 
-from ui.theme import PRIMARY, ON_PRIMARY, PRIMARY_HOVER, FG, FG_MUTED, BG, BG_MUTED, BG_SUBTLE, BORDER
-from ui.widgets import Toggle, StyledInput, icon_pixmap, field
+from ui.theme import (
+    PRIMARY, ON_PRIMARY, PRIMARY_HOVER,
+    FG, FG_MUTED, BG, BG_MUTED, BG_SUBTLE, BORDER,
+)
+from ui.widgets import StyledInput, icon_pixmap, field
 from ui.state import AppState
 from backend.models import Playlist
 
@@ -67,54 +70,12 @@ class AddPlaylistDialog(QDialog):
         self._url_input = StyledInput("https://youtube.com/playlist?list=…", mono=True)
         body_lay.addWidget(field("Playlist URL", self._url_input))
 
-        mid_row = QWidget()
-        mid_lay = QHBoxLayout(mid_row)
-        mid_lay.setContentsMargins(0, 0, 0, 0)
-        mid_lay.setSpacing(10)
-
         self._prefix_input = StyledInput(next_prefix, mono=True)
         self._prefix_input.setText(next_prefix)
         self._prefix_input.setAlignment(Qt.AlignCenter)
         pfx_w = field("Prefix", self._prefix_input)
         pfx_w.setFixedWidth(80)
-        mid_lay.addWidget(pfx_w)
-
-        # speed
-        speed_w = QWidget()
-        speed_lay = QHBoxLayout(speed_w)
-        speed_lay.setContentsMargins(0, 0, 0, 0)
-        speed_lay.setSpacing(8)
-        self._speed_toggle = Toggle(False)
-        self._speed_toggle.toggled.connect(self._on_speed_toggle)
-        self._speed_spin = QDoubleSpinBox()
-        self._speed_spin.setRange(1.0, 3.0)
-        self._speed_spin.setSingleStep(0.05)
-        self._speed_spin.setValue(1.5)
-        self._speed_spin.setEnabled(False)
-        self._speed_spin.setFixedHeight(32)
-        self._speed_spin.setStyleSheet(self._spin_style(False))
-        speed_lay.addWidget(self._speed_toggle)
-        speed_lay.addWidget(self._speed_spin, 1)
-        mid_lay.addWidget(field("Speed", speed_w), 1)
-
-        # split
-        split_w = QWidget()
-        split_lay = QHBoxLayout(split_w)
-        split_lay.setContentsMargins(0, 0, 0, 0)
-        split_lay.setSpacing(8)
-        self._split_toggle = Toggle(False)
-        self._split_toggle.toggled.connect(self._on_split_toggle)
-        self._split_spin = QSpinBox()
-        self._split_spin.setRange(5, 120)
-        self._split_spin.setValue(30)
-        self._split_spin.setSuffix(" min")
-        self._split_spin.setEnabled(False)
-        self._split_spin.setFixedHeight(32)
-        self._split_spin.setStyleSheet(self._spin_style(False))
-        split_lay.addWidget(self._split_toggle)
-        split_lay.addWidget(self._split_spin, 1)
-        mid_lay.addWidget(field("Split (min)", split_w), 1)
-        body_lay.addWidget(mid_row)
+        body_lay.addWidget(pfx_w)
         root.addWidget(body)
 
         # ── footer ──
@@ -154,45 +115,24 @@ class AddPlaylistDialog(QDialog):
         f_lay.addWidget(add_btn)
         root.addWidget(footer)
 
-    def _spin_style(self, enabled: bool) -> str:
-        bg    = BG       if enabled else BG_SUBTLE
-        color = FG       if enabled else FG_MUTED
-        return (
-            f"QDoubleSpinBox, QSpinBox {{ "
-            f"background:{bg}; color:{color}; border:1px solid {BORDER}; "
-            f"border-radius:6px; padding:0 8px; "
-            f"font-family:'JetBrains Mono',monospace; font-size:12px; }}"
-        )
-
-    def _on_speed_toggle(self, checked: bool) -> None:
-        self._speed_spin.setEnabled(checked)
-        self._speed_spin.setStyleSheet(self._spin_style(checked))
-
-    def _on_split_toggle(self, checked: bool) -> None:
-        self._split_spin.setEnabled(checked)
-        self._split_spin.setStyleSheet(self._spin_style(checked))
-
     def _on_add(self) -> None:
         url = self._url_input.text().strip()
         if not url:
             return
-        prefix       = self._prefix_input.text().strip() or str(len(self._state.playlists)).zfill(2)
-        speed        = self._speed_spin.value() if self._speed_toggle._checked else 1.0
-        split_on     = self._split_toggle._checked
-        split_min    = self._split_spin.value()
+        prefix = self._prefix_input.text().strip() or str(len(self._state.playlists)).zfill(2)
 
         pl = Playlist(
             id           = str(uuid.uuid4()),
             prefix       = prefix,
-            title        = url,           # updated to real title after metadata fetch
+            title        = url,
             url          = url,
             video_count  = 0,
             completed    = 0,
             status       = "queued",
             active_stage = "download",
-            speed        = speed,
-            split_enabled= split_on,
-            split_min    = split_min,
+            speed        = 1.0,
+            split_enabled= False,
+            split_min    = 30,
             size_mb      = None,
             added_at     = _fmt_now(),
         )
