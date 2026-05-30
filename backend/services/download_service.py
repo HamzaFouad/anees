@@ -5,9 +5,20 @@ from pathlib import Path
 from typing import Callable
 
 import re
+import re
 from backend.models import Playlist, Video
 from backend.commands.ytdlp import YtdlpClient
 from backend.services.split_service import SplitService
+
+# Lines from ffmpeg that carry no actionable information for the user
+_FFMPEG_NOISE = re.compile(
+    r"^(ffmpeg version\s|built with\s|configuration:\s|lib\w+\s+\d"
+    r"|Input #\d|Output #\d|Stream #\d|Stream mapping"
+    r"|\s+Duration:\s|\s+Metadata\s*:|\s+encoder\s*:"
+    r"|\s+Stream #|\s+Copyright|\s+Press \[q\]"
+    r"|frame=\s*\d.*fps=|video:\s*\d|audio:\s*\d|subtitle:\s*\d)",
+    re.IGNORECASE,
+)
 
 
 def _safe_name(s: str, maxlen: int = 60) -> str:
@@ -94,7 +105,13 @@ class DownloadService:
 
     def _download(self, pl: Playlist) -> None:
         self._current_idx = 0
-        _done_ids: set[str] = set()
+
+        def _ffmpeg_log(m: str) -> None:
+            """Pass through ffmpeg lines — skip verbose build/codec banner."""
+            if _FFMPEG_NOISE.match(m.strip()):
+                return
+            lvl = "error" if m.strip().lower().startswith("error") else "debug"
+            self._log(lvl, m)
 
         out_tmpl = os.path.join(
             self._root,
@@ -115,23 +132,32 @@ class DownloadService:
         def on_postprocess(d: dict) -> None:
             if d.get("status") != "finished":
                 return
-            info  = d.get("info_dict") or {}
-            key   = str(info.get("id", "")) + str(info.get("playlist_index", ""))
-            if not key or key in _done_ids:
+            # Only act after FFmpegExtractAudio — that is when the MP3 file
+            # actually exists on disk.  Other postprocessors fire first with the
+            # original .webm file; if we split those we get
+            # "Invalid audio stream" because webm/opus ≠ MP3.
+            if d.get("postprocessor") != "FFmpegExtractAudio":
                 return
-            _done_ids.add(key)
+
+            info     = d.get("info_dict") or {}
+            filepath = info.get("filepath") or ""
+
+            if not filepath.lower().endswith(".mp3"):
+                self._log("error",
+                    f"Expected .mp3 after audio extraction, got: {filepath!r}")
+                return
+
             idx      = self._current_idx
             title    = info.get("title") or f"Video {idx+1}"
             duration = int(info.get("duration") or 0)
-            filepath = info.get("filepath") or info.get("filename", "")
 
             self._on_video_meta(pl.id, idx, title, duration)
 
             # ── split pass ────────────────────────────────────────────────────
-            if pl.split_enabled and filepath and not self._stop.is_set():
+            if pl.split_enabled and os.path.exists(filepath) and not self._stop.is_set():
                 self._on_video_stage(pl.id, idx, "split", 0.3)
                 parts = SplitService(
-                    on_log=lambda m: self._log("debug", m)
+                    on_log=_ffmpeg_log
                 ).split_file(filepath, pl.split_min, self._stop)
                 self._log("info", f"Split [{idx+1}] {title} → {len(parts)} part(s)")
 
