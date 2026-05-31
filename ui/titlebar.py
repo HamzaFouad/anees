@@ -20,6 +20,7 @@ class TitleBar(QWidget):
         # app mark
         self._mark = _AppMark()
         lay.addWidget(self._mark)
+        lay.addSpacing(4)
 
         # title
         self._title_lbl = QLabel("Anees")
