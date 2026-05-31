@@ -9,7 +9,7 @@ from PySide6.QtGui import QIcon, QColor
 from ui.theme import (
     PRIMARY, FG, FG_MUTED, FG_SUBTLE, BG, BG_MUTED, BG_SUBTLE, BG_ACCENT, BORDER,
     SUCCESS, SUCCESS_DARK, SUCCESS_BG, ERROR, ERROR_DARK, ERROR_BG, ERROR_BORDER,
-    SURFACE_ALT, ERROR_TINT_10, PRIMARY_TINT_8, ERROR_TINT_4,
+    SURFACE_ALT, ERROR_TINT_10,
     WARN_DARK,
     PIPELINE_STAGES, fmt_dur, fmt_mb,
 )
@@ -342,12 +342,12 @@ class _ColHeader(QWidget):
         self._lay.addWidget(h("#", Qt.AlignRight, 28))
         self._lay.addWidget(h("Title"), 1)
         self._lay.addWidget(h("Dur", Qt.AlignRight, 50))
-        self._lay.addWidget(h("DL",  Qt.AlignHCenter, 36))
-        self._lay.addWidget(h("MP3", Qt.AlignHCenter, 36))
+        self._lay.addWidget(h("DL",  Qt.AlignHCenter, 28))
+        self._lay.addWidget(h("MP3", Qt.AlignHCenter, 28))
         split_val = f"/{pl.split_min}m" if (pl and pl.split_enabled) else "/–"
-        self._lay.addWidget(h(split_val, Qt.AlignHCenter, 36))
+        self._lay.addWidget(h(split_val, Qt.AlignHCenter, 28))
         spd = f"×{pl.speed}" if pl else "×"
-        self._lay.addWidget(h(spd, Qt.AlignHCenter, 36))
+        self._lay.addWidget(h(spd, Qt.AlignHCenter, 28))
         self._lay.addWidget(h("State", Qt.AlignRight, 92))
 
     def update(self, pl):
@@ -441,34 +441,29 @@ class VideoRow(QWidget):
 
         for i, (key, label, short, _) in enumerate(PIPELINE_STAGES):
             cell = QWidget()
-            cell.setFixedSize(36, 24)
+            cell.setFixedSize(28, 28)
+            cell.setStyleSheet("background:transparent;")
             c_lay = QHBoxLayout(cell)
             c_lay.setContentsMargins(0, 0, 0, 0)
             c_lay.setAlignment(Qt.AlignCenter)
 
             if key == "split" and not split_enabled:
-                cell.setStyleSheet(f"background:transparent; border-radius:12px;")
                 lbl = QLabel("—")
                 lbl.setStyleSheet(f"color:{SURFACE_ALT}; font-size:12px;")
                 c_lay.addWidget(lbl)
             elif is_failed and i == failed_idx:
-                cell.setStyleSheet(f"background:{ERROR_TINT_4}; border-radius:12px;")
                 c_lay.addWidget(icon_label("alert", 13, ERROR))
             elif (not is_failed and (video.stage == "done" or stage_idx > i)) or \
                  (is_failed and i < failed_idx):
-                cell.setStyleSheet(f"background:{SUCCESS_BG}; border-radius:12px;")
                 c_lay.addWidget(icon_label("check", 12, SUCCESS))
             elif is_failed and i > failed_idx:
-                cell.setStyleSheet(f"background:{BG_SUBTLE}; border-radius:12px;")
                 lbl = QLabel("—")
                 lbl.setStyleSheet(f"color:{SURFACE_ALT}; font-size:12px;")
                 c_lay.addWidget(lbl)
             elif not is_failed and stage_idx == i:
-                cell.setStyleSheet(f"background:{PRIMARY_TINT_8}; border-radius:12px;")
                 sp = Spinner(16, PRIMARY)
                 c_lay.addWidget(sp)
             else:
-                cell.setStyleSheet(f"background:{BG_SUBTLE}; border-radius:12px;")
                 dot = QLabel()
                 dot.setFixedSize(6, 6)
                 dot.setStyleSheet(f"background:{SURFACE_ALT}; border-radius:3px;")
@@ -558,28 +553,22 @@ class VideoRow(QWidget):
                     c_lay.takeAt(j)
 
             if key == "split" and not self._split:
-                cell.setStyleSheet(f"background:transparent; border-radius:12px;")
                 lbl = QLabel("—")
                 lbl.setStyleSheet(f"color:{SURFACE_ALT}; font-size:12px;")
                 c_lay.addWidget(lbl)
             elif is_failed and i == failed_idx:
-                cell.setStyleSheet(f"background:{ERROR_TINT_4}; border-radius:12px;")
                 c_lay.addWidget(icon_label("alert", 13, ERROR))
             elif (not is_failed and (video.stage == "done" or stage_idx > i)) or \
                  (is_failed and i < failed_idx):
-                cell.setStyleSheet(f"background:{SUCCESS_BG}; border-radius:12px;")
                 c_lay.addWidget(icon_label("check", 12, SUCCESS))
             elif is_failed and i > failed_idx:
-                cell.setStyleSheet(f"background:{BG_SUBTLE}; border-radius:12px;")
                 lbl = QLabel("—")
                 lbl.setStyleSheet(f"color:{SURFACE_ALT}; font-size:12px;")
                 c_lay.addWidget(lbl)
             elif not is_failed and stage_idx == i:
-                cell.setStyleSheet(f"background:{PRIMARY_TINT_8}; border-radius:12px;")
                 sp = Spinner(16, PRIMARY)
                 c_lay.addWidget(sp)
             else:
-                cell.setStyleSheet(f"background:{BG_SUBTLE}; border-radius:12px;")
                 dot = QLabel()
                 dot.setFixedSize(6, 6)
                 dot.setStyleSheet(f"background:{SURFACE_ALT}; border-radius:3px;")
