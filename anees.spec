@@ -29,7 +29,7 @@ a = Analysis(
     ["main.py"],
     pathex=[],
     binaries=yt_dlp_binaries + _ffmpeg_bin,
-    datas=yt_dlp_datas,
+    datas=yt_dlp_datas + [("ui/images/anees.ico", "images")],
     hiddenimports=yt_dlp_hiddenimports + [
         "PySide6.QtSvg",
         "PySide6.QtXml",
@@ -63,7 +63,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=None,              # TODO: add icon.ico / icon.icns
+    icon="ui/images/anees.ico",              # TODO: add icon.ico / icon.icns
 )
 
 coll = COLLECT(
@@ -82,7 +82,7 @@ if sys.platform == "darwin":
     app = BUNDLE(
         coll,
         name="Anees.app",
-        icon=None,
+        icon="ui/images/anees.ico",
         bundle_identifier="ai.ginni.anees",
         info_plist={
             "NSHighResolutionCapable": True,

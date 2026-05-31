@@ -73,7 +73,11 @@ class TitleBar(QWidget):
 class _AppMark(QLabel):
     def __init__(self, parent=None):
         super().__init__(parent)
-        ico = Path(__file__).parent / "images" / "anees.ico"
+        import sys
+        if getattr(sys, "frozen", False):
+            ico = Path(sys._MEIPASS) / "images" / "anees.ico"  # type: ignore[attr-defined]
+        else:
+            ico = Path(__file__).parent / "images" / "anees.ico"
         px = QPixmap(str(ico))
         if not px.isNull():
             self.setPixmap(px.scaled(20, 20, Qt.KeepAspectRatio, Qt.SmoothTransformation))

@@ -8,12 +8,16 @@ from typing import Callable
 
 
 def _find_ffmpeg() -> str:
-    """Return the ffmpeg binary path — bundled first, then PATH."""
+    """Return the ffmpeg binary path — bundled first, Homebrew, then PATH."""
     if getattr(sys, "frozen", False):
         name = "ffmpeg.exe" if sys.platform == "win32" else "ffmpeg"
         path = os.path.join(sys._MEIPASS, name)  # type: ignore[attr-defined]
         if os.path.exists(path):
             return path
+    if sys.platform == "darwin":
+        for candidate in ["/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg"]:
+            if os.path.exists(candidate):
+                return candidate
     return "ffmpeg"
 
 

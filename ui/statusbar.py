@@ -32,6 +32,11 @@ def _ffmpeg_exe() -> str:
         path = os.path.join(sys._MEIPASS, name)  # type: ignore[attr-defined]
         if os.path.exists(path):
             return path
+    # macOS .app launches with a minimal PATH — check Homebrew locations explicitly
+    if sys.platform == "darwin":
+        for candidate in ["/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg"]:
+            if os.path.exists(candidate):
+                return candidate
     return "ffmpeg"
 
 
