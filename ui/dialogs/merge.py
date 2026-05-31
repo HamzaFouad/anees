@@ -402,7 +402,7 @@ class _PlaylistChecklist(QWidget):
     def _set_row_style(self, row: "_CheckRow", checked: bool, border_bottom: bool) -> None:
         oid = f"chkRow_{id(row)}"
         row.setObjectName(oid)
-        bg = BG_ACCENT if checked else BG
+        bg = BG_ACCENT if checked else "transparent"
         border = f"border-bottom:1px solid {BORDER};" if border_bottom else ""
         row.setStyleSheet(f"#{oid} {{ background:{bg}; {border} }}")
 
