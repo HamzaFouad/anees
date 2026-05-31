@@ -220,6 +220,7 @@ class MergeDialog(QDialog):
 
         # SPLITTER CLIPS (always on — fixed playlist)
         self._splitter_section = _SplitterSection()
+        self._splitter_section.update_count(len(self._selected))  # seed before fetch completes
         lay.addWidget(self._splitter_section)
 
         self._update_preview()
@@ -560,7 +561,9 @@ class _SplitterSection(QWidget):
     # ── public API ────────────────────────────────────────────────────────────
 
     def get_urls(self, n: int) -> list[str]:
-        return [url for url, _, _ in self._clips[:n]]
+        if not self._clips:
+            return []
+        return [self._clips[i % len(self._clips)][0] for i in range(n)]
 
     def update_count(self, n: int) -> None:
         self._count = n
@@ -588,12 +591,15 @@ class _SplitterSection(QWidget):
     # ── list rendering ────────────────────────────────────────────────────────
 
     def _refresh_list(self) -> None:
+        if not self._clips or not self._count:
+            return
         while self._list_lay.count() > 1:
             item = self._list_lay.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
 
-        for i, (_, title, dur) in enumerate(self._clips[:self._count]):
+        for i in range(self._count):
+            _, title, dur = self._clips[i % len(self._clips)]
             row = QWidget()
             row_lay = QHBoxLayout(row)
             row_lay.setContentsMargins(14, 6, 14, 6)
