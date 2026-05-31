@@ -135,10 +135,10 @@ class Toggle(QWidget):
         # track
         p.setBrush(QColor(PRIMARY if self._checked else SURFACE_ALT))
         p.drawRoundedRect(0, 4, 44, 16, 8, 8)
-        # thumb
+        # thumb — 14×14, centered vertically in the 16px track (y=5), 3px side padding
         p.setBrush(QColor("white"))
-        x = 22 if self._checked else 2
-        p.drawEllipse(x, 2, 20, 20)
+        x = 27 if self._checked else 3
+        p.drawEllipse(x, 5, 14, 14)
 
     def mousePressEvent(self, _event):
         self._checked = not self._checked
