@@ -146,6 +146,10 @@ class RunControls(QWidget):
     def _do_resume(self) -> None: self._api.resume()
     def _do_stop(self)   -> None: self._api.stop()
 
+    def _do_merge(self) -> None:
+        from ui.dialogs.merge import MergeDialog
+        MergeDialog(self._state, self.window()).exec()
+
     def mousePressEvent(self, event) -> None:
         print(f"[RunControls] mouse press {event.position()}", flush=True)
         super().mousePressEvent(event)
@@ -240,6 +244,10 @@ class RunControls(QWidget):
             new_btn = self._ctrl_btn("refresh", "New run", FG, BG, BORDER)
             new_btn.clicked.connect(self._do_stop)
             self._lay.addWidget(new_btn)
+
+            merge_btn = self._ctrl_btn("merge", "Merge to folder", ON_PRIMARY, PRIMARY, "transparent")
+            merge_btn.clicked.connect(self._do_merge)
+            self._lay.addWidget(merge_btn)
 
             done_lbl = QLabel(f"✓  Complete · {c['videos_total']} videos downloaded")
             done_lbl.setStyleSheet(f"font-size:{TEXT_MD}px; color:{SUCCESS_DARK};")
