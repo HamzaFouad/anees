@@ -10,9 +10,9 @@ from PySide6.QtGui import QIcon
 from ui.theme import (
     PRIMARY, PRIMARY_HOVER, ON_PRIMARY, PRIMARY_TINT_4,
     FG, FG_MUTED, BG, BG_SUBTLE, BORDER,
-    SUCCESS_BG, SUCCESS_DARK,
+    SUCCESS, SUCCESS_BG, SUCCESS_DARK,
 )
-from ui.widgets import Toggle, Badge, StyledInput, icon_pixmap, icon_label, Checkbox
+from ui.widgets import Toggle, StyledInput, icon_pixmap, icon_label, Checkbox
 from ui.state import AppState
 from backend.models import Playlist, Video
 from backend.api.config import get_output_root
@@ -393,10 +393,7 @@ class _PlaylistChecklist(QWidget):
         super().__init__(parent)
         self._selected = selected
         self._rows: list[_CheckRow] = []
-        self.setObjectName("plChecklist")
-        self.setStyleSheet(
-            f"#plChecklist {{ border:1px solid {BORDER}; border-radius:8px; background:{BG}; }}"
-        )
+        self.setStyleSheet("background:transparent;")
         self.setMaximumHeight(200)
 
         lay = QVBoxLayout(self)
@@ -418,7 +415,7 @@ class _PlaylistChecklist(QWidget):
     def _set_row_style(self, row: "_CheckRow", checked: bool, border_bottom: bool) -> None:
         oid = f"chkRow_{id(row)}"
         row.setObjectName(oid)
-        bg = PRIMARY_TINT_4 if checked else BG
+        bg = PRIMARY_TINT_4 if checked else "transparent"
         border = f"border-bottom:1px solid {BORDER};" if border_bottom else ""
         row.setStyleSheet(f"#{oid} {{ background:{bg}; {border} }}")
 
@@ -613,10 +610,7 @@ class _SplitterSection(QWidget):
                 item.widget().deleteLater()
 
         card = QWidget()
-        card.setObjectName("splitterCard")
-        card.setStyleSheet(
-            f"#splitterCard {{ background:{BG}; border:1px solid {BORDER}; border-radius:8px; }}"
-        )
+        card.setStyleSheet("background:transparent;")
         card_lay = QHBoxLayout(card)
         card_lay.setContentsMargins(10, 8, 10, 8)
         card_lay.setSpacing(10)
@@ -651,8 +645,7 @@ class _SplitterSection(QWidget):
         info_lay.addWidget(sub)
         card_lay.addWidget(info, 1)
 
-        badge = Badge("✓  Resolved", "success")
-        card_lay.addWidget(badge)
+        card_lay.addWidget(icon_label("check", 14, SUCCESS))
 
         self._card_slot_lay.addWidget(card)
 
