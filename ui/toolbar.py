@@ -75,6 +75,19 @@ class Toolbar(QWidget):
         self._search.textChanged.connect(self._queue_api.search)
         lay.addWidget(self._search)
 
+        # merge to folder
+        m_btn = QPushButton()
+        m_btn.setIcon(QIcon(icon_pixmap("merge", 14, FG_MUTED)))
+        m_btn.setFixedSize(28, 28)
+        m_btn.setCursor(Qt.PointingHandCursor)
+        m_btn.setToolTip("Merge to folder")
+        m_btn.setStyleSheet(f"""
+            QPushButton {{ background:transparent; border:none; border-radius:6px; }}
+            QPushButton:hover {{ background:{BG_MUTED}; }}
+        """)
+        m_btn.clicked.connect(self._on_merge)
+        lay.addWidget(m_btn)
+
         # settings
         s_btn = QPushButton()
         s_btn.setIcon(QIcon(icon_pixmap("settings", 14, FG_MUTED)))
@@ -111,6 +124,10 @@ class Toolbar(QWidget):
     def _on_view(self, view: str):
         self._search.setPlaceholderText("Search history" if view == "history" else "Search queue")
 
+    def _on_merge(self) -> None:
+        from ui.dialogs.merge import MergeDialog
+        MergeDialog(self._state, self.window()).exec()
+
 
 class RunControls(QWidget):
     def __init__(self, state: AppState, parent=None):
@@ -145,10 +162,6 @@ class RunControls(QWidget):
     def _do_pause(self)  -> None: self._api.pause()
     def _do_resume(self) -> None: self._api.resume()
     def _do_stop(self)   -> None: self._api.stop()
-
-    def _do_merge(self) -> None:
-        from ui.dialogs.merge import MergeDialog
-        MergeDialog(self._state, self.window()).exec()
 
     def mousePressEvent(self, event) -> None:
         print(f"[RunControls] mouse press {event.position()}", flush=True)
@@ -244,10 +257,6 @@ class RunControls(QWidget):
             new_btn = self._ctrl_btn("refresh", "New run", FG, BG, BORDER)
             new_btn.clicked.connect(self._do_stop)
             self._lay.addWidget(new_btn)
-
-            merge_btn = self._ctrl_btn("merge", "Merge to folder", ON_PRIMARY, PRIMARY, "transparent")
-            merge_btn.clicked.connect(self._do_merge)
-            self._lay.addWidget(merge_btn)
 
             done_lbl = QLabel(f"✓  Complete · {c['videos_total']} videos downloaded")
             done_lbl.setStyleSheet(f"font-size:{TEXT_MD}px; color:{SUCCESS_DARK};")

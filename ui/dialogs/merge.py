@@ -14,8 +14,53 @@ from ui.theme import (
 )
 from ui.widgets import Toggle, Badge, StyledInput, icon_pixmap, icon_label, Checkbox
 from ui.state import AppState
-from backend.models import Playlist
+from backend.models import Playlist, Video
 from backend.api.config import get_output_root
+
+
+def _scan_output_root(output_root: str) -> list[Playlist]:
+    """Discover playlist folders on disk and build minimal Playlist stubs.
+
+    Used when the in-memory queue is empty (e.g. after a crash/restart).
+    A valid folder looks like ``{prefix}_{title}/`` and contains *.mp3 files.
+    """
+    import os, re, uuid
+    from pathlib import Path
+
+    root = Path(output_root)
+    if not root.is_dir():
+        return []
+
+    playlists: list[Playlist] = []
+    for entry in sorted(root.iterdir()):
+        if not entry.is_dir():
+            continue
+        m = re.match(r'^(\w+)_(.+)$', entry.name)
+        if not m:
+            continue
+        prefix, title_slug = m.group(1), m.group(2)
+        mp3s = sorted(entry.glob("*.mp3"))
+        if not mp3s:
+            continue
+        size_mb = sum(f.stat().st_size for f in mp3s) / 1024 / 1024
+        pl = Playlist(
+            id           = str(uuid.uuid5(uuid.NAMESPACE_URL, str(entry))),
+            prefix       = prefix,
+            title        = title_slug.replace("_", " "),
+            url          = "",
+            video_count  = len(mp3s),
+            completed    = len(mp3s),
+            status       = "done",
+            active_stage = "done",
+            speed        = 1.0,
+            split_enabled= False,
+            split_min    = 30,
+            size_mb      = round(size_mb, 1),
+            added_at     = "",
+            videos       = [Video(f.stem, 0, "done") for f in mp3s],
+        )
+        playlists.append(pl)
+    return playlists
 
 
 def _sep(layout) -> None:
@@ -37,9 +82,14 @@ class MergeDialog(QDialog):
     def __init__(self, state: AppState, parent=None):
         super().__init__(parent)
         self._state = state
-        self._selected: set[str] = {
-            p.id for p in state.playlists if p.completed > 0
-        }
+
+        # merge from in-memory queue; fall back to scanning the output folder
+        # so the dialog works after a crash/restart with no queue loaded
+        mem_pls = [p for p in state.playlists if p.completed > 0]
+        disk_pls = _scan_output_root(get_output_root()) if not mem_pls else []
+        self._playlists: list[Playlist] = mem_pls or disk_pls
+
+        self._selected: set[str] = {p.id for p in self._playlists}
         self._worker = None
 
         self.setWindowTitle("Merge to single folder")
@@ -148,7 +198,7 @@ class MergeDialog(QDialog):
         lay.addWidget(dest_sec)
 
         # PLAYLISTS TO INCLUDE
-        eligible = list(self._state.playlists)
+        eligible = list(self._playlists)
         n_sel = sum(1 for p in eligible if p.id in self._selected)
         self._pl_label = _section_lbl(
             f"Playlists to Include ({n_sel}/{len(eligible)} selected)"
@@ -235,7 +285,7 @@ class MergeDialog(QDialog):
             self._dest_input.setText(path)
 
     def _on_selection_changed(self) -> None:
-        eligible = list(self._state.playlists)
+        eligible = list(self._playlists)
         n_sel = len(self._selected)
         self._pl_label.setText(
             f"Playlists to Include ({n_sel}/{len(eligible)} selected)"
@@ -244,7 +294,7 @@ class MergeDialog(QDialog):
         self._update_preview()
 
     def _update_footer(self) -> None:
-        selected_pls = [p for p in self._state.playlists if p.id in self._selected]
+        selected_pls = [p for p in self._playlists if p.id in self._selected]
         total_files = sum(p.completed for p in selected_pls)
         total_mb = sum(p.size_mb or 0 for p in selected_pls)
         n_sel = len(selected_pls)
@@ -260,7 +310,7 @@ class MergeDialog(QDialog):
 
     def _update_preview(self) -> None:
         selected_pls = sorted(
-            (p for p in self._state.playlists if p.id in self._selected),
+            (p for p in self._playlists if p.id in self._selected),
             key=lambda p: p.prefix,
         )
         lines: list[str] = []
@@ -285,7 +335,7 @@ class MergeDialog(QDialog):
                 self._footer_info.setText("Enter a splitter clip URL or disable splitter.")
                 return
 
-        selected_pls = [p for p in self._state.playlists if p.id in self._selected]
+        selected_pls = [p for p in self._playlists if p.id in self._selected]
         if not selected_pls:
             return
 
