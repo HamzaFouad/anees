@@ -593,8 +593,7 @@ class _SplitterSection(QWidget):
             if item.widget():
                 item.widget().deleteLater()
 
-        for i, (_, title, dur) in enumerate(self._clips):
-            used = i < self._count
+        for i, (_, title, dur) in enumerate(self._clips[:self._count]):
             row = QWidget()
             row_lay = QHBoxLayout(row)
             row_lay.setContentsMargins(14, 6, 14, 6)
@@ -604,15 +603,13 @@ class _SplitterSection(QWidget):
             idx_lbl.setFixedWidth(20)
             idx_lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
             idx_lbl.setStyleSheet(
-                f"font-size:11px; font-weight:600; "
-                f"color:{PRIMARY if used else FG_MUTED}; background:transparent; border:none;"
+                f"font-size:11px; font-weight:600; color:{PRIMARY}; background:transparent; border:none;"
             )
             row_lay.addWidget(idx_lbl)
 
             t_lbl = QLabel(title[:55])
             t_lbl.setStyleSheet(
-                f"font-size:11px; color:{FG if used else FG_MUTED}; "
-                f"background:transparent; border:none;"
+                f"font-size:11px; color:{FG}; background:transparent; border:none;"
             )
             row_lay.addWidget(t_lbl, 1)
 
