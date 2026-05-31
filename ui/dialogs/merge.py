@@ -149,9 +149,8 @@ class MergeDialog(QDialog):
         text_lay.addWidget(title_row)
 
         desc = QLabel(
-            "Copies the processed <b>.mp3</b> files from every selected playlist "
-            "into one flat folder — handy for syncing to a phone, MP3 player, or car. "
-            "The original per-playlist folders stay untouched."
+            "Moves the processed <b>.mp3</b> files from every selected playlist "
+            "into one flat folder — handy for syncing to a phone, MP3 player, or car."
         )
         desc.setStyleSheet(f"font-size:12px; color:{FG_MUTED};")
         desc.setWordWrap(True)
@@ -311,7 +310,7 @@ class MergeDialog(QDialog):
 
         files_str = f"{total_files} + {n_splitters} splitter files" if n_splitters else f"{total_files} files"
         self._footer_info.setText(
-            f"{files_str} · {total_mb:.1f} MB · copies, doesn't move"
+            f"{files_str} · {total_mb:.1f} MB · moves files"
         )
         self._merge_btn.setText(f"  Merge {n_sel} playlist{'s' if n_sel != 1 else ''}")
         self._merge_btn.setEnabled(bool(n_sel))

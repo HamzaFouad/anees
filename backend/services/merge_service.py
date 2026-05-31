@@ -74,9 +74,9 @@ class MergeService:
                 break
             dest_file = os.path.join(dest_path, dest_name)
             try:
-                shutil.copy2(src, dest_file)
+                shutil.move(src, dest_file)
                 copied += 1
-                self._on_log(f"copied: {dest_name}")
+                self._on_log(f"moved: {dest_name}")
             except OSError as exc:
                 self._on_log(f"copy failed: {dest_name} — {exc}")
             on_progress(copied, total)
