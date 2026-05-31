@@ -443,6 +443,7 @@ class _CheckRow(QWidget):
         self._pl = pl
         self._checked = checked
         self._eligible = eligible
+        self.setAttribute(Qt.WA_StyledBackground, True)
 
         if eligible:
             self.setCursor(Qt.PointingHandCursor)
@@ -504,16 +505,16 @@ class _SplitterSection(QWidget):
         self._root.setSpacing(0)
 
         # toggle row
-        top = QWidget(); top.setStyleSheet("background:transparent;")
+        top = QWidget()
         top_lay = QHBoxLayout(top)
         top_lay.setContentsMargins(14, 12, 14, 12)
         top_lay.setSpacing(12)
 
-        text = QWidget(); text.setStyleSheet("background:transparent;")
+        text = QWidget()
         text_lay = QVBoxLayout(text)
         text_lay.setContentsMargins(0, 0, 0, 0); text_lay.setSpacing(3)
 
-        title_row = QWidget(); title_row.setStyleSheet("background:transparent;")
+        title_row = QWidget()
         title_lay = QHBoxLayout(title_row)
         title_lay.setContentsMargins(0, 0, 0, 0); title_lay.setSpacing(6)
         title_lay.addWidget(icon_label("scissors", 13, FG))
@@ -551,7 +552,7 @@ class _SplitterSection(QWidget):
         url_lay.setContentsMargins(14, 10, 14, 12)
         url_lay.setSpacing(8)
 
-        input_row = QWidget(); input_row.setStyleSheet("background:transparent;")
+        input_row = QWidget()
         input_lay = QHBoxLayout(input_row)
         input_lay.setContentsMargins(0, 0, 0, 0); input_lay.setSpacing(8)
         self._url_input = StyledInput("https://youtube.com/watch?v=…", mono=True)
@@ -619,7 +620,6 @@ class _SplitterSection(QWidget):
                 item.widget().deleteLater()
 
         card = QWidget()
-        card.setStyleSheet("background:transparent;")
         card_lay = QHBoxLayout(card)
         card_lay.setContentsMargins(10, 8, 10, 8)
         card_lay.setSpacing(10)
@@ -637,7 +637,7 @@ class _SplitterSection(QWidget):
         )
         card_lay.addWidget(thumb)
 
-        info = QWidget(); info.setStyleSheet("background:transparent;")
+        info = QWidget()
         info_lay = QVBoxLayout(info)
         info_lay.setContentsMargins(0, 0, 0, 0); info_lay.setSpacing(2)
         t = QLabel(title[:60])
