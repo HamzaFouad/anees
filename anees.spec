@@ -63,7 +63,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon="ui/images/anees.ico",              # TODO: add icon.ico / icon.icns
+    icon="ui/images/anees.ico" if sys.platform == "win32" else "ui/images/anees.icns",
 )
 
 coll = COLLECT(
@@ -82,7 +82,7 @@ if sys.platform == "darwin":
     app = BUNDLE(
         coll,
         name="Anees.app",
-        icon="ui/images/anees.ico",
+        icon="ui/images/anees.icns",
         bundle_identifier="ai.ginni.anees",
         info_plist={
             "NSHighResolutionCapable": True,
