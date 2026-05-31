@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
     QLineEdit, QWidget, QFileDialog, QTextEdit, QFrame, QScrollArea,
 )
 from PySide6.QtCore import Qt, QThread, Signal as _Signal
-from PySide6.QtGui import QIcon, QPainter, QColor
+from PySide6.QtGui import QIcon
 
 from ui.theme import (
     PRIMARY, PRIMARY_HOVER, ON_PRIMARY, PRIMARY_TINT_4,
@@ -422,6 +422,10 @@ class _CheckRow(QWidget):
         self._pl = pl
         self._checked = checked
         self._eligible = eligible
+        self.setAttribute(Qt.WA_NoSystemBackground, True)
+        self.setAttribute(Qt.WA_OpaquePaintEvent, False)
+        self.setAutoFillBackground(False)
+        self.setStyleSheet("background:transparent; border:none;")
 
         if eligible:
             self.setCursor(Qt.PointingHandCursor)
@@ -453,11 +457,6 @@ class _CheckRow(QWidget):
             f"font-family:'JetBrains Mono',monospace; background:transparent; border:none;"
         )
         lay.addWidget(stats)
-
-    def paintEvent(self, event):
-        if self._checked:
-            p = QPainter(self)
-            p.fillRect(self.rect(), QColor(BG_ACCENT))
 
     def mousePressEvent(self, event):
         if self._eligible:
