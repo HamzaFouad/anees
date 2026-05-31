@@ -577,7 +577,7 @@ class _SplitterSection(QWidget):
         self._preview_box.setReadOnly(True)
         self._preview_box.setFixedHeight(72)
         self._preview_box.setStyleSheet(
-            f"QTextEdit {{ background:{BG}; border:1px solid {BORDER}; "
+            f"QTextEdit {{ background:rgba(0,68,255,0.03); border:1px solid {BORDER}; "
             f"border-radius:6px; padding:6px 10px; "
             f"font-family:'JetBrains Mono',monospace; font-size:11px; color:{FG_MUTED}; }}"
         )
