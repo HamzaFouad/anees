@@ -9,7 +9,6 @@ from ui.statusbar import StatusBar
 from ui.panels.queue_list import QueueList
 from ui.panels.detail import DetailPanel
 from ui.panels.history import HistoryPanel
-from ui.panels.logs import LogsPanel
 from ui.panels.console import ConsolePanel, ConsoleToggleBar
 
 
@@ -71,11 +70,6 @@ class MainWindow(QWidget):
         self._history.rerun_requested.connect(self._on_rerun)
         self._content.addWidget(self._history)
 
-        # logs view
-        self._logs = LogsPanel(self._state)
-        self._logs.send_diagnostics_clicked.connect(self._on_send_diagnostics)
-        self._content.addWidget(self._logs)
-
         # global console (full-width; outside tab content)
         self._console = ConsolePanel(self._state, self)
         self._console_toggle = ConsoleToggleBar(self._console, self)
@@ -95,7 +89,7 @@ class MainWindow(QWidget):
         self._on_view(self._state.view)
 
     def _on_view(self, view: str):
-        idx = {"queue": 0, "history": 1, "logs": 2}.get(view, 0)
+        idx = {"queue": 0, "history": 1}.get(view, 0)
         self._content.setCurrentIndex(idx)
 
     def _on_add(self):
@@ -111,6 +105,3 @@ class MainWindow(QWidget):
         from ui.api import NavAPI
         NavAPI(self._state).go_queue()
 
-    def _on_send_diagnostics(self):
-        from ui.dialogs.diagnostics import DiagnosticsDialog
-        DiagnosticsDialog(self).exec()

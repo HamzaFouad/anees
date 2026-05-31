@@ -2,7 +2,7 @@ from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QPushButton
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QIcon
 
-from ui.theme import PRIMARY, PRIMARY_TINT_8, FG, FG_MUTED, BG, BORDER, ERROR_DARK, ERROR_BG
+from ui.theme import PRIMARY, PRIMARY_TINT_8, FG, FG_MUTED, BG, BORDER
 from ui.widgets import icon_pixmap
 from ui.state import AppState
 from backend.models import RunState
@@ -21,9 +21,8 @@ class TabBar(QWidget):
 
         self._btns: dict[str, QPushButton] = {}
         tabs = [
-            ("queue",   "Queue",   "list",     lambda: 0,                    True),
-            ("history", "History", "clock",    lambda: 0,                    False),
-            ("logs",    "Logs",    "terminal", lambda: self._log_errors(),   False),
+            ("queue",   "Queue",   "list",  lambda: 0, True),
+            ("history", "History", "clock", lambda: 0, False),
         ]
         for key, label, icon, count_fn, enabled in tabs:
             btn = _TabBtn(key, label, icon, count_fn, enabled=enabled)
@@ -44,10 +43,6 @@ class TabBar(QWidget):
         self._on_view(state.view)
         self._refresh_counts()
 
-    def _log_errors(self) -> int:
-        from backend.mock_data import MOCK_LOGS
-        return sum(1 for l in MOCK_LOGS if l.lvl == "error")
-
     def _on_view(self, view: str):
         for k, btn in self._btns.items():
             btn.set_active(k == view)
@@ -61,7 +56,6 @@ class TabBar(QWidget):
         self._btns["queue"].set_count(len(self._state.playlists))
         from backend.mock_data import MOCK_HISTORY
         self._btns["history"].set_count(len(MOCK_HISTORY))
-        self._btns["logs"].set_count(self._log_errors())
 
 
 class _TabBtn(QPushButton):
@@ -107,11 +101,10 @@ class _TabBtn(QPushButton):
             """)
             return
 
-        is_err = self._key == "logs" and self._count_fn() > 0
-        color  = PRIMARY if self._active else (ERROR_DARK if is_err else FG_MUTED)
+        color  = PRIMARY if self._active else FG_MUTED
         weight = "600" if self._active else "500"
         border = f"border-bottom:2px solid {PRIMARY};" if self._active else ""
-        count  = self._count_fn() if self._key == "logs" else self._count
+        count  = self._count
 
         self.setIcon(QIcon(icon_pixmap(self._icon, 12, color)))
         self.setText(f" {self._label}  {count}")

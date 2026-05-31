@@ -214,7 +214,7 @@ class PipelineStrip(QWidget):
             elif is_active:
                 bg, fg, dot = PRIMARY_TINT_8, PRIMARY, PRIMARY
             else:
-                bg, fg, dot = BG_ACCENT, FG_MUTED, SURFACE_ALT
+                bg, fg, dot = BG_SUBTLE, FG_MUTED, SURFACE_ALT
 
             pill = QWidget()
             pill.setToolTip(label)
@@ -240,7 +240,7 @@ class PipelineStrip(QWidget):
                 "background:transparent; border:none; text-decoration:none;"
             )
             pl.addWidget(txt)
-            pill.setStyleSheet(f"background:{bg}; border-radius:99px;")
+            pill.setStyleSheet(f"background:{bg}; border-radius:8px;")
             lay.addWidget(pill)
 
             if i < len(stages) - 1:
