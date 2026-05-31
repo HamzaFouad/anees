@@ -9,7 +9,7 @@ from PySide6.QtGui import QIcon
 
 from ui.theme import (
     PRIMARY, PRIMARY_HOVER, ON_PRIMARY, PRIMARY_TINT_4,
-    FG, FG_MUTED, BG, BG_SUBTLE, BORDER,
+    FG, FG_MUTED, BG, BG_SUBTLE, BG_ACCENT, BORDER,
     SUCCESS, SUCCESS_BG, SUCCESS_DARK,
 )
 from ui.widgets import Toggle, StyledInput, icon_pixmap, icon_label, Checkbox
@@ -229,7 +229,7 @@ class MergeDialog(QDialog):
         self._preview_box.setReadOnly(True)
         self._preview_box.setFixedHeight(80)
         self._preview_box.setStyleSheet(
-            f"QTextEdit {{ background:{BG_SUBTLE}; border:1px solid {BORDER}; "
+            f"QTextEdit {{ background:{BG_ACCENT}; border:1px solid {BORDER}; "
             f"border-radius:8px; padding:6px 10px; "
             f"font-family:'JetBrains Mono',monospace; font-size:11px; color:{FG_MUTED}; }}"
         )
@@ -393,7 +393,10 @@ class _PlaylistChecklist(QWidget):
         super().__init__(parent)
         self._selected = selected
         self._rows: list[_CheckRow] = []
-        self.setStyleSheet("background:transparent;")
+        self.setObjectName("plChecklist")
+        self.setStyleSheet(
+            f"#plChecklist {{ border:1px solid {BORDER}; border-radius:6px; background:{BG}; }}"
+        )
         self.setMaximumHeight(200)
 
         lay = QVBoxLayout(self)
@@ -415,7 +418,7 @@ class _PlaylistChecklist(QWidget):
     def _set_row_style(self, row: "_CheckRow", checked: bool, border_bottom: bool) -> None:
         oid = f"chkRow_{id(row)}"
         row.setObjectName(oid)
-        bg = PRIMARY_TINT_4 if checked else "transparent"
+        bg = PRIMARY_TINT_4 if checked else BG
         border = f"border-bottom:1px solid {BORDER};" if border_bottom else ""
         row.setStyleSheet(f"#{oid} {{ background:{bg}; {border} }}")
 
@@ -580,6 +583,10 @@ class _SplitterSection(QWidget):
     def _on_toggle(self, on: bool) -> None:
         self._on = on
         self._url_row.setVisible(on)
+        bg = "rgba(0,68,255,0.03)" if on else BG
+        self.setStyleSheet(
+            f"#splitterSection {{ border:1px solid {BORDER}; border-radius:8px; background:{bg}; }}"
+        )
         self.toggled.emit(on)
 
     def _on_fetch(self) -> None:
