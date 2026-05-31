@@ -72,6 +72,7 @@ class Toolbar(QWidget):
         """)
         from ui.api import QueueAPI
         self._queue_api = QueueAPI(state)
+        self._search.setToolTip("Filter playlists by name")
         self._search.textChanged.connect(self._queue_api.search)
         lay.addWidget(self._search)
 
@@ -80,7 +81,7 @@ class Toolbar(QWidget):
         m_btn.setIcon(QIcon(icon_pixmap("merge", 14, FG_MUTED)))
         m_btn.setFixedSize(28, 28)
         m_btn.setCursor(Qt.PointingHandCursor)
-        m_btn.setToolTip("Merge to folder")
+        m_btn.setToolTip("Merge playlists into one flat folder")
         m_btn.setStyleSheet(f"""
             QPushButton {{ background:transparent; border:none; border-radius:6px; }}
             QPushButton:hover {{ background:{BG_MUTED}; }}
@@ -93,7 +94,7 @@ class Toolbar(QWidget):
         s_btn.setIcon(QIcon(icon_pixmap("settings", 14, FG_MUTED)))
         s_btn.setFixedSize(28, 28)
         s_btn.setCursor(Qt.PointingHandCursor)
-        s_btn.setToolTip("Settings")
+        s_btn.setToolTip("App settings")
         s_btn.setStyleSheet(f"""
             QPushButton {{ background:transparent; border:none; border-radius:6px; }}
             QPushButton:hover {{ background:{BG_MUTED}; }}
