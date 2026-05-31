@@ -379,7 +379,7 @@ class _PlaylistChecklist(QWidget):
         self.setObjectName("plChecklist")
         self.setAttribute(Qt.WA_StyledBackground, True)
         self.setStyleSheet(
-            f"#plChecklist {{ border:1px solid {BORDER}; border-radius:8px; background:{BG_ACCENT}; }}"
+            f"#plChecklist {{ border:1px solid {BORDER}; border-radius:8px; background:rgba(0,68,255,0.03); }}"
         )
         self.setMaximumHeight(200)
 
@@ -480,7 +480,7 @@ class _SplitterSection(QWidget):
         self.setObjectName("splitterSection")
         self.setAttribute(Qt.WA_StyledBackground, True)
         self.setStyleSheet(
-            f"#splitterSection {{ border:1px solid {BORDER}; border-radius:8px; background:{BG_ACCENT}; }}"
+            f"#splitterSection {{ border:1px solid {BORDER}; border-radius:8px; background:rgba(0,68,255,0.03); }}"
         )
 
         self._root = QVBoxLayout(self)
@@ -577,7 +577,7 @@ class _SplitterSection(QWidget):
         self._preview_box.setReadOnly(True)
         self._preview_box.setFixedHeight(72)
         self._preview_box.setStyleSheet(
-            f"QTextEdit {{ background:rgba(0,68,255,0.03); border:1px solid {BORDER}; "
+            f"QTextEdit {{ background:#F3F3F7; border:1px solid {BORDER}; "
             f"border-radius:6px; padding:6px 10px; "
             f"font-family:'JetBrains Mono',monospace; font-size:11px; color:{FG_MUTED}; }}"
         )
