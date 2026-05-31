@@ -394,6 +394,7 @@ class _PlaylistChecklist(QWidget):
         self._selected = selected
         self._rows: list[_CheckRow] = []
         self.setObjectName("plChecklist")
+        self.setAttribute(Qt.WA_StyledBackground, True)
         self.setStyleSheet(
             f"#plChecklist {{ border:1px solid {BORDER}; border-radius:6px; background:{BG}; }}"
         )
@@ -418,7 +419,7 @@ class _PlaylistChecklist(QWidget):
     def _set_row_style(self, row: "_CheckRow", checked: bool, border_bottom: bool) -> None:
         oid = f"chkRow_{id(row)}"
         row.setObjectName(oid)
-        bg = PRIMARY_TINT_4 if checked else BG
+        bg = BG_ACCENT if checked else BG
         border = f"border-bottom:1px solid {BORDER};" if border_bottom else ""
         row.setStyleSheet(f"#{oid} {{ background:{bg}; {border} }}")
 
@@ -493,6 +494,7 @@ class _SplitterSection(QWidget):
         self._fetch_thread: QThread | None = None
 
         self.setObjectName("splitterSection")
+        self.setAttribute(Qt.WA_StyledBackground, True)
         self.setStyleSheet(
             f"#splitterSection {{ border:1px solid {BORDER}; border-radius:8px; background:{BG}; }}"
         )
@@ -583,7 +585,7 @@ class _SplitterSection(QWidget):
     def _on_toggle(self, on: bool) -> None:
         self._on = on
         self._url_row.setVisible(on)
-        bg = "rgba(0,68,255,0.03)" if on else BG
+        bg = BG_ACCENT if on else BG
         self.setStyleSheet(
             f"#splitterSection {{ border:1px solid {BORDER}; border-radius:8px; background:{bg}; }}"
         )
