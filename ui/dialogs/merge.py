@@ -219,6 +219,7 @@ class MergeDialog(QDialog):
         # SPLITTER CLIP
         self._splitter_section = _SplitterSection()
         self._splitter_section.toggled.connect(self._update_footer)
+        self._splitter_section.toggled.connect(lambda _: self._update_preview())
         lay.addWidget(self._splitter_section)
 
         self._update_preview()
@@ -301,18 +302,27 @@ class MergeDialog(QDialog):
         self._merge_btn.setEnabled(bool(n_sel))
 
     def _update_preview(self) -> None:
+        from backend.services.merge_service import JOC_BASE
         selected_pls = sorted(
             (p for p in self._playlists if p.id in self._selected),
             key=lambda p: p.prefix,
         )
+        splitter_on = self._splitter_section._on
         lines: list[str] = []
-        for pl in selected_pls:
-            for i, v in enumerate(pl.videos[:3]):
-                safe = v.title[:45].replace("/", "_")
-                lines.append(f"{pl.prefix}_{i+1:02d}_{safe}.mp3")
-            if len(pl.videos) > 3:
-                lines.append(f"{pl.prefix}_…")
-        self._splitter_section.update_preview("\n".join(lines[:8]))
+        joc = JOC_BASE
+        for idx, pl in enumerate(selected_pls):
+            if splitter_on and idx > 0:
+                lines.append(f"{joc}.mp3  ← splitter")
+                joc += 1
+            count = pl.video_count or len(pl.videos) or 1
+            shown = min(count, 3)
+            for _ in range(shown):
+                lines.append(f"{joc}.mp3")
+                joc += 1
+            if count > shown:
+                lines.append(f"  … ({count - shown} more, up to {joc + count - shown - 1}.mp3)")
+                joc += count - shown
+        self._splitter_section.update_preview("\n".join(lines[:12]))
 
     def _on_merge(self) -> None:
         dest = self._dest_input.text().strip()
