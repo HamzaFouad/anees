@@ -116,7 +116,7 @@ class Toggle(QWidget):
     def __init__(self, checked: bool = False, parent=None):
         super().__init__(parent)
         self._checked = checked
-        self.setFixedSize(34, 20)
+        self.setFixedSize(44, 24)
         self.setCursor(Qt.PointingHandCursor)
 
     @property
@@ -134,11 +134,11 @@ class Toggle(QWidget):
         p.setPen(Qt.NoPen)
         # track
         p.setBrush(QColor(PRIMARY if self._checked else SURFACE_ALT))
-        p.drawRoundedRect(0, 3, 34, 14, 7, 7)
+        p.drawRoundedRect(0, 4, 44, 16, 8, 8)
         # thumb
         p.setBrush(QColor("white"))
-        x = 18 if self._checked else 2
-        p.drawEllipse(x, 2, 16, 16)
+        x = 22 if self._checked else 2
+        p.drawEllipse(x, 2, 20, 20)
 
     def mousePressEvent(self, _event):
         self._checked = not self._checked

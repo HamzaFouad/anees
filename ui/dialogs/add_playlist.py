@@ -1,26 +1,34 @@
 import uuid
 from datetime import datetime as _dt
 
+from PySide6.QtWidgets import (
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QWidget,
+    QLineEdit, QFrame,
+)
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QIcon, QDoubleValidator, QIntValidator
+
+from ui.theme import (
+    PRIMARY, ON_PRIMARY, PRIMARY_HOVER,
+    FG, FG_MUTED, BG, BG_SUBTLE, BORDER,
+)
+from ui.widgets import Toggle, StyledInput, icon_pixmap
+from ui.state import AppState
+from backend.models import Playlist
+
 
 def _fmt_now() -> str:
     n = _dt.now()
     return f"{n.strftime('%b')} {n.day}, {n.hour}:{n.strftime('%M')}"
 
 
-from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QWidget, QSpinBox,
-    QDoubleSpinBox,
-)
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QIcon
-
-from ui.theme import (
-    PRIMARY, ON_PRIMARY, PRIMARY_HOVER,
-    FG, FG_MUTED, BG, BG_MUTED, BG_SUBTLE, BORDER,
-)
-from ui.widgets import Toggle, StyledInput, icon_pixmap, field
-from ui.state import AppState
-from backend.models import Playlist
+def _lbl(text: str) -> QLabel:
+    l = QLabel(text)
+    l.setStyleSheet(
+        f"font-size:10px; font-weight:600; color:{FG_MUTED}; "
+        "letter-spacing:0.05em; background:transparent; border:none;"
+    )
+    return l
 
 
 class AddPlaylistDialog(QDialog):
@@ -28,134 +36,134 @@ class AddPlaylistDialog(QDialog):
         super().__init__(parent)
         self._state = state
         self.setWindowTitle("Add Playlist")
-        self.setFixedWidth(480)
         self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
-        self.setObjectName("addPlaylistDialog")
-        self.setStyleSheet(
-            f"#addPlaylistDialog {{ background:{BG}; border-radius:10px; border:1px solid {BORDER}; }}"
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setFixedWidth(520)
+
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+
+        card = QWidget()
+        card.setObjectName("addCard")
+        card.setStyleSheet(
+            f"#addCard {{ background:{BG}; border-radius:12px; "
+            f"border:1px solid {BORDER}; }}"
         )
+        outer.addWidget(card)
 
-        next_prefix = str(len(state.playlists)).zfill(2)
-
-        root = QVBoxLayout(self)
+        root = QVBoxLayout(card)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        # ── header ──
+        # ── header ──────────────────────────────────────────────────────────
         header = QWidget()
-        header.setFixedHeight(48)
-        header.setStyleSheet(f"border-bottom:1px solid {BORDER};")
+        header.setFixedHeight(56)
+        header.setStyleSheet("background:transparent;")
         h_lay = QHBoxLayout(header)
-        h_lay.setContentsMargins(18, 0, 18, 0)
+        h_lay.setContentsMargins(20, 0, 16, 0)
         t = QLabel("Add Playlist")
-        t.setStyleSheet(f"font-size:14px; font-weight:600; color:{FG};")
+        t.setStyleSheet(f"font-size:15px; font-weight:700; color:{FG};")
         h_lay.addWidget(t)
         h_lay.addStretch()
         x_btn = QPushButton()
         x_btn.setIcon(QIcon(icon_pixmap("x", 14, FG_MUTED)))
-        x_btn.setFixedSize(28, 28)
+        x_btn.setFixedSize(30, 30)
         x_btn.setCursor(Qt.PointingHandCursor)
         x_btn.setStyleSheet(
-            f"QPushButton {{ background:transparent; border:none; border-radius:5px; }}"
+            f"QPushButton {{ background:transparent; border:none; border-radius:6px; }}"
             f"QPushButton:hover {{ background:{BG_SUBTLE}; }}"
         )
         x_btn.clicked.connect(self.reject)
         h_lay.addWidget(x_btn)
         root.addWidget(header)
 
-        # ── body ──
+        _sep(root)
+
+        # ── body ────────────────────────────────────────────────────────────
         body = QWidget()
-        body_lay = QVBoxLayout(body)
-        body_lay.setContentsMargins(18, 16, 18, 16)
-        body_lay.setSpacing(14)
+        body.setStyleSheet("background:transparent;")
+        b_lay = QVBoxLayout(body)
+        b_lay.setContentsMargins(20, 20, 20, 20)
+        b_lay.setSpacing(18)
 
+        # PLAYLIST URL
+        url_w = _section()
+        url_w.layout().addWidget(_lbl("Playlist URL"))
         self._url_input = StyledInput("https://youtube.com/playlist?list=…", mono=True)
-        body_lay.addWidget(field("Playlist URL", self._url_input))
+        url_w.layout().addWidget(self._url_input)
+        b_lay.addWidget(url_w)
 
-        # prefix + split row
-        mid = QWidget()
-        mid_lay = QHBoxLayout(mid)
-        mid_lay.setContentsMargins(0, 0, 0, 0)
-        mid_lay.setSpacing(10)
+        # PREFIX | SPEED | SPLIT row
+        next_prefix = str(len(state.playlists)).zfill(2)
+        row = QWidget(); row.setStyleSheet("background:transparent;")
+        r_lay = QHBoxLayout(row)
+        r_lay.setContentsMargins(0, 0, 0, 0)
+        r_lay.setSpacing(12)
 
+        # PREFIX
+        pfx_w = _section()
+        pfx_w.setFixedWidth(80)
+        pfx_w.layout().addWidget(_lbl("Prefix"))
         self._prefix_input = StyledInput(next_prefix, mono=True)
         self._prefix_input.setText(next_prefix)
         self._prefix_input.setAlignment(Qt.AlignCenter)
-        pfx_w = field("Prefix", self._prefix_input)
-        pfx_w.setFixedWidth(80)
-        mid_lay.addWidget(pfx_w)
+        pfx_w.layout().addWidget(self._prefix_input)
+        r_lay.addWidget(pfx_w)
 
-        # split toggle + spinbox
-        split_w = QWidget()
-        split_lay = QHBoxLayout(split_w)
-        split_lay.setContentsMargins(0, 0, 0, 0)
-        split_lay.setSpacing(8)
-        self._split_toggle = Toggle(False)
-        self._split_toggle.toggled.connect(self._on_split_toggle)
-        self._split_spin = QSpinBox()
-        self._split_spin.setRange(5, 120)
-        self._split_spin.setValue(30)
-        self._split_spin.setSuffix(" min")
-        self._split_spin.setEnabled(False)
-        self._split_spin.setFixedHeight(32)
-        self._split_spin.setStyleSheet(self._spin_style(False))
-        split_lay.addWidget(self._split_toggle)
-        split_lay.addWidget(self._split_spin, 1)
-        mid_lay.addWidget(field("Split chunks", split_w), 1)
-
-        # speed toggle + spinbox
-        speed_w = QWidget()
-        speed_lay = QHBoxLayout(speed_w)
-        speed_lay.setContentsMargins(0, 0, 0, 0)
-        speed_lay.setSpacing(8)
+        # SPEED
+        spd_w = _section()
+        spd_w.layout().addWidget(_lbl("Speed (×)"))
         self._speed_toggle = Toggle(False)
         self._speed_toggle.toggled.connect(self._on_speed_toggle)
-        self._speed_spin = QDoubleSpinBox()
-        self._speed_spin.setRange(0.5, 3.0)
-        self._speed_spin.setSingleStep(0.25)
-        self._speed_spin.setValue(1.5)
-        self._speed_spin.setSuffix("×")
-        self._speed_spin.setDecimals(2)
-        self._speed_spin.setEnabled(False)
-        self._speed_spin.setFixedHeight(32)
-        self._speed_spin.setStyleSheet(self._spin_style(False))
-        speed_lay.addWidget(self._speed_toggle)
-        speed_lay.addWidget(self._speed_spin, 1)
-        mid_lay.addWidget(field("Speed up", speed_w), 1)
+        self._speed_input = _value_input("1.5", QDoubleValidator(1.0, 3.0, 2), enabled=False)
+        spd_ctrl = _toggle_row(self._speed_toggle, self._speed_input)
+        spd_w.layout().addWidget(spd_ctrl)
+        r_lay.addWidget(spd_w, 1)
 
-        body_lay.addWidget(mid)
+        # SPLIT (MIN)
+        spl_w = _section()
+        spl_w.layout().addWidget(_lbl("Split (min)"))
+        self._split_toggle = Toggle(False)
+        self._split_toggle.toggled.connect(self._on_split_toggle)
+        self._split_input = _value_input("30", QIntValidator(1, 999), enabled=False)
+        spl_ctrl = _toggle_row(self._split_toggle, self._split_input)
+        spl_w.layout().addWidget(spl_ctrl)
+        r_lay.addWidget(spl_w, 1)
+
+        b_lay.addWidget(row)
         root.addWidget(body)
 
-        # ── footer ──
+        _sep(root)
+
+        # ── footer ──────────────────────────────────────────────────────────
         footer = QWidget()
-        footer.setFixedHeight(52)
-        footer.setStyleSheet(f"background:{BG_MUTED}; border-top:1px solid {BORDER};")
+        footer.setFixedHeight(60)
+        footer.setStyleSheet("background:transparent;")
         f_lay = QHBoxLayout(footer)
-        f_lay.setContentsMargins(18, 0, 18, 0)
-        f_lay.setSpacing(8)
+        f_lay.setContentsMargins(20, 0, 20, 0)
+        f_lay.setSpacing(10)
         f_lay.addStretch()
 
         cancel_btn = QPushButton("Cancel")
-        cancel_btn.setFixedHeight(32)
+        cancel_btn.setFixedHeight(36)
         cancel_btn.setCursor(Qt.PointingHandCursor)
         cancel_btn.setStyleSheet(f"""
             QPushButton {{
                 background:{BG}; color:{FG}; border:1px solid {BORDER};
-                border-radius:6px; padding:0 16px; font-size:13px;
+                border-radius:8px; padding:0 20px; font-size:13px;
             }}
             QPushButton:hover {{ background:{BG_SUBTLE}; }}
         """)
         cancel_btn.clicked.connect(self.reject)
         f_lay.addWidget(cancel_btn)
 
-        add_btn = QPushButton("  Add to Queue")
-        add_btn.setIcon(QIcon(icon_pixmap("plus", 13, ON_PRIMARY)))
-        add_btn.setFixedHeight(32)
+        add_btn = QPushButton("  + Add to Queue")
+        add_btn.setFixedHeight(36)
         add_btn.setCursor(Qt.PointingHandCursor)
         add_btn.setStyleSheet(f"""
             QPushButton {{
                 background:{PRIMARY}; color:{ON_PRIMARY}; border:none;
-                border-radius:6px; padding:0 16px; font-size:13px; font-weight:600;
+                border-radius:8px; padding:0 20px; font-size:13px; font-weight:600;
             }}
             QPushButton:hover {{ background:{PRIMARY_HOVER}; }}
         """)
@@ -163,33 +171,34 @@ class AddPlaylistDialog(QDialog):
         f_lay.addWidget(add_btn)
         root.addWidget(footer)
 
-    def _spin_style(self, enabled: bool) -> str:
-        bg    = BG       if enabled else BG_SUBTLE
-        color = FG       if enabled else FG_MUTED
-        rule = (
-            f"background:{bg}; color:{color}; border:1px solid {BORDER}; "
-            f"border-radius:6px; padding:0 8px; "
-            f"font-family:'JetBrains Mono',monospace; font-size:12px;"
-        )
-        return f"QSpinBox {{ {rule} }} QDoubleSpinBox {{ {rule} }}"
+    # ── toggle handlers ──────────────────────────────────────────────────────
+    def _on_speed_toggle(self, checked: bool) -> None:
+        self._speed_input.setEnabled(checked)
+        self._speed_input.setStyleSheet(_input_style(checked))
 
     def _on_split_toggle(self, checked: bool) -> None:
-        self._split_spin.setEnabled(checked)
-        self._split_spin.setStyleSheet(self._spin_style(checked))
+        self._split_input.setEnabled(checked)
+        self._split_input.setStyleSheet(_input_style(checked))
 
-    def _on_speed_toggle(self, checked: bool) -> None:
-        self._speed_spin.setEnabled(checked)
-        self._speed_spin.setStyleSheet(self._spin_style(checked))
-
+    # ── submit ───────────────────────────────────────────────────────────────
     def _on_add(self) -> None:
         url = self._url_input.text().strip()
         if not url:
             return
-        prefix      = self._prefix_input.text().strip() or str(len(self._state.playlists)).zfill(2)
-        split_on    = self._split_toggle._checked
-        split_min   = self._split_spin.value()
-        speed_on    = self._speed_toggle._checked
-        speed       = self._speed_spin.value() if speed_on else 1.0
+
+        prefix   = self._prefix_input.text().strip() or str(len(self._state.playlists)).zfill(2)
+        speed_on = self._speed_toggle._checked
+        split_on = self._split_toggle._checked
+
+        try:
+            speed = max(1.0, min(3.0, float(self._speed_input.text()))) if speed_on else 1.0
+        except ValueError:
+            speed = 1.5
+
+        try:
+            split_min = max(1, int(self._split_input.text())) if split_on else 30
+        except ValueError:
+            split_min = 30
 
         pl = Playlist(
             id           = str(uuid.uuid4()),
@@ -209,3 +218,45 @@ class AddPlaylistDialog(QDialog):
         from ui.api import QueueAPI
         QueueAPI(self._state).add(pl)
         self.accept()
+
+
+# ── helpers ───────────────────────────────────────────────────────────────────
+
+def _sep(layout) -> None:
+    f = QFrame(); f.setFixedHeight(1)
+    f.setStyleSheet(f"background:{BORDER}; border:none;")
+    layout.addWidget(f)
+
+
+def _section() -> QWidget:
+    w = QWidget(); w.setStyleSheet("background:transparent;")
+    lay = QVBoxLayout(w); lay.setContentsMargins(0, 0, 0, 0); lay.setSpacing(6)
+    return w
+
+
+def _input_style(enabled: bool) -> str:
+    bg    = BG       if enabled else BG_SUBTLE
+    color = FG       if enabled else FG_MUTED
+    return (
+        f"QLineEdit {{ background:{bg}; color:{color}; border:1px solid {BORDER}; "
+        f"border-radius:8px; padding:0 10px; "
+        f"font-family:'JetBrains Mono',monospace; font-size:13px; }}"
+    )
+
+
+def _value_input(default: str, validator, enabled: bool = True) -> QLineEdit:
+    e = QLineEdit(default)
+    e.setFixedHeight(32)
+    e.setEnabled(enabled)
+    e.setValidator(validator)
+    e.setAlignment(Qt.AlignCenter)
+    e.setStyleSheet(_input_style(enabled))
+    return e
+
+
+def _toggle_row(toggle: Toggle, inp: QLineEdit) -> QWidget:
+    w = QWidget(); w.setStyleSheet("background:transparent;")
+    lay = QHBoxLayout(w); lay.setContentsMargins(0, 0, 0, 0); lay.setSpacing(8)
+    lay.addWidget(toggle)
+    lay.addWidget(inp, 1)
+    return w
