@@ -220,22 +220,6 @@ class MergeDialog(QDialog):
         self._splitter_section.toggled.connect(self._update_footer)
         lay.addWidget(self._splitter_section)
 
-        # OUTPUT ORDER PREVIEW
-        self._preview_sec = QWidget(); self._preview_sec.setStyleSheet("background:transparent;")
-        prev_lay = QVBoxLayout(self._preview_sec)
-        prev_lay.setContentsMargins(0, 0, 0, 0); prev_lay.setSpacing(6)
-        prev_lay.addWidget(_section_lbl("Output Order Preview"))
-        self._preview_box = QTextEdit()
-        self._preview_box.setReadOnly(True)
-        self._preview_box.setFixedHeight(80)
-        self._preview_box.setStyleSheet(
-            f"QTextEdit {{ background:{BG_ACCENT}; border:1px solid {BORDER}; "
-            f"border-radius:8px; padding:6px 10px; "
-            f"font-family:'JetBrains Mono',monospace; font-size:11px; color:{FG_MUTED}; }}"
-        )
-        prev_lay.addWidget(self._preview_box)
-        lay.addWidget(self._preview_sec)
-
         self._update_preview()
         return w
 
@@ -327,8 +311,7 @@ class MergeDialog(QDialog):
                 lines.append(f"{pl.prefix}_{i+1:02d}_{safe}.mp3")
             if len(pl.videos) > 3:
                 lines.append(f"{pl.prefix}_…")
-        self._preview_box.setPlainText("\n".join(lines[:8]))
-        self._preview_sec.setVisible(bool(lines))
+        self._splitter_section.update_preview("\n".join(lines[:8]))
 
     def _on_merge(self) -> None:
         dest = self._dest_input.text().strip()
@@ -580,8 +563,32 @@ class _SplitterSection(QWidget):
 
         self._root.addWidget(self._url_row)
 
+        # OUTPUT ORDER PREVIEW — always visible inside this block
+        self._preview_row = QWidget()
+        self._preview_row.setObjectName("splitterPreviewRow")
+        self._preview_row.setStyleSheet(
+            f"#splitterPreviewRow {{ border-top:1px solid {BORDER}; background:transparent; }}"
+        )
+        prev_lay = QVBoxLayout(self._preview_row)
+        prev_lay.setContentsMargins(14, 10, 14, 12)
+        prev_lay.setSpacing(6)
+        prev_lay.addWidget(_section_lbl("Output Order Preview"))
+        self._preview_box = QTextEdit()
+        self._preview_box.setReadOnly(True)
+        self._preview_box.setFixedHeight(72)
+        self._preview_box.setStyleSheet(
+            f"QTextEdit {{ background:{BG}; border:1px solid {BORDER}; "
+            f"border-radius:6px; padding:6px 10px; "
+            f"font-family:'JetBrains Mono',monospace; font-size:11px; color:{FG_MUTED}; }}"
+        )
+        prev_lay.addWidget(self._preview_box)
+        self._root.addWidget(self._preview_row)
+
     def url(self) -> str:
         return self._url_input.text().strip()
+
+    def update_preview(self, text: str) -> None:
+        self._preview_box.setPlainText(text)
 
     def _on_toggle(self, on: bool) -> None:
         self._on = on
