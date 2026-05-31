@@ -396,7 +396,7 @@ class _PlaylistChecklist(QWidget):
         self.setObjectName("plChecklist")
         self.setAttribute(Qt.WA_StyledBackground, True)
         self.setStyleSheet(
-            f"#plChecklist {{ border:1px solid {BORDER}; border-radius:6px; background:{BG}; }}"
+            f"#plChecklist {{ border:1px solid {BORDER}; border-radius:8px; background:{BG}; }}"
         )
         self.setMaximumHeight(200)
 
@@ -497,7 +497,7 @@ class _SplitterSection(QWidget):
         self.setObjectName("splitterSection")
         self.setAttribute(Qt.WA_StyledBackground, True)
         self.setStyleSheet(
-            f"#splitterSection {{ border:1px solid {BORDER}; border-radius:8px; background:{BG}; }}"
+            f"#splitterSection {{ border:1px solid {BORDER}; border-radius:8px; background:{BG_ACCENT}; }}"
         )
 
         self._root = QVBoxLayout(self)
@@ -586,10 +586,6 @@ class _SplitterSection(QWidget):
     def _on_toggle(self, on: bool) -> None:
         self._on = on
         self._url_row.setVisible(on)
-        bg = BG_ACCENT if on else BG
-        self.setStyleSheet(
-            f"#splitterSection {{ border:1px solid {BORDER}; border-radius:8px; background:{bg}; }}"
-        )
         self.toggled.emit(on)
 
     def _on_fetch(self) -> None:
