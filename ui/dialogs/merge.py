@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QLineEdit, QWidget, QFileDialog, QTextEdit, QFrame,
+    QLineEdit, QWidget, QFileDialog, QTextEdit, QFrame, QScrollArea,
 )
 from PySide6.QtCore import Qt, QThread, Signal as _Signal
 from PySide6.QtGui import QIcon
@@ -114,7 +114,15 @@ class MergeDialog(QDialog):
 
         root.addWidget(self._build_header())
         _sep(root)
-        root.addWidget(self._build_body())
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setStyleSheet(f"QScrollArea {{ background:{BG}; border:none; }}")
+        scroll.setWidget(self._build_body())
+        scroll.viewport().setStyleSheet(f"background:{BG};")
+        root.addWidget(scroll, 1)
+
         _sep(root)
         root.addWidget(self._build_footer())
 
