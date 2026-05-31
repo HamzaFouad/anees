@@ -588,7 +588,7 @@ class VideoRow(QWidget):
 class _NoSelection(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setStyleSheet(f"background:{BG_SUBTLE};")
+        self.setStyleSheet("background:transparent;")
         lay = QVBoxLayout(self)
         lay.setAlignment(Qt.AlignCenter)
         lay.setSpacing(12)
