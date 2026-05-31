@@ -396,12 +396,12 @@ class _PlaylistChecklist(QWidget):
         self.setObjectName("plChecklist")
         self.setAttribute(Qt.WA_StyledBackground, True)
         self.setStyleSheet(
-            f"#plChecklist {{ border:1px solid {BORDER}; border-radius:8px; background:{BG}; }}"
+            f"#plChecklist {{ border:1px solid {BORDER}; border-radius:8px; background:{BG_ACCENT}; }}"
         )
         self.setMaximumHeight(200)
 
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setContentsMargins(1, 1, 1, 1)
         lay.setSpacing(0)
 
         for i, p in enumerate(playlists):
