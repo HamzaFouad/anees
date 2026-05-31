@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
     QLineEdit, QWidget, QFileDialog, QTextEdit, QFrame, QScrollArea,
 )
 from PySide6.QtCore import Qt, QThread, Signal as _Signal
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QPainter, QColor
 
 from ui.theme import (
     PRIMARY, PRIMARY_HOVER, ON_PRIMARY, PRIMARY_TINT_4,
@@ -395,16 +395,12 @@ class _PlaylistChecklist(QWidget):
                 row.toggled.connect(
                     lambda checked, pid=p.id: self._on_toggle(pid, checked)
                 )
-            has_border = i < len(playlists) - 1
-            self._set_row_style(row, p.id in selected, has_border)
             lay.addWidget(row)
-
-    def _set_row_style(self, row: "_CheckRow", checked: bool, border_bottom: bool) -> None:
-        oid = f"chkRow_{id(row)}"
-        row.setObjectName(oid)
-        bg = BG_ACCENT if checked else "transparent"
-        border = f"border-bottom:1px solid {BORDER};" if border_bottom else ""
-        row.setStyleSheet(f"#{oid} {{ background:{bg}; {border} }}")
+            if i < len(playlists) - 1:
+                sep = QFrame()
+                sep.setFixedHeight(1)
+                sep.setStyleSheet(f"background:{BORDER}; border:none;")
+                lay.addWidget(sep)
 
     def _on_toggle(self, pid: str, checked: bool) -> None:
         if checked:
@@ -413,8 +409,8 @@ class _PlaylistChecklist(QWidget):
             self._selected.discard(pid)
         for row in self._rows:
             if row._pl.id == pid:
-                has_border = self._rows.index(row) < len(self._rows) - 1
-                self._set_row_style(row, checked, has_border)
+                row._checked = checked
+                row.update()
         self.selection_changed.emit()
 
 
@@ -426,7 +422,6 @@ class _CheckRow(QWidget):
         self._pl = pl
         self._checked = checked
         self._eligible = eligible
-        self.setAttribute(Qt.WA_StyledBackground, True)
 
         if eligible:
             self.setCursor(Qt.PointingHandCursor)
@@ -458,6 +453,11 @@ class _CheckRow(QWidget):
             f"font-family:'JetBrains Mono',monospace; background:transparent; border:none;"
         )
         lay.addWidget(stats)
+
+    def paintEvent(self, event):
+        if self._checked:
+            p = QPainter(self)
+            p.fillRect(self.rect(), QColor(BG_ACCENT))
 
     def mousePressEvent(self, event):
         if self._eligible:
