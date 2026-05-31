@@ -166,11 +166,12 @@ class AddPlaylistDialog(QDialog):
     def _spin_style(self, enabled: bool) -> str:
         bg    = BG       if enabled else BG_SUBTLE
         color = FG       if enabled else FG_MUTED
-        return (
-            f"QSpinBox {{ background:{bg}; color:{color}; border:1px solid {BORDER}; "
+        rule = (
+            f"background:{bg}; color:{color}; border:1px solid {BORDER}; "
             f"border-radius:6px; padding:0 8px; "
-            f"font-family:'JetBrains Mono',monospace; font-size:12px; }}"
+            f"font-family:'JetBrains Mono',monospace; font-size:12px;"
         )
+        return f"QSpinBox {{ {rule} }} QDoubleSpinBox {{ {rule} }}"
 
     def _on_split_toggle(self, checked: bool) -> None:
         self._split_spin.setEnabled(checked)
