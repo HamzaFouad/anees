@@ -8,25 +8,25 @@ from backend.models import Playlist
 
 
 class MergeWorker(QThread):
-    progress     = Signal(int, int)   # copied, total
-    log_added    = Signal(str, str)   # level, message
-    completed    = Signal(int)        # total files copied
-    failed       = Signal(str)        # error message
+    progress  = Signal(int, int)   # copied, total
+    log_added = Signal(str, str)   # level, message
+    completed = Signal(int)        # total files
+    failed    = Signal(str)        # error message
 
     def __init__(
         self,
         playlists: list[Playlist],
         output_root: str,
         dest_path: str,
-        splitter_url: str | None = None,
+        splitter_urls: list[str] | None = None,
         parent=None,
     ):
         super().__init__(parent)
-        self._playlists    = playlists
-        self._output_root  = output_root
-        self._dest_path    = dest_path
-        self._splitter_url = splitter_url
-        self._stop         = threading.Event()
+        self._playlists     = playlists
+        self._output_root   = output_root
+        self._dest_path     = dest_path
+        self._splitter_urls = splitter_urls
+        self._stop          = threading.Event()
 
     def run(self) -> None:
         try:
@@ -34,7 +34,7 @@ class MergeWorker(QThread):
                 self._playlists,
                 self._output_root,
                 self._dest_path,
-                splitter_url=self._splitter_url,
+                splitter_urls=self._splitter_urls,
                 on_log=lambda msg: self.log_added.emit("info", msg),
                 on_progress=lambda c, t: self.progress.emit(c, t),
                 stop=self._stop,

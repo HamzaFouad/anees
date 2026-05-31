@@ -23,7 +23,7 @@ def _playlist_folder(pl: Playlist) -> str:
 
 @dataclass
 class _Entry:
-    src: str          # source path (None = splitter copy)
+    src: str
     is_splitter: bool
     playlist_name: str
 
@@ -37,17 +37,20 @@ class MergeService:
         playlists: list[Playlist],
         output_root: str,
         dest_path: str,
-        splitter_path: str | None = None,
+        splitter_paths: list[str] | None = None,
         on_progress: Callable[[int, int], None] | None = None,
         stop: threading.Event | None = None,
     ) -> int:
         """Move MP3s from each playlist folder into *dest_path*, renamed
         sequentially starting from JOC_BASE (1111.mp3, 1112.mp3, …).
 
-        A CSV summary is written next to *dest_path* with one row per
-        playlist showing its start/end positions and JOC numbers.
+        *splitter_paths* is a list of local MP3 paths — one per playlist.
+        Each splitter is inserted BEFORE its corresponding playlist, giving
+        N splitters for N playlists:
+            spl_1 → PL1 → spl_2 → PL2 → … → spl_N → PLN
 
-        Returns the total number of files moved.
+        A CSV summary is written next to *dest_path*.
+        Returns total files moved/copied.
         """
         if stop is None:
             stop = threading.Event()
@@ -58,7 +61,6 @@ class MergeService:
 
         ordered = sorted(playlists, key=lambda p: p.prefix)
 
-        # Build flat entry list in final order
         entries: list[_Entry] = []
         for idx, pl in enumerate(ordered):
             folder = os.path.join(output_root, _playlist_folder(pl))
@@ -68,8 +70,13 @@ class MergeService:
             mp3s = sorted(f for f in os.listdir(folder) if f.lower().endswith(".mp3"))
             if not mp3s:
                 continue
-            if splitter_path and idx > 0:
-                entries.append(_Entry(splitter_path, is_splitter=True, playlist_name="splitter"))
+
+            # insert splitter before this playlist
+            if splitter_paths and idx < len(splitter_paths):
+                entries.append(_Entry(
+                    splitter_paths[idx], is_splitter=True, playlist_name="splitter"
+                ))
+
             for fname in mp3s:
                 entries.append(_Entry(
                     os.path.join(folder, fname),
@@ -78,9 +85,8 @@ class MergeService:
                 ))
 
         total = len(entries)
-
-        # Move / copy files with sequential JOC names
         moved = 0
+
         for seq, entry in enumerate(entries):
             if stop.is_set():
                 self._on_log("Merge stopped by user")
@@ -89,7 +95,6 @@ class MergeService:
             dest_file = os.path.join(dest_path, f"{joc}.mp3")
             try:
                 if entry.is_splitter:
-                    # splitter is reused across insertions — copy, not move
                     shutil.copy2(entry.src, dest_file)
                 else:
                     shutil.move(entry.src, dest_file)
@@ -99,7 +104,6 @@ class MergeService:
                 self._on_log(f"failed {joc}.mp3: {exc}")
             on_progress(moved, total)
 
-        # Write CSV summary (outside dest_path)
         if moved > 0:
             self._write_csv(entries, dest_path)
 
@@ -111,20 +115,17 @@ class MergeService:
             str(Path(dest_path).parent),
             f"{Path(dest_path).name}_summary.csv",
         )
-        # Group consecutive entries by playlist_name
         rows = []
         i = 0
         while i < len(entries):
             name = entries[i].playlist_name
-            start_seq = i + 1          # 1-based
             j = i
             while j < len(entries) and entries[j].playlist_name == name:
                 j += 1
-            end_seq = j                # last index (1-based)
             rows.append({
                 "playlist_name": name,
-                "start":         start_seq,
-                "end":           end_seq,
+                "start":         i + 1,
+                "end":           j,
                 "joc_start":     JOC_BASE + i,
                 "joc_end":       JOC_BASE + j - 1,
             })

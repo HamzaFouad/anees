@@ -13,8 +13,8 @@ from ui.theme import (
     SUCCESS, SUCCESS_BG, SUCCESS_DARK,
 )
 from ui.widgets import (
-    Toggle, StyledInput, icon_pixmap, icon_label, Checkbox,
-    section_card_qss, make_transparent_row, hsep,
+    icon_pixmap, icon_label, Checkbox, StyledInput,
+    section_card_qss,
 )
 from ui.state import AppState
 from backend.models import Playlist, Video
@@ -67,7 +67,9 @@ def _scan_output_root(output_root: str) -> list[Playlist]:
 
 
 def _sep(layout) -> None:
-    layout.addWidget(hsep())
+    f = QFrame(); f.setFixedHeight(1)
+    f.setStyleSheet(f"background:{BORDER}; border:none;")
+    layout.addWidget(f)
 
 
 def _section_lbl(text: str) -> QLabel:
@@ -216,10 +218,8 @@ class MergeDialog(QDialog):
         self._pl_list.selection_changed.connect(self._on_selection_changed)
         lay.addWidget(self._pl_list)
 
-        # SPLITTER CLIP
+        # SPLITTER CLIPS (always on — fixed playlist)
         self._splitter_section = _SplitterSection()
-        self._splitter_section.toggled.connect(self._update_footer)
-        self._splitter_section.toggled.connect(lambda _: self._update_preview())
         lay.addWidget(self._splitter_section)
 
         self._update_preview()
@@ -283,6 +283,7 @@ class MergeDialog(QDialog):
         self._pl_label.setText(
             f"Playlists to Include ({n_sel}/{len(eligible)} selected)"
         )
+        self._splitter_section.update_count(n_sel)
         self._update_footer()
         self._update_preview()
 
@@ -291,8 +292,7 @@ class MergeDialog(QDialog):
         total_files = sum(p.completed for p in selected_pls)
         total_mb = sum(p.size_mb or 0 for p in selected_pls)
         n_sel = len(selected_pls)
-        splitter_on = self._splitter_section._on if hasattr(self, "_splitter_section") else False
-        n_splitters = max(0, n_sel - 1) if splitter_on else 0
+        n_splitters = n_sel  # one splitter before each playlist
 
         files_str = f"{total_files} + {n_splitters} splitter files" if n_splitters else f"{total_files} files"
         self._footer_info.setText(
@@ -307,13 +307,11 @@ class MergeDialog(QDialog):
             (p for p in self._playlists if p.id in self._selected),
             key=lambda p: p.prefix,
         )
-        splitter_on = self._splitter_section._on
         lines: list[str] = []
         joc = JOC_BASE
         for idx, pl in enumerate(selected_pls):
-            if splitter_on and idx > 0:
-                lines.append(f"{joc}.mp3  ← splitter")
-                joc += 1
+            lines.append(f"{joc}.mp3  ← splitter")
+            joc += 1
             count = pl.video_count or len(pl.videos) or 1
             shown = min(count, 3)
             for _ in range(shown):
@@ -329,24 +327,23 @@ class MergeDialog(QDialog):
         if not dest:
             self._footer_info.setText("Please enter a destination folder.")
             return
-        splitter_url = None
-        if self._splitter_section._on:
-            splitter_url = self._splitter_section.url()
-            if not splitter_url:
-                self._footer_info.setText("Enter a splitter clip URL or disable splitter.")
-                return
 
         selected_pls = [p for p in self._playlists if p.id in self._selected]
         if not selected_pls:
             return
 
+        splitter_urls = self._splitter_section.get_urls(len(selected_pls))
+        if not splitter_urls:
+            self._footer_info.setText("Splitter playlist still loading — please wait.")
+            return
+
         self._merge_btn.setEnabled(False)
         self._merge_btn.setText("  Merging…")
-        self._footer_info.setText("Copying files…")
+        self._footer_info.setText("Downloading splitter clips…")
 
         from ui.workers.merge_worker import MergeWorker
         self._worker = MergeWorker(
-            selected_pls, get_output_root(), dest, splitter_url, parent=self
+            selected_pls, get_output_root(), dest, splitter_urls, parent=self
         )
         self._worker.progress.connect(
             lambda c, t: self._footer_info.setText(f"Copying files… ({c}/{t})")
@@ -406,7 +403,9 @@ class _PlaylistChecklist(QWidget):
                 )
             lay.addWidget(row)
             if i < len(playlists) - 1:
-                lay.addWidget(hsep())
+                sep = QFrame(); sep.setFixedHeight(1)
+                sep.setStyleSheet(f"background:{BORDER}; border:none;")
+                lay.addWidget(sep)
 
     def _on_toggle(self, pid: str, checked: bool) -> None:
         if checked:
@@ -428,7 +427,6 @@ class _CheckRow(QWidget):
         self._pl = pl
         self._checked = checked
         self._eligible = eligible
-        make_transparent_row(self)
 
         if eligible:
             self.setCursor(Qt.PointingHandCursor)
@@ -469,14 +467,17 @@ class _CheckRow(QWidget):
         super().mousePressEvent(event)
 
 
+SPLITTER_PLAYLIST = "https://www.youtube.com/playlist?list=PLoOpuURvl_OMoX3iDm8WB9uYWFutIG9dj"
+
+
 # ── Splitter section ──────────────────────────────────────────────────────────
 
 class _SplitterSection(QWidget):
-    toggled = _Signal(bool)
-
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._on = False
+        # list of (url, title, duration_sec) from the splitter playlist
+        self._clips: list[tuple[str, str, int]] = []
+        self._count = 0  # how many playlists are selected
         self._fetch_thread: QThread | None = None
 
         self.setObjectName("splitterSection")
@@ -487,89 +488,58 @@ class _SplitterSection(QWidget):
         self._root.setContentsMargins(0, 0, 0, 0)
         self._root.setSpacing(0)
 
-        # toggle row
+        # ── header ──
         top = QWidget()
         top_lay = QHBoxLayout(top)
         top_lay.setContentsMargins(14, 12, 14, 12)
-        top_lay.setSpacing(12)
-
-        text = QWidget()
-        text_lay = QVBoxLayout(text)
-        text_lay.setContentsMargins(0, 0, 0, 0); text_lay.setSpacing(3)
-
-        title_row = QWidget()
-        title_lay = QHBoxLayout(title_row)
-        title_lay.setContentsMargins(0, 0, 0, 0); title_lay.setSpacing(6)
-        title_lay.addWidget(icon_label("scissors", 13, FG))
-        title_lbl = QLabel("Splitter clip between playlists")
+        top_lay.setSpacing(8)
+        top_lay.addWidget(icon_label("scissors", 13, FG))
+        title_lbl = QLabel("Splitter clips")
         title_lbl.setStyleSheet(
             f"font-size:12px; font-weight:600; color:{FG}; background:transparent; border:none;"
         )
-        title_lay.addWidget(title_lbl)
-        text_lay.addWidget(title_row)
-
-        desc = QLabel(
-            'Insert one short YouTube clip in the merged folder between each playlist — '
-            'a chime, jingle, or "next up" marker so you hear where one ends and the next begins.'
-        )
-        desc.setStyleSheet(
+        top_lay.addWidget(title_lbl)
+        top_lay.addStretch()
+        self._status_lbl = QLabel("Loading…")
+        self._status_lbl.setStyleSheet(
             f"font-size:11px; color:{FG_MUTED}; background:transparent; border:none;"
         )
-        desc.setWordWrap(True)
-        text_lay.addWidget(desc)
-        top_lay.addWidget(text, 1)
-
-        self._toggle = Toggle(False)
-        self._toggle.toggled.connect(self._on_toggle)
-        top_lay.addWidget(self._toggle)
+        top_lay.addWidget(self._status_lbl)
         self._root.addWidget(top)
 
-        # URL row (hidden initially)
-        self._url_row = QWidget()
-        self._url_row.setObjectName("splitterUrlRow")
-        self._url_row.setStyleSheet(
-            f"#splitterUrlRow {{ border-top:1px solid {BORDER}; background:transparent; }}"
+        # ── clip list ──
+        clips_border = QWidget()
+        clips_border.setObjectName("clipsArea")
+        clips_border.setStyleSheet(
+            f"#clipsArea {{ border-top:1px solid {BORDER}; background:transparent; }}"
         )
-        self._url_row.setVisible(False)
-        url_lay = QVBoxLayout(self._url_row)
-        url_lay.setContentsMargins(14, 10, 14, 12)
-        url_lay.setSpacing(8)
+        clips_v = QVBoxLayout(clips_border)
+        clips_v.setContentsMargins(0, 0, 0, 0)
+        clips_v.setSpacing(0)
 
-        input_row = QWidget()
-        input_lay = QHBoxLayout(input_row)
-        input_lay.setContentsMargins(0, 0, 0, 0); input_lay.setSpacing(8)
-        self._url_input = StyledInput("https://youtube.com/watch?v=…", mono=True)
-        input_lay.addWidget(self._url_input, 1)
-        self._fetch_btn = QPushButton("Fetch")
-        self._fetch_btn.setFixedHeight(32)
-        self._fetch_btn.setCursor(Qt.PointingHandCursor)
-        self._fetch_btn.setStyleSheet(f"""
-            QPushButton {{
-                background:{BG}; color:{FG}; border:1px solid {BORDER};
-                border-radius:8px; padding:0 14px; font-size:12px;
-            }}
-            QPushButton:hover {{ background:{BG_SUBTLE}; }}
-            QPushButton:disabled {{ color:{FG_MUTED}; }}
-        """)
-        self._fetch_btn.clicked.connect(self._on_fetch)
-        input_lay.addWidget(self._fetch_btn)
-        url_lay.addWidget(input_row)
+        self._list_scroll = QScrollArea()
+        self._list_scroll.setWidgetResizable(True)
+        self._list_scroll.setFrameShape(QFrame.NoFrame)
+        self._list_scroll.setFixedHeight(130)
+        self._list_scroll.setStyleSheet("QScrollArea { border:none; background:transparent; }")
+        self._list_scroll.viewport().setStyleSheet("background:transparent;")
+        self._list_widget = QWidget()
+        self._list_widget.setStyleSheet("background:transparent;")
+        self._list_lay = QVBoxLayout(self._list_widget)
+        self._list_lay.setContentsMargins(0, 0, 0, 0)
+        self._list_lay.setSpacing(0)
+        self._list_lay.addStretch()
+        self._list_scroll.setWidget(self._list_widget)
+        clips_v.addWidget(self._list_scroll)
+        self._root.addWidget(clips_border)
 
-        # card slot
-        self._card_slot = QWidget(); self._card_slot.setStyleSheet("background:transparent;")
-        self._card_slot_lay = QVBoxLayout(self._card_slot)
-        self._card_slot_lay.setContentsMargins(0, 0, 0, 0)
-        url_lay.addWidget(self._card_slot)
-
-        self._root.addWidget(self._url_row)
-
-        # OUTPUT ORDER PREVIEW — always visible inside this block
-        self._preview_row = QWidget()
-        self._preview_row.setObjectName("splitterPreviewRow")
-        self._preview_row.setStyleSheet(
+        # ── OUTPUT ORDER PREVIEW ──
+        prev_row = QWidget()
+        prev_row.setObjectName("splitterPreviewRow")
+        prev_row.setStyleSheet(
             f"#splitterPreviewRow {{ border-top:1px solid {BORDER}; background:transparent; }}"
         )
-        prev_lay = QVBoxLayout(self._preview_row)
+        prev_lay = QVBoxLayout(prev_row)
         prev_lay.setContentsMargins(14, 10, 14, 12)
         prev_lay.setSpacing(6)
         prev_lay.addWidget(_section_lbl("Output Order Preview"))
@@ -582,89 +552,90 @@ class _SplitterSection(QWidget):
             f"font-family:'JetBrains Mono',monospace; font-size:11px; color:{FG_MUTED}; }}"
         )
         prev_lay.addWidget(self._preview_box)
-        self._root.addWidget(self._preview_row)
+        self._root.addWidget(prev_row)
 
-    def url(self) -> str:
-        return self._url_input.text().strip()
+        # auto-fetch the fixed splitter playlist
+        self._start_fetch()
+
+    # ── public API ────────────────────────────────────────────────────────────
+
+    def get_urls(self, n: int) -> list[str]:
+        return [url for url, _, _ in self._clips[:n]]
+
+    def update_count(self, n: int) -> None:
+        self._count = n
+        self._refresh_list()
 
     def update_preview(self, text: str) -> None:
         self._preview_box.setPlainText(text)
 
-    def _on_toggle(self, on: bool) -> None:
-        self._on = on
-        self._url_row.setVisible(on)
-        self.toggled.emit(on)
+    # ── fetch ─────────────────────────────────────────────────────────────────
 
-    def _on_fetch(self) -> None:
-        url = self._url_input.text().strip()
-        if not url:
-            return
-        self._fetch_btn.setText("Fetching…")
-        self._fetch_btn.setEnabled(False)
-
-        self._fetch_thread = _FetchInfoThread(url, self)
-        self._fetch_thread.resolved.connect(self._on_resolved)
+    def _start_fetch(self) -> None:
+        self._fetch_thread = _FetchPlaylistThread(SPLITTER_PLAYLIST, self)
+        self._fetch_thread.fetched.connect(self._on_fetched)
         self._fetch_thread.errored.connect(self._on_fetch_error)
         self._fetch_thread.start()
 
-    def _on_resolved(self, title: str, dur: int) -> None:
-        self._fetch_btn.setText("Re-fetch")
-        self._fetch_btn.setEnabled(True)
-        self._show_card(title, dur)
+    def _on_fetched(self, clips: list) -> None:
+        self._clips = clips
+        self._status_lbl.setText(f"{len(clips)} clips available")
+        self._refresh_list()
 
     def _on_fetch_error(self, msg: str) -> None:
-        self._fetch_btn.setText("Retry")
-        self._fetch_btn.setEnabled(True)
+        self._status_lbl.setText("Failed to load — retry later")
 
-    def _show_card(self, title: str, dur: int) -> None:
-        while self._card_slot_lay.count():
-            item = self._card_slot_lay.takeAt(0)
+    # ── list rendering ────────────────────────────────────────────────────────
+
+    def _refresh_list(self) -> None:
+        while self._list_lay.count() > 1:
+            item = self._list_lay.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
 
-        card = QWidget()
-        card_lay = QHBoxLayout(card)
-        card_lay.setContentsMargins(10, 8, 10, 8)
-        card_lay.setSpacing(10)
+        for i, (_, title, dur) in enumerate(self._clips):
+            used = i < self._count
+            row = QWidget()
+            row_lay = QHBoxLayout(row)
+            row_lay.setContentsMargins(14, 6, 14, 6)
+            row_lay.setSpacing(8)
 
-        thumb = QWidget()
-        thumb.setFixedSize(42, 42)
-        thumb.setStyleSheet(
-            "background:qlineargradient(x1:0,y1:0,x2:1,y2:1,"
-            "stop:0 #1a2547,stop:1 #2a3050); border-radius:6px;"
-        )
-        thumb_inner = QHBoxLayout(thumb)
-        thumb_inner.setContentsMargins(0, 0, 0, 0)
-        thumb_inner.addWidget(
-            icon_label("music", 16, "rgba(255,255,255,0.7)"), alignment=Qt.AlignCenter
-        )
-        card_lay.addWidget(thumb)
+            idx_lbl = QLabel(str(i + 1))
+            idx_lbl.setFixedWidth(20)
+            idx_lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            idx_lbl.setStyleSheet(
+                f"font-size:11px; font-weight:600; "
+                f"color:{PRIMARY if used else FG_MUTED}; background:transparent; border:none;"
+            )
+            row_lay.addWidget(idx_lbl)
 
-        info = QWidget()
-        info_lay = QVBoxLayout(info)
-        info_lay.setContentsMargins(0, 0, 0, 0); info_lay.setSpacing(2)
-        t = QLabel(title[:60])
-        t.setStyleSheet(
-            f"font-size:12px; font-weight:600; color:{FG}; background:transparent; border:none;"
-        )
-        info_lay.addWidget(t)
-        mins, secs = divmod(dur, 60)
-        sub = QLabel(f"{mins}:{secs:02d}")
-        sub.setStyleSheet(
-            f"font-size:11px; color:{FG_MUTED}; "
-            f"font-family:'JetBrains Mono',monospace; background:transparent; border:none;"
-        )
-        info_lay.addWidget(sub)
-        card_lay.addWidget(info, 1)
+            t_lbl = QLabel(title[:55])
+            t_lbl.setStyleSheet(
+                f"font-size:11px; color:{FG if used else FG_MUTED}; "
+                f"background:transparent; border:none;"
+            )
+            row_lay.addWidget(t_lbl, 1)
 
-        card_lay.addWidget(icon_label("check", 14, SUCCESS))
+            mins, secs = divmod(dur, 60)
+            d_lbl = QLabel(f"{mins}:{secs:02d}")
+            d_lbl.setStyleSheet(
+                f"font-size:11px; color:{FG_MUTED}; "
+                f"font-family:'JetBrains Mono',monospace; background:transparent; border:none;"
+            )
+            row_lay.addWidget(d_lbl)
 
-        self._card_slot_lay.addWidget(card)
+            self._list_lay.insertWidget(i, row)
+
+            if i < len(self._clips) - 1:
+                sep = QFrame()
+                sep.setFixedHeight(1)
+                sep.setStyleSheet(f"background:{BORDER}; border:none;")
+                self._list_lay.insertWidget(i * 2 + 1, sep)
 
 
-class _FetchInfoThread(QThread):
-    resolved = _Signal(str, int)
-    errored  = _Signal(str)
+class _FetchPlaylistThread(QThread):
+    fetched = _Signal(object)   # list[tuple[str, str, int]]
+    errored = _Signal(str)
 
     def __init__(self, url: str, parent=None):
         super().__init__(parent)
@@ -673,7 +644,7 @@ class _FetchInfoThread(QThread):
     def run(self) -> None:
         try:
             from backend.api.merge import MergeAPI
-            title, dur = MergeAPI().fetch_splitter_info(self._url)
-            self.resolved.emit(title, dur)
+            clips = MergeAPI().fetch_splitter_playlist(self._url)
+            self.fetched.emit(clips)
         except Exception as exc:
             self.errored.emit(str(exc))

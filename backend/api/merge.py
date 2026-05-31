@@ -7,27 +7,21 @@ from backend.models import Playlist
 
 
 class MergeAPI:
-    def fetch_splitter_info(self, url: str) -> tuple[str, int]:
-        """Return (title, duration_sec) for a YouTube video URL."""
+    def fetch_splitter_playlist(self, playlist_url: str) -> list[tuple[str, str, int]]:
+        """Return [(video_url, title, duration_sec)] for all videos in a playlist."""
         from backend.services.splitter_service import SplitterService
-        return SplitterService().fetch_info(url)
+        return SplitterService().fetch_playlist_videos(playlist_url)
 
     def merge(
         self,
         playlists: list[Playlist],
         output_root: str,
         dest_path: str,
-        splitter_url: str | None = None,
+        splitter_urls: list[str] | None = None,
         on_log: Callable[[str], None] | None = None,
         on_progress: Callable[[int, int], None] | None = None,
         stop: threading.Event | None = None,
     ) -> int:
-        """Merge selected playlists into *dest_path*.
-
-        If *splitter_url* is given the clip is downloaded first and inserted
-        between each playlist in the output.
-        Returns total files copied.
-        """
         from backend.services.merge_service import MergeService
         from backend.services.splitter_service import SplitterService
 
@@ -35,20 +29,21 @@ class MergeAPI:
             stop = threading.Event()
         log = on_log or (lambda _: None)
 
-        splitter_path: str | None = None
-        if splitter_url and not stop.is_set():
-            tmp_dir = os.path.join(dest_path, "_splitter_tmp")
-            log("Downloading splitter clip…")
-            try:
-                splitter_path = SplitterService().download_clip(splitter_url, tmp_dir, stop)
-                log(f"Splitter ready: {os.path.basename(splitter_path)}")
-            except Exception as exc:
-                log(f"Splitter download failed: {exc} — continuing without splitter")
-                splitter_path = None
+        splitter_paths: list[str] | None = None
+        if splitter_urls and not stop.is_set():
+            splitter_paths = []
+            for i, url in enumerate(splitter_urls):
+                tmp_dir = os.path.join(dest_path, f"_splitter_tmp_{i}")
+                log(f"Downloading splitter {i + 1}/{len(splitter_urls)}…")
+                try:
+                    path = SplitterService().download_clip(url, tmp_dir, stop)
+                    splitter_paths.append(path)
+                except Exception as exc:
+                    log(f"Splitter {i + 1} download failed: {exc} — skipping")
 
         return MergeService(on_log=log).merge(
             playlists, output_root, dest_path,
-            splitter_path=splitter_path,
+            splitter_paths=splitter_paths or None,
             on_progress=on_progress,
             stop=stop,
         )

@@ -63,6 +63,26 @@ class YtdlpClient:
             raise RuntimeError(f"fetch_info failed: {exc}") from exc
         return videos, title
 
+    def fetch_video_urls(self, playlist_url: str) -> list[tuple[str, str, int]]:
+        """Return [(webpage_url, title, duration_sec)] for every entry in a playlist."""
+        import yt_dlp
+        opts = {"quiet": True, "no_warnings": True, "extract_flat": True}
+        result: list[tuple[str, str, int]] = []
+        try:
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                info = ydl.extract_info(playlist_url, download=False)
+            for e in (info.get("entries") or []):
+                if not e:
+                    continue
+                url = e.get("webpage_url") or e.get("url") or ""
+                if url and not url.startswith("http"):
+                    url = f"https://www.youtube.com/watch?v={url}"
+                if url:
+                    result.append((url, e.get("title") or "", int(e.get("duration") or 0)))
+        except Exception as exc:
+            raise RuntimeError(f"fetch_video_urls failed: {exc}") from exc
+        return result
+
     # ── Download ──────────────────────────────────────────────────────────────
     def download(
         self,

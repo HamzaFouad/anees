@@ -10,6 +10,10 @@ class SplitterService:
     def __init__(self):
         self._client = YtdlpClient()
 
+    def fetch_playlist_videos(self, playlist_url: str) -> list[tuple[str, str, int]]:
+        """Return [(webpage_url, title, duration_sec)] for all videos in a playlist."""
+        return self._client.fetch_video_urls(playlist_url)
+
     def fetch_info(self, url: str) -> tuple[str, int]:
         """Return (title, duration_sec) for a single YouTube video URL."""
         videos, title = self._client.fetch_info(url)
