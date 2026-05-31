@@ -64,7 +64,7 @@ anees/
 
 ## Status
 
-**Phase 6 complete** — download + split + speed working end-to-end.
+**Phase 8 complete** — download + split + speed + merge (with optional splitter clip) working end-to-end.
 
 | Feature | Status |
 |---------|--------|
@@ -79,7 +79,7 @@ anees/
 | Download console (collapsible terminal panel) | ✅ |
 | PyInstaller Windows .exe + macOS .app via GitHub Actions CI | ✅ |
 | Speed processing (atempo filter) | ✅ Phase 6 |
-| Merge to folder | 🔜 Phase 7 |
+| Merge to folder + splitter clip | ✅ Phase 7 + 8 |
 | SQLite history | 🔜 Phase 9 |
 
 See [`docs/roadmap.md`](docs/roadmap.md) for the full milestone plan.

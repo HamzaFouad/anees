@@ -150,24 +150,30 @@ Pipeline: **DL → MP3 → /Split → ×Speed**
 
 ---
 
-### Phase 7 · Merge Functionality
+### Phase 7 · Merge Functionality ✅
 
 | File | Purpose |
 |------|---------|
 | `backend/services/merge_service.py` | Copies MP3s from selected playlist folders into destination in prefix order |
+| `backend/api/merge.py` | `MergeAPI` — public facade |
+| `ui/workers/merge_worker.py` | `MergeWorker(QThread)` — runs merge in background, emits progress/completed/failed |
 
-- Merge dialog wired to real file copy (with progress feedback)
+- Merge dialog fully wired: browse button, real file copy with live progress, stop on cancel
+- Output filename: `{pl.prefix}_{original_filename}` (e.g. `00_01_Title.mp3`)
+- Output order preview generated from in-memory video data
 
 ---
 
-### Phase 8 · Splitter Clip
+### Phase 8 · Splitter Clip ✅
 
 | File | Purpose |
 |------|---------|
-| `backend/services/splitter_service.py` | Downloads a single YouTube URL via yt-dlp, inserts `_splitter_*.mp3` between each playlist in merged output |
+| `backend/services/splitter_service.py` | `fetch_info()` resolves title+duration; `download_clip()` downloads as MP3 |
 
-- Merge dialog "Fetch" button calls real yt-dlp, shows resolved video card
-- Output order: `playlist_A_files… → _splitter.mp3 → playlist_B_files… → _splitter.mp3 → …`
+- Merge dialog "Fetch" button calls real yt-dlp, shows resolved video card with title + duration
+- Splitter downloaded to `dest/_splitter_tmp/` before merge starts
+- Inserted as `{pl.prefix}_00_splitter.mp3` between each playlist group
+- Output order: `playlist_A_files… → splitter.mp3 → playlist_B_files… → splitter.mp3 → …`
 
 ---
 
