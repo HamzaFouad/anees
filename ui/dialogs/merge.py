@@ -2,17 +2,20 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QLineEdit, QWidget, QFileDialog, QTextEdit, QFrame, QScrollArea,
+    QWidget, QFileDialog, QTextEdit, QFrame, QScrollArea,
 )
 from PySide6.QtCore import Qt, QThread, Signal as _Signal
 from PySide6.QtGui import QIcon
 
 from ui.theme import (
-    PRIMARY, PRIMARY_HOVER, ON_PRIMARY, PRIMARY_TINT_4,
-    FG, FG_MUTED, BG, BG_SUBTLE, BG_ACCENT, BORDER,
+    PRIMARY, PRIMARY_HOVER, ON_PRIMARY, PRIMARY_TINT_3,
+    FG, FG_MUTED, BG, BG_SUBTLE, BORDER,
     SUCCESS, SUCCESS_BG, SUCCESS_DARK,
 )
-from ui.widgets import Toggle, StyledInput, icon_pixmap, icon_label, Checkbox
+from ui.widgets import (
+    Toggle, StyledInput, icon_pixmap, icon_label, Checkbox,
+    section_card_qss, make_transparent_row, hsep,
+)
 from ui.state import AppState
 from backend.models import Playlist, Video
 from backend.api.config import get_output_root
@@ -64,9 +67,7 @@ def _scan_output_root(output_root: str) -> list[Playlist]:
 
 
 def _sep(layout) -> None:
-    f = QFrame(); f.setFixedHeight(1)
-    f.setStyleSheet(f"background:{BORDER}; border:none;")
-    layout.addWidget(f)
+    layout.addWidget(hsep())
 
 
 def _section_lbl(text: str) -> QLabel:
@@ -378,9 +379,7 @@ class _PlaylistChecklist(QWidget):
         self._rows: list[_CheckRow] = []
         self.setObjectName("plChecklist")
         self.setAttribute(Qt.WA_StyledBackground, True)
-        self.setStyleSheet(
-            f"#plChecklist {{ border:1px solid {BORDER}; border-radius:8px; background:rgba(0,68,255,0.03); }}"
-        )
+        self.setStyleSheet(section_card_qss("plChecklist", PRIMARY_TINT_3))
         self.setMaximumHeight(200)
 
         lay = QVBoxLayout(self)
@@ -397,10 +396,7 @@ class _PlaylistChecklist(QWidget):
                 )
             lay.addWidget(row)
             if i < len(playlists) - 1:
-                sep = QFrame()
-                sep.setFixedHeight(1)
-                sep.setStyleSheet(f"background:{BORDER}; border:none;")
-                lay.addWidget(sep)
+                lay.addWidget(hsep())
 
     def _on_toggle(self, pid: str, checked: bool) -> None:
         if checked:
@@ -422,10 +418,7 @@ class _CheckRow(QWidget):
         self._pl = pl
         self._checked = checked
         self._eligible = eligible
-        self.setAttribute(Qt.WA_NoSystemBackground, True)
-        self.setAttribute(Qt.WA_OpaquePaintEvent, False)
-        self.setAutoFillBackground(False)
-        self.setStyleSheet("background:transparent; border:none;")
+        make_transparent_row(self)
 
         if eligible:
             self.setCursor(Qt.PointingHandCursor)
@@ -478,9 +471,7 @@ class _SplitterSection(QWidget):
 
         self.setObjectName("splitterSection")
         self.setAttribute(Qt.WA_StyledBackground, True)
-        self.setStyleSheet(
-            f"#splitterSection {{ border:1px solid {BORDER}; border-radius:8px; background:rgba(0,68,255,0.03); }}"
-        )
+        self.setStyleSheet(section_card_qss("splitterSection", PRIMARY_TINT_3))
 
         self._root = QVBoxLayout(self)
         self._root.setContentsMargins(0, 0, 0, 0)

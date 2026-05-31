@@ -70,6 +70,17 @@
 
 ---
 
+## Scoped container chrome + transparent rows
+
+**Decision:** For tinted cards/lists, style container chrome via `setObjectName(...)` + `#id` selector and keep child rows transparent by default.
+
+**Why:**
+- Parent sections are the single owner of base surface color (`background`, `border`, `radius`), so nested rows do not accidentally override tint.
+- Transparent rows avoid Qt background erase conflicts that can make parent tints disappear.
+- Selection state remains additive (checkbox/accent/text) unless an explicit full-row fill is intended.
+
+---
+
 ## `ScrollBarAlwaysOff` on video rows
 
 **Decision:** `scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)`.

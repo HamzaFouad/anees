@@ -107,6 +107,9 @@ After every change, update the relevant doc(s) before committing:
 
 - **Border cascade**: never set `border-*` on a container QWidget — it cascades to all children. Use `#id { border: ... }` selectors.
 - **Separator**: always use a dedicated 1px `QFrame`, never `border-bottom` on a widget.
+- **Visual ownership**: container owns base surface (bg/border/radius); rows inside tinted containers stay transparent by default.
+- **Override precedence**: theme tokens → `ui/widgets.py` helpers/primitives → scoped `#id` local styles → `paintEvent` (last resort).
+- **Token discipline**: prefer `ui/theme.py` tokens (`PRIMARY_TINT_*`, `BORDER`, `ROW_DIVIDER`) over hardcoded rgba/hex in UI code.
 - **Spinner segfault**: call `sp.stop()` + `w.hide()` before `deleteLater()` on any widget that contains a `Spinner`.
 - **No I/O in toolbar refresh**: `refresh()` is called on every `playlists_changed` signal — never call `shutil.disk_usage` or `Path.mkdir` there.
 - **Signal GC**: lambdas as slots in `refresh()` get silently garbage-collected. Use bound methods (`_do_start`, `_do_pause`, etc.).

@@ -49,6 +49,28 @@ PySide6 only. No file I/O, no subprocess, no SQLite.
 | `ui/theme.py` | Design tokens: colors, typography, spacing, `PIPELINE_STAGES`. |
 | `ui/widgets.py` | Shared primitives: `Btn`, `Badge`, `Toggle`, `Spinner`, `EmptyState`, `Checkbox`, `field()`, `status_dot()`, `icon_button()`. |
 
+## UI styling contract
+
+### Visual ownership
+
+- **Section/container** owns base surface: background, border, radius.
+- **Row widget** is transparent by default inside tinted sections.
+- **Leaf controls** (labels, checkboxes, buttons) own typography and local interaction visuals.
+
+### Override precedence
+
+1. `ui/theme.py` tokens (color/spacing/radius constants).
+2. Shared primitives/helpers in `ui/widgets.py`.
+3. Scoped local styles using `setObjectName(...)` + `#id { ... }`.
+4. `paintEvent` custom fills only when a widget must intentionally be opaque.
+
+### Guardrails
+
+- Use scoped selectors (`#id`) for container chrome; avoid broad `QWidget { border-* }` rules.
+- Prefer dedicated 1px `QFrame` separators over `border-bottom` on layout containers.
+- For rows inside tinted containers, keep `background:transparent`, disable autofill/system background, and make selection cues additive (checkbox/accent/text) unless a full row fill is intentional.
+- Prefer theme tokens (for example `PRIMARY_TINT_*`, `BORDER`, `ROW_DIVIDER`) over hardcoded rgba/hex values.
+
 ### `backend/`
 Pure Python. No PySide6 imports anywhere.
 

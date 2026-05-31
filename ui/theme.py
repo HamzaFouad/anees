@@ -38,6 +38,7 @@ INACTIVE        = "#D6D3D1"           # inactive playlist status dot
 WIN_CLOSE_HOVER = "#E81123"           # Windows system close-button hover
 
 # ── Tint palette (all rgba(primary/error, …) usages consolidated) ─────────────
+PRIMARY_TINT_3  = "rgba(0,68,255,0.03)"
 PRIMARY_TINT_4  = "rgba(0,68,255,0.04)"
 PRIMARY_TINT_8  = "rgba(0,68,255,0.08)"   # PRIMARY_TINT stays as 0.10
 PRIMARY_TINT_18 = "rgba(0,68,255,0.18)"

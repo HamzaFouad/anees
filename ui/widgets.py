@@ -17,7 +17,7 @@ from ui.theme import (
     WARN_DARK, WARN_BG,
     TEXT_XS, TEXT_SM, TEXT_MD,
     SPACE_4, SPACE_8,
-    RADIUS_SM, RADIUS_MD, RADIUS_PILL,
+    RADIUS_SM, RADIUS_MD, RADIUS_LG, RADIUS_PILL,
     PIPELINE_STAGES, make_icon_svg, fmt_dur,
 )
 
@@ -38,6 +38,35 @@ def icon_label(key: str, size: int = 14, color: str = FG_MUTED) -> QLabel:
     lbl.setPixmap(icon_pixmap(key, size, color))
     lbl.setFixedSize(size, size)
     return lbl
+
+
+def section_card_qss(
+    object_name: str,
+    background: str,
+    border: str = BORDER,
+    radius: int = RADIUS_LG,
+) -> str:
+    """Scoped card chrome so children keep control of their own visuals."""
+    return (
+        f"#{object_name} {{ "
+        f"border:1px solid {border}; border-radius:{radius}px; background:{background}; "
+        "}"
+    )
+
+
+def make_transparent_row(widget: QWidget) -> None:
+    """Rows inside tinted containers should not repaint the base surface."""
+    widget.setAttribute(Qt.WA_NoSystemBackground, True)
+    widget.setAttribute(Qt.WA_OpaquePaintEvent, False)
+    widget.setAutoFillBackground(False)
+    widget.setStyleSheet("background:transparent; border:none;")
+
+
+def hsep(color: str = BORDER, parent=None) -> QFrame:
+    sep = QFrame(parent)
+    sep.setFixedHeight(1)
+    sep.setStyleSheet(f"background:{color}; border:none;")
+    return sep
 
 
 # ── Btn ───────────────────────────────────────────────────────────────────────
