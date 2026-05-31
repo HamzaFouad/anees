@@ -1,10 +1,9 @@
+from pathlib import Path
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QPushButton
 from PySide6.QtCore import Qt, QPoint
-from PySide6.QtGui import QPainter, QColor
-from PySide6.QtSvg import QSvgRenderer
-from PySide6.QtCore import QByteArray
+from PySide6.QtGui import QPainter, QColor, QPixmap
 
-from ui.theme import PRIMARY, FG, FG_MUTED, BG, BORDER, WIN_CLOSE_HOVER, ON_PRIMARY, TEXT_MD, EQUALIZER_SVG
+from ui.theme import PRIMARY, FG, FG_MUTED, BG, BORDER, WIN_CLOSE_HOVER, ON_PRIMARY, TEXT_MD
 
 
 class TitleBar(QWidget):
@@ -70,19 +69,16 @@ class TitleBar(QWidget):
             self.window().move(event.globalPosition().toPoint() - self._drag_pos)
 
 
-class _AppMark(QWidget):
+class _AppMark(QLabel):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setFixedSize(18, 18)
-        self._renderer = QSvgRenderer(QByteArray(EQUALIZER_SVG.encode()))
-
-    def paintEvent(self, _event):
-        p = QPainter(self)
-        p.setRenderHint(QPainter.Antialiasing)
-        p.setPen(Qt.NoPen)
-        p.setBrush(QColor(PRIMARY))
-        p.drawRoundedRect(0, 0, 18, 18, 3, 3)
-        self._renderer.render(p, self.rect())
+        ico = Path(__file__).parent / "images" / "anees.ico"
+        px = QPixmap(str(ico))
+        if not px.isNull():
+            self.setPixmap(px.scaled(20, 20, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        self.setFixedSize(20, 20)
+        self.setAlignment(Qt.AlignCenter)
+        self.setStyleSheet("background:transparent;")
 
 
 class _WinBtn(QPushButton):
