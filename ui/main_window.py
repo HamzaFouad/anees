@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget, QFrame
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QRectF
+from PySide6.QtGui import QPainter, QColor, QPainterPath
 
 from ui.state import AppState
 from ui.titlebar import TitleBar
@@ -18,14 +19,12 @@ class MainWindow(QWidget):
         self._state = AppState()
 
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Window)
-        self.setAttribute(Qt.WA_TranslucentBackground, False)
+        self.setAttribute(Qt.WA_TranslucentBackground, True)
         self.setMinimumSize(1100, 720)
         self.resize(1100, 720)
         self.setObjectName("mainWindow")
-        from ui.theme import BG, BORDER
-        self.setStyleSheet(
-            f"#mainWindow {{ background:{BG}; border:1px solid {BORDER}; }}"
-        )
+        from ui.theme import BG
+        self._bg_color = QColor(BG)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
@@ -39,6 +38,7 @@ class MainWindow(QWidget):
         self._toolbar = Toolbar(self._state, self)
         self._toolbar.add_clicked.connect(self._on_add)
         self._toolbar.settings_clicked.connect(self._on_settings)
+        self._toolbar.about_clicked.connect(self._on_about)
         root.addWidget(self._toolbar)
 
         # tabs
@@ -101,7 +101,20 @@ class MainWindow(QWidget):
         from ui.dialogs.settings import SettingsDialog
         SettingsDialog(self._state, self).exec()
 
+    def _on_about(self):
+        from ui.dialogs.about import AboutDialog
+        AboutDialog(self).exec()
+
     def _on_rerun(self):
         from ui.api import NavAPI
         NavAPI(self._state).go_queue()
+
+    def paintEvent(self, event):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        p.setPen(Qt.NoPen)
+        p.setBrush(self._bg_color)
+        path = QPainterPath()
+        path.addRoundedRect(QRectF(self.rect()), 12, 12)
+        p.drawPath(path)
 
