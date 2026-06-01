@@ -613,10 +613,13 @@ class _SplitterSection(QWidget):
             )
             row_lay.addWidget(idx_lbl)
 
-            t_lbl = QLabel(title[:55])
-            t_lbl.setStyleSheet(
-                f"font-size:11px; color:{FG}; background:transparent; border:none;"
-            )
+            url, _, _ = self._clips[i % len(self._clips)]
+            t_lbl = QLabel(f'<a href="{url}" style="color:{FG}; text-decoration:none;">{title[:55]}</a>')
+            t_lbl.setTextFormat(Qt.RichText)
+            t_lbl.setOpenExternalLinks(True)
+            t_lbl.setCursor(Qt.PointingHandCursor)
+            t_lbl.setStyleSheet("font-size:11px; background:transparent; border:none;")
+            t_lbl.setToolTip(url)
             row_lay.addWidget(t_lbl, 1)
 
             mins, secs = divmod(dur, 60)
