@@ -125,7 +125,7 @@ class _LockPill(QWidget):
         lay.setContentsMargins(10, 4, 10, 4)
         lay.setSpacing(6)
 
-        lay.addWidget(_BreathingDot())
+        lay.addWidget(BreathingDot())
 
         lbl = QLabel("Queue locked — run in progress")
         lbl.setStyleSheet(f"font-size:11px; font-weight:500; color:{PRIMARY};")
