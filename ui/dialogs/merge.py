@@ -614,7 +614,7 @@ class _SplitterSection(QWidget):
             row_lay.addWidget(idx_lbl)
 
             url, _, _ = self._clips[i % len(self._clips)]
-            t_lbl = QLabel(f'<a href="{url}" style="color:{PRIMARY}; text-decoration:underline;">{title[:55]}</a>')
+            t_lbl = QLabel(f'<a href="{url}" style="color:{PRIMARY}; text-decoration:none;">{title[:55]}</a>')
             t_lbl.setTextFormat(Qt.RichText)
             t_lbl.setOpenExternalLinks(True)
             t_lbl.setCursor(Qt.PointingHandCursor)
