@@ -45,9 +45,9 @@ class Toolbar(QWidget):
         lay.addStretch()
 
         # build card — primary CTA button
-        self._add_btn = QPushButton("  Build Card")
-        self._add_btn.setIcon(QIcon(icon_pixmap("merge", 14, ON_PRIMARY)))
-        self._add_btn.setFixedHeight(34)
+        self._add_btn = QPushButton("  Build Card…")
+        self._add_btn.setIcon(QIcon(icon_pixmap("merge", 15, PRIMARY)))
+        self._add_btn.setFixedHeight(36)
         self._add_btn.setCursor(Qt.PointingHandCursor)
         self._add_btn.setToolTip(
             "Assemble all processed playlists into a JOC memory card.\n"
@@ -55,11 +55,10 @@ class Toolbar(QWidget):
         )
         self._add_btn.setStyleSheet(f"""
             QPushButton {{
-                background:{PRIMARY}; color:{ON_PRIMARY}; border:none;
-                border-radius:8px; padding:0 16px; font-size:13px; font-weight:700;
-                letter-spacing:0.01em;
+                background:{BG}; color:{FG}; border:1.5px solid {BORDER};
+                border-radius:10px; padding:0 18px; font-size:14px; font-weight:600;
             }}
-            QPushButton:hover {{ background:{PRIMARY_HOVER}; }}
+            QPushButton:hover {{ background:{BG_MUTED}; border-color:{PRIMARY}; }}
         """)
         self._add_btn.clicked.connect(self._on_merge)
         lay.addWidget(self._add_btn)
