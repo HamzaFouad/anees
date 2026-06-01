@@ -44,19 +44,22 @@ class Toolbar(QWidget):
 
         lay.addStretch()
 
-        # build card button (permanent, right side)
+        # build card — primary CTA button
         self._add_btn = QPushButton("  Build Card")
-        self._add_btn.setIcon(QIcon(icon_pixmap("merge", 13, FG_MUTED)))
-        self._add_btn.setFixedHeight(30)
+        self._add_btn.setIcon(QIcon(icon_pixmap("merge", 14, ON_PRIMARY)))
+        self._add_btn.setFixedHeight(34)
         self._add_btn.setCursor(Qt.PointingHandCursor)
-        self._add_btn.setToolTip("Assembles your playlists into a JOC memory card folder")
+        self._add_btn.setToolTip(
+            "Assemble all processed playlists into a JOC memory card.\n"
+            "Files are numbered 1111, 1112, … with splitter clips between playlists."
+        )
         self._add_btn.setStyleSheet(f"""
             QPushButton {{
-                background:{BG}; color:{FG}; border:1px solid {BORDER};
-                border-radius:6px; padding:0 12px; font-size:12px; font-weight:500;
+                background:{PRIMARY}; color:{ON_PRIMARY}; border:none;
+                border-radius:8px; padding:0 16px; font-size:13px; font-weight:700;
+                letter-spacing:0.01em;
             }}
-            QPushButton:hover {{ background:{BG_MUTED}; }}
-            QPushButton:disabled {{ background:{DISABLED_BG}; color:{DISABLED_FG}; opacity:0.7; }}
+            QPushButton:hover {{ background:{PRIMARY_HOVER}; }}
         """)
         self._add_btn.clicked.connect(self._on_merge)
         lay.addWidget(self._add_btn)
@@ -185,25 +188,6 @@ class RunControls(QWidget):
             """)
             start_btn.clicked.connect(self._do_start)
             self._lay.addWidget(start_btn)
-
-            merge_btn = QPushButton("  Build Card")
-            merge_btn.setIcon(QIcon(icon_pixmap("merge", 13, FG)))
-            merge_btn.setFixedHeight(32)
-            merge_btn.setCursor(Qt.PointingHandCursor)
-            merge_btn.setToolTip(
-                "Merge all processed playlists into one flat folder.\n"
-                "Files are renamed sequentially (1111, 1112, …) with\n"
-                "splitter clips inserted between each playlist."
-            )
-            merge_btn.setStyleSheet(f"""
-                QPushButton {{
-                    background:{BG}; color:{FG}; border:1px solid {BORDER};
-                    border-radius:6px; padding:0 16px; font-size:13px; font-weight:500;
-                }}
-                QPushButton:hover {{ background:{BG_MUTED}; }}
-            """)
-            merge_btn.clicked.connect(self._on_merge)
-            self._lay.addWidget(merge_btn)
 
             if can_start:
                 est = self._state.total_estimate_mb()
