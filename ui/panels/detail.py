@@ -463,7 +463,7 @@ class VideoRow(QWidget):
                 lbl.setStyleSheet(f"color:{SURFACE_ALT}; font-size:12px;")
                 c_lay.addWidget(lbl)
             elif not is_failed and stage_idx == i:
-                sp = BreathingDot(PRIMARY, size=20)
+                sp = Spinner(16, PRIMARY)
                 c_lay.addWidget(sp)
             else:
                 dot = QLabel()
@@ -569,7 +569,7 @@ class VideoRow(QWidget):
                 lbl.setStyleSheet(f"color:{SURFACE_ALT}; font-size:12px;")
                 c_lay.addWidget(lbl)
             elif not is_failed and stage_idx == i:
-                sp = BreathingDot(PRIMARY, size=20)
+                sp = Spinner(16, PRIMARY)
                 c_lay.addWidget(sp)
             else:
                 dot = QLabel()

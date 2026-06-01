@@ -122,16 +122,19 @@ class _LockPill(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         lay = QHBoxLayout(self)
-        lay.setContentsMargins(10, 4, 10, 4)
-        lay.setSpacing(6)
+        lay.setContentsMargins(8, 4, 10, 4)
+        lay.setSpacing(5)
 
-        lay.addWidget(BreathingDot())
+        lay.addWidget(BreathingDot(PRIMARY, size=14))
 
         lbl = QLabel("Queue locked — run in progress")
-        lbl.setStyleSheet(f"font-size:11px; font-weight:500; color:{PRIMARY};")
+        lbl.setStyleSheet(
+            f"font-size:11px; font-weight:500; color:{PRIMARY}; "
+            "background:transparent; border:none;"
+        )
         lay.addWidget(lbl)
 
         self.setAttribute(Qt.WA_StyledBackground, True)
         self.setStyleSheet(
-            f"background:{PRIMARY_TINT_8}; border-radius:99px;"
+            f"background:{PRIMARY_TINT_8}; border-radius:8px;"
         )

@@ -257,10 +257,13 @@ class PipelineStrip(QWidget):
                                   2 if self._compact else 4)
             pl.setSpacing(4)
 
-            if is_active:
-                dot_w = BreathingDot(PRIMARY,
-                                     size=14 if not self._compact else 10,
-                                     running=self._running)
+            if is_active and self._running:
+                dot_w = Spinner(14 if not self._compact else 10, PRIMARY)
+            elif is_active:
+                # queued but not yet running — static dot same as active color
+                dot_w = QLabel()
+                dot_w.setFixedSize(6, 6)
+                dot_w.setStyleSheet(f"background:{PRIMARY}; border-radius:3px;")
             else:
                 dot_w = QLabel()
                 dot_w.setFixedSize(6, 6)
