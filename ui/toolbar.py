@@ -33,7 +33,7 @@ class Toolbar(QWidget):
         # logo
         from ui.titlebar import _AppMark
         lay.addWidget(_AppMark(size=52))
-        lay.addSpacing(-4)
+        lay.addSpacing(-10)
         name = QLabel("أنيس")
         name.setStyleSheet("font-size:17px; font-weight:700; color:#0F1729;")
         lay.addWidget(name)

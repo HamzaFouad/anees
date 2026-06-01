@@ -18,7 +18,7 @@ class TitleBar(QWidget):
         lay.setSpacing(8)
 
         # app mark
-        self._mark = _AppMark(size=18)
+        self._mark = _AppMark(size=28)
         lay.addWidget(self._mark)
         lay.addSpacing(4)
 
