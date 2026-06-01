@@ -127,7 +127,7 @@ class AppState(QObject):
         worker = RetryVideoWorker(pl, video_indices, self._output_root, self)
         worker.video_stage.connect(self._on_video_stage)
         worker.video_meta.connect(self._on_video_meta)
-        worker.log_added.connect(self._on_log)
+        worker.log_added.connect(self._add_log)
         worker.completed.connect(worker.deleteLater)
         worker.start()
 
