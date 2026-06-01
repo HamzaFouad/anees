@@ -215,11 +215,12 @@ class PipelineStrip(QWidget):
                  stage_counts: dict | None = None,
                  parent=None):
         super().__init__(parent)
-        self._active  = active_stage
-        self._split   = split_enabled
-        self._compact = compact
-        self._running = running
-        self._counts  = stage_counts or {}
+        self._active       = active_stage
+        self._split        = split_enabled
+        self._compact      = compact
+        self._running      = running
+        self._counts       = stage_counts or {}
+        self._count_labels: dict[str, QLabel] = {}
         self._build()
 
     def _stage_index(self, key: str) -> int:
@@ -284,6 +285,7 @@ class PipelineStrip(QWidget):
                 f"color:{fg}; font-size:{'10' if self._compact else '11'}px; font-weight:500; "
                 "background:transparent; border:none; text-decoration:none;"
             )
+            self._count_labels[key] = txt
             pl.addWidget(txt)
             pill.setStyleSheet(f"background:{bg}; border-radius:8px;")
             lay.addWidget(pill)
@@ -306,6 +308,15 @@ class PipelineStrip(QWidget):
         if stage_counts is not None:
             self._counts = stage_counts
         self._build()
+
+    def update_counts_only(self, stage_counts: dict) -> None:
+        """Update count text in-place — no layout rebuild, safe to call every tick."""
+        self._counts = stage_counts
+        for key, lbl in self._count_labels.items():
+            if key in stage_counts and not self._compact:
+                done, total = stage_counts[key]
+                stage_label = next((l for k, l, *_ in PIPELINE_STAGES if k == key), key)
+                lbl.setText(f"{stage_label}  {done}/{total}")
 
 
 # ── Field (label wrapper) ─────────────────────────────────────────────────────
