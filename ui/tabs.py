@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QPushButton
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QIcon
+from PySide6.QtCore import Qt, Signal, QRectF
+from PySide6.QtGui import QIcon, QPainter, QColor
 
 from ui.theme import PRIMARY, PRIMARY_TINT_8, FG, FG_MUTED, BG, BORDER
 from ui.widgets import icon_pixmap, BreathingDot
@@ -134,6 +134,10 @@ class _LockPill(QWidget):
         )
         lay.addWidget(lbl)
 
-        self.setStyleSheet(
-            f"background:{PRIMARY_TINT_8}; border-radius:99px;"
-        )
+    def paintEvent(self, _):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        p.setPen(Qt.NoPen)
+        p.setBrush(QColor(PRIMARY_TINT_8))
+        r = self.height() / 2
+        p.drawRoundedRect(QRectF(self.rect()), r, r)
