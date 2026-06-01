@@ -7,7 +7,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QDialog, QFrame, QHBoxLayout, QLabel, QPushButton, QScrollArea,
-    QVBoxLayout, QWidget,
+    QSizePolicy, QVBoxLayout, QWidget,
 )
 
 from ui.statusbar import _ffmpeg_version, _yt_dlp_version
@@ -165,6 +165,7 @@ class AboutDialog(QDialog):
         h_text.setWordWrap(True)
         h_text.setAlignment(Qt.AlignCenter)
         h_text.setLayoutDirection(Qt.RightToLeft)
+        h_text.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.MinimumExpanding)
         hb_lay.addWidget(h_text)
 
         h_src = QLabel(HADITH_SOURCE)
