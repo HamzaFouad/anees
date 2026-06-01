@@ -83,7 +83,7 @@ class Toolbar(QWidget):
 
         # settings
         about_btn = QPushButton()
-        about_btn.setIcon(QIcon(icon_pixmap("more", 14, FG_MUTED)))
+        about_btn.setIcon(QIcon(icon_pixmap("info", 14, FG_MUTED)))
         about_btn.setFixedSize(28, 28)
         about_btn.setCursor(Qt.PointingHandCursor)
         about_btn.setToolTip("About Anees")
