@@ -38,7 +38,6 @@ class Toolbar(QWidget):
         name.setStyleSheet("font-size:17px; font-weight:700; color:#0F1729;")
         lay.addWidget(name)
         lay.addWidget(VSep())
-        lay.addSpacing(6)
 
         # run controls (swappable)
         self._run_controls = RunControls(state, on_merge=self._on_merge)
