@@ -1,3 +1,4 @@
+import re
 import uuid
 from datetime import datetime as _dt
 
@@ -11,10 +12,32 @@ from PySide6.QtGui import QIcon, QDoubleValidator, QIntValidator
 from ui.theme import (
     PRIMARY, ON_PRIMARY, PRIMARY_HOVER,
     FG, FG_MUTED, BG, BG_SUBTLE, BORDER,
+    ERROR, ERROR_DARK,
 )
 from ui.widgets import Toggle, StyledInput, icon_pixmap
 from ui.state import AppState
 from backend.models import Playlist
+
+
+_PLAYLIST_RE = re.compile(
+    r"^https?://"
+    r"("
+    # YouTube playlist
+    r"(www\.)?youtube\.com/playlist\?.*list=[\w-]+"
+    r"|youtu\.be/[\w-]+\?.*list=[\w-]+"
+    r"|(www\.)?youtube\.com/watch\?.*list=[\w-]+"
+    r"|(www\.)?youtube\.com/@[\w.-]+(/[\w-]+)?"
+    r"|(www\.)?youtube\.com/channel/[\w-]+"
+    r"|(www\.)?youtube\.com/user/[\w-]+"
+    # SoundCloud sets
+    r"|soundcloud\.com/[\w-]+/sets/[\w-]+"
+    r")",
+    re.IGNORECASE,
+)
+
+
+def _is_valid_playlist_url(url: str) -> bool:
+    return bool(_PLAYLIST_RE.match(url.strip()))
 
 
 def _fmt_now() -> str:
@@ -89,7 +112,14 @@ class AddPlaylistDialog(QDialog):
         url_w = _section()
         url_w.layout().addWidget(_lbl("Playlist URL"))
         self._url_input = StyledInput("https://youtube.com/playlist?list=…", mono=True)
+        self._url_input.textChanged.connect(self._clear_url_error)
         url_w.layout().addWidget(self._url_input)
+        self._url_error = QLabel("")
+        self._url_error.setStyleSheet(
+            f"font-size:11px; color:{ERROR_DARK}; background:transparent; border:none;"
+        )
+        self._url_error.setVisible(False)
+        url_w.layout().addWidget(self._url_error)
         b_lay.addWidget(url_w)
 
         # PREFIX | SPEED | SPLIT row
@@ -194,6 +224,16 @@ class AddPlaylistDialog(QDialog):
         root = get_output_root().rstrip("/\\")
         self._dest_hint.setText(f"→  {root}/{prefix}_…/")
 
+    def _clear_url_error(self) -> None:
+        self._url_error.setVisible(False)
+        self._url_input.setStyleSheet(self._url_input.styleSheet().replace(
+            f"border-color:{ERROR};", ""
+        ))
+
+    def _show_url_error(self, msg: str) -> None:
+        self._url_error.setText(msg)
+        self._url_error.setVisible(True)
+
     def _on_speed_toggle(self, checked: bool) -> None:
         self._speed_input.setEnabled(checked)
         self._speed_input.setStyleSheet(_input_style(checked))
@@ -206,6 +246,13 @@ class AddPlaylistDialog(QDialog):
     def _on_add(self) -> None:
         url = self._url_input.text().strip()
         if not url:
+            self._show_url_error("Please enter a playlist URL.")
+            return
+        if not _is_valid_playlist_url(url):
+            self._show_url_error(
+                "Must be a YouTube playlist or SoundCloud set URL.\n"
+                "e.g. youtube.com/playlist?list=… or soundcloud.com/user/sets/…"
+            )
             return
 
         prefix   = self._prefix_input.text().strip() or str(len(self._state.playlists)).zfill(2)
