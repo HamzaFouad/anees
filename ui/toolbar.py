@@ -45,7 +45,7 @@ class Toolbar(QWidget):
         lay.addStretch()
 
         # build card — primary CTA button
-        self._add_btn = QPushButton("  Build Card…")
+        self._add_btn = QPushButton("  Build Card")
         self._add_btn.setIcon(QIcon(icon_pixmap("merge", 15, PRIMARY)))
         self._add_btn.setFixedHeight(36)
         self._add_btn.setCursor(Qt.PointingHandCursor)
