@@ -115,6 +115,16 @@ class AddPlaylistDialog(QDialog):
         pfx_w.layout().addWidget(self._prefix_input)
         r_lay.addWidget(pfx_w)
 
+        # SPLIT (MIN) — before speed, enabled by default
+        spl_w = _section()
+        spl_w.layout().addWidget(_lbl("Split (min)"))
+        self._split_toggle = Toggle(True)
+        self._split_toggle.toggled.connect(self._on_split_toggle)
+        self._split_input = _value_input("30", QIntValidator(1, 999), enabled=True)
+        spl_ctrl = _toggle_row(self._split_toggle, self._split_input)
+        spl_w.layout().addWidget(spl_ctrl)
+        r_lay.addWidget(spl_w, 1)
+
         # SPEED
         spd_w = _section()
         spd_w.layout().addWidget(_lbl("Speed (×)"))
@@ -124,16 +134,6 @@ class AddPlaylistDialog(QDialog):
         spd_ctrl = _toggle_row(self._speed_toggle, self._speed_input)
         spd_w.layout().addWidget(spd_ctrl)
         r_lay.addWidget(spd_w, 1)
-
-        # SPLIT (MIN)
-        spl_w = _section()
-        spl_w.layout().addWidget(_lbl("Split (min)"))
-        self._split_toggle = Toggle(False)
-        self._split_toggle.toggled.connect(self._on_split_toggle)
-        self._split_input = _value_input("30", QIntValidator(1, 999), enabled=False)
-        spl_ctrl = _toggle_row(self._split_toggle, self._split_input)
-        spl_w.layout().addWidget(spl_ctrl)
-        r_lay.addWidget(spl_w, 1)
 
         b_lay.addWidget(row)
         root.addWidget(body)
