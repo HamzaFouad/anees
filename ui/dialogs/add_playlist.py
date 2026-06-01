@@ -137,6 +137,17 @@ class AddPlaylistDialog(QDialog):
         r_lay.addWidget(spd_w, 1)
 
         b_lay.addWidget(row)
+
+        # destination hint
+        from backend.api.config import get_output_root
+        self._dest_hint = QLabel()
+        self._dest_hint.setStyleSheet(
+            f"font-size:11px; color:{FG_MUTED}; background:transparent; border:none;"
+        )
+        self._update_dest_hint()
+        self._prefix_input.textChanged.connect(lambda _: self._update_dest_hint())
+        b_lay.addWidget(self._dest_hint)
+
         root.addWidget(body)
 
         _sep(root)
@@ -178,6 +189,12 @@ class AddPlaylistDialog(QDialog):
         root.addWidget(footer)
 
     # ── toggle handlers ──────────────────────────────────────────────────────
+    def _update_dest_hint(self) -> None:
+        from backend.api.config import get_output_root
+        prefix = self._prefix_input.text().strip() or "??"
+        root = get_output_root().rstrip("/\\")
+        self._dest_hint.setText(f"→  {root}/{prefix}_…/")
+
     def _on_speed_toggle(self, checked: bool) -> None:
         self._speed_input.setEnabled(checked)
         self._speed_input.setStyleSheet(_input_style(checked))
