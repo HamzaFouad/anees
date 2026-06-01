@@ -103,6 +103,7 @@ class AboutDialog(RoundedDialog):
         # hadith box
         hadith_box = QFrame()
         hadith_box.setObjectName("hadithBox")
+        hadith_box.setFixedWidth(400)
         hadith_box.setStyleSheet(
             "#hadithBox { background:rgba(0,68,255,0.04); "
             "border:1px solid rgba(0,68,255,0.12); border-radius:10px; }"
