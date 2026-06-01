@@ -151,7 +151,8 @@ class _Detail(QWidget):
 
         rows = []
         for i, v in enumerate(videos):
-            row = VideoRow(i, v, pl.split_enabled, self._on_retry)
+            row = VideoRow(i, v, pl.split_enabled, self._on_retry,
+                           speed_enabled=(pl.speed != 1.0))
             rows.append(row)
             self._rows_lay.insertWidget(i * 2, row)
             sep = QFrame()
@@ -384,7 +385,7 @@ class _ColHeader(QWidget):
         self._lay.addWidget(h("MP3", Qt.AlignHCenter, 28))
         split_val = f"/{pl.split_min}m" if (pl and pl.split_enabled) else "/–"
         self._lay.addWidget(h(split_val, Qt.AlignHCenter, 28))
-        spd = f"×{pl.speed}" if pl else "×"
+        spd = f"×{pl.speed}" if (pl and pl.speed != 1.0) else "×–"
         self._lay.addWidget(h(spd, Qt.AlignHCenter, 28))
         self._lay.addWidget(h("State", Qt.AlignRight, 92))
 
@@ -396,11 +397,12 @@ class VideoRow(QWidget):
     STAGE_ORDER = [s[0] for s in PIPELINE_STAGES]
 
     def __init__(self, idx: int, video: Video, split_enabled: bool,
-                 on_retry, parent=None):
+                 on_retry, speed_enabled: bool = True, parent=None):
         super().__init__(parent)
         self._idx = idx
         self._v = video
         self._split = split_enabled
+        self._speed = speed_enabled
         self._on_retry_cb = on_retry
 
         is_failed = video.stage == "failed"
@@ -485,7 +487,8 @@ class VideoRow(QWidget):
             c_lay.setContentsMargins(0, 0, 0, 0)
             c_lay.setAlignment(Qt.AlignCenter)
 
-            if key == "split" and not split_enabled:
+            if (key == "split" and not split_enabled) or \
+               (key == "speed" and not self._speed):
                 lbl = QLabel("—")
                 lbl.setStyleSheet(f"color:{SURFACE_ALT}; font-size:12px;")
                 c_lay.addWidget(lbl)
@@ -591,7 +594,8 @@ class VideoRow(QWidget):
                     w.deleteLater()
                     c_lay.takeAt(j)
 
-            if key == "split" and not self._split:
+            if (key == "split" and not self._split) or \
+               (key == "speed" and not self._speed):
                 lbl = QLabel("—")
                 lbl.setStyleSheet(f"color:{SURFACE_ALT}; font-size:12px;")
                 c_lay.addWidget(lbl)
