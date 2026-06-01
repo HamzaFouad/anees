@@ -70,9 +70,11 @@ class AppState(QObject):
     def counts(self) -> dict:
         queued = sum(1 for p in self._playlists if p.status in ("queued", "active"))
         done   = sum(1 for p in self._playlists if p.status == "done")
-        vdone  = sum(p.completed for p in self._playlists)
-        vtotal = sum(p.video_count for p in self._playlists)
-        return {"queued": queued, "done": done, "videos_done": vdone, "videos_total": vtotal}
+        vdone   = sum(p.completed for p in self._playlists)
+        vtotal  = sum(p.video_count for p in self._playlists)
+        vfailed = sum(sum(1 for v in p.videos if v.stage == "failed") for p in self._playlists)
+        return {"queued": queued, "done": done,
+                "videos_done": vdone, "videos_total": vtotal, "videos_failed": vfailed}
 
     # ── Run lifecycle ─────────────────────────────────────────────────────────
     def start_run(self) -> None:

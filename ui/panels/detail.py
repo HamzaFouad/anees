@@ -9,7 +9,7 @@ from PySide6.QtGui import QIcon, QColor
 from ui.theme import (
     PRIMARY, FG, FG_MUTED, FG_SUBTLE, BG, BG_MUTED, BG_SUBTLE, BG_ACCENT, BORDER,
     SUCCESS, SUCCESS_DARK, SUCCESS_BG, ERROR, ERROR_DARK, ERROR_BG, ERROR_BORDER,
-    SURFACE_ALT, ERROR_TINT_10,
+    SURFACE_ALT, ERROR_TINT_4,
     WARN_DARK,
     PIPELINE_STAGES, fmt_dur, fmt_mb,
 )
@@ -410,7 +410,7 @@ class VideoRow(QWidget):
         if is_failed:
             self.setObjectName("videoRowFailed")
             self.setStyleSheet(
-                f"#videoRowFailed {{ background: {ERROR_TINT_10}; }}"
+                f"#videoRowFailed {{ background: {ERROR_TINT_4}; }}"
             )
         else:
             self.setObjectName("videoRow")
@@ -588,7 +588,7 @@ class VideoRow(QWidget):
         # update row background style for failed state change
         if is_failed:
             self.setObjectName("videoRowFailed")
-            self.setStyleSheet(f"#videoRowFailed {{ background: {ERROR_TINT_10}; }}")
+            self.setStyleSheet(f"#videoRowFailed {{ background: {ERROR_TINT_4}; }}")
         else:
             self.setObjectName("videoRow")
             self.setStyleSheet(f"#videoRow {{ background: transparent; border-bottom:1px solid {BORDER}; }}")

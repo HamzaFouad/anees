@@ -259,9 +259,14 @@ class RunControls(QWidget):
             new_btn.clicked.connect(self._do_stop)
             self._lay.addWidget(new_btn)
 
-            done_lbl = QLabel(f"✓  Complete · {c['videos_total']} videos downloaded")
+            failed = c.get("videos_failed", 0)
+            done_lbl = QLabel(f"✓  Complete · {c['videos_total']} videos")
             done_lbl.setStyleSheet(f"font-size:{TEXT_MD}px; color:{SUCCESS_DARK};")
             self._lay.addWidget(done_lbl)
+            if failed:
+                fail_lbl = QLabel(f"⚠  {failed} failed")
+                fail_lbl.setStyleSheet(f"font-size:{TEXT_MD}px; color:{ERROR_DARK}; font-weight:600;")
+                self._lay.addWidget(fail_lbl)
 
     def _ctrl_btn(self, icon: str, text: str, fg: str, bg: str, border: str) -> QPushButton:
         btn = QPushButton(f"  {text}")

@@ -9,7 +9,7 @@ from PySide6.QtGui import QIcon, QDrag, QPainter, QColor, QPen
 from ui.theme import (
     PRIMARY, PRIMARY_TINT_8, FG, FG_MUTED, BG, BG_MUTED, BG_SUBTLE, BORDER,
     DISABLED_BG, DISABLED_FG, INACTIVE,
-    SUCCESS, TEXT_MD,
+    SUCCESS, ERROR, ERROR_DARK, TEXT_MD,
 )
 from ui.widgets import Btn, SlimProgressBar, icon_pixmap, status_dot, EmptyState
 from ui.state import AppState
@@ -195,7 +195,9 @@ class PlaylistRow(QWidget):
         top_lay.setContentsMargins(0, 0, 0, 0)
         top_lay.setSpacing(6)
 
-        dot_color = SUCCESS if pl.status == "done" else (PRIMARY if pl.status == "active" else INACTIVE)
+        failed_count = sum(1 for v in pl.videos if v.stage == "failed")
+        has_failures = failed_count > 0 and pl.status == "done"
+        dot_color = ERROR if has_failures else (SUCCESS if pl.status == "done" else (PRIMARY if pl.status == "active" else INACTIVE))
         top_lay.addWidget(status_dot(dot_color))
 
         title = QLabel(pl.title)
@@ -212,14 +214,15 @@ class PlaylistRow(QWidget):
         bot_lay.setContentsMargins(0, 0, 0, 0)
         bot_lay.setSpacing(6)
         bar = SlimProgressBar(
-            color=SUCCESS if pl.status == "done" else PRIMARY,
+            color=ERROR if has_failures else (SUCCESS if pl.status == "done" else PRIMARY),
             bar_height=3,
         )
         bar.set_value(pl.completed, pl.video_count)
         bot_lay.addWidget(bar, 1)
-        cnt = QLabel(f"{pl.completed}/{pl.video_count}")
+        cnt_text = f"{pl.completed}/{pl.video_count}" + (f" · {failed_count} failed" if has_failures else "")
+        cnt = QLabel(cnt_text)
         cnt.setStyleSheet(
-            f"font-size:10px; color:{FG_MUTED}; "
+            f"font-size:10px; color:{ERROR_DARK if has_failures else FG_MUTED}; "
             f"font-family:'JetBrains Mono',monospace; min-width:36px;"
         )
         cnt.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
