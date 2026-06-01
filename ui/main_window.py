@@ -18,13 +18,13 @@ class MainWindow(QWidget):
         self._state = AppState()
 
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Window)
-        self.setAttribute(Qt.WA_TranslucentBackground, False)
+        self.setAttribute(Qt.WA_TranslucentBackground, True)
         self.setMinimumSize(1100, 720)
         self.resize(1100, 720)
         self.setObjectName("mainWindow")
         from ui.theme import BG, BORDER
         self.setStyleSheet(
-            f"#mainWindow {{ background:{BG}; border:1px solid {BORDER}; }}"
+            f"#mainWindow {{ background:{BG}; border:1px solid {BORDER}; border-radius:12px; }}"
         )
 
         root = QVBoxLayout(self)
@@ -38,6 +38,7 @@ class MainWindow(QWidget):
         # toolbar
         self._toolbar = Toolbar(self._state, self)
         self._toolbar.add_clicked.connect(self._on_add)
+        self._toolbar.about_clicked.connect(self._on_about)
         self._toolbar.settings_clicked.connect(self._on_settings)
         root.addWidget(self._toolbar)
 
@@ -100,6 +101,10 @@ class MainWindow(QWidget):
     def _on_settings(self):
         from ui.dialogs.settings import SettingsDialog
         SettingsDialog(self._state, self).exec()
+
+    def _on_about(self):
+        from ui.dialogs.about import AboutDialog
+        AboutDialog(self).exec()
 
     def _on_rerun(self):
         from ui.api import NavAPI
