@@ -49,7 +49,7 @@ def _scan_output_root(output_root: str) -> list[Playlist]:
         pl = Playlist(
             id           = str(uuid.uuid5(uuid.NAMESPACE_URL, str(entry))),
             prefix       = prefix,
-            title        = title_slug.replace("_", " "),
+            title        = title_slug,
             url          = "",
             video_count  = len(mp3s),
             completed    = len(mp3s),
