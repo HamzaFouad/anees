@@ -134,7 +134,6 @@ class _LockPill(QWidget):
         )
         lay.addWidget(lbl)
 
-        self.setAttribute(Qt.WA_StyledBackground, True)
         self.setStyleSheet(
             f"background:{PRIMARY_TINT_8}; border-radius:99px;"
         )
