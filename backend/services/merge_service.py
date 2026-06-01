@@ -40,6 +40,7 @@ class MergeService:
         splitter_paths: list[str] | None = None,
         on_progress: Callable[[int, int], None] | None = None,
         stop: threading.Event | None = None,
+        csv_dir: str | None = None,
     ) -> int:
         """Move MP3s from each playlist folder into *dest_path*, renamed
         sequentially starting from JOC_BASE (1111.mp3, 1112.mp3, …).
@@ -105,17 +106,15 @@ class MergeService:
             on_progress(moved, total)
 
         if moved > 0:
-            self._write_summary_csv(entries, dest_path)
-            self._write_detail_csv(entries, dest_path)
+            out_dir = csv_dir or str(Path(dest_path).parent)
+            self._write_summary_csv(entries, out_dir)
+            self._write_detail_csv(entries, out_dir)
 
         self._on_log(f"Merge complete — {moved}/{total} files in {dest_path}")
         return moved
 
-    def _csv_base(self, dest_path: str) -> str:
-        return os.path.join(str(Path(dest_path).parent), Path(dest_path).name)
-
-    def _write_summary_csv(self, entries: list[_Entry], dest_path: str) -> None:
-        csv_path = self._csv_base(dest_path) + "_summary.csv"
+    def _write_summary_csv(self, entries: list[_Entry], csv_dir: str) -> None:
+        csv_path = os.path.join(csv_dir, "summary.csv")
         rows = []
         i = 0
         while i < len(entries):
@@ -140,9 +139,9 @@ class MergeService:
         except OSError as exc:
             self._on_log(f"Summary CSV failed: {exc}")
 
-    def _write_detail_csv(self, entries: list[_Entry], dest_path: str) -> None:
+    def _write_detail_csv(self, entries: list[_Entry], csv_dir: str) -> None:
         """One row per file: joc_number, original_filename, playlist_name."""
-        csv_path = self._csv_base(dest_path) + "_detail.csv"
+        csv_path = os.path.join(csv_dir, "detail.csv")
         rows = [
             {
                 "joc_number":       JOC_BASE + seq,
