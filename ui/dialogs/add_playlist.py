@@ -108,9 +108,10 @@ class AddPlaylistDialog(QDialog):
         self._prefix_input.setText(next_prefix)
         self._prefix_input.setAlignment(Qt.AlignCenter)
         self._prefix_input.setReadOnly(True)
+        self._prefix_input.setCursor(Qt.ArrowCursor)
         self._prefix_input.setStyleSheet(
             self._prefix_input.styleSheet() +
-            f"QLineEdit {{ background:{BG_SUBTLE}; color:{FG_MUTED}; cursor:default; }}"
+            f"QLineEdit {{ background:{BG_SUBTLE}; color:{FG_MUTED}; }}"
         )
         pfx_w.layout().addWidget(self._prefix_input)
         r_lay.addWidget(pfx_w)
