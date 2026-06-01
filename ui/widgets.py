@@ -2,7 +2,7 @@ from __future__ import annotations
 import math
 from PySide6.QtWidgets import (
     QWidget, QLabel, QPushButton, QLineEdit, QHBoxLayout, QVBoxLayout,
-    QSizePolicy, QFrame,
+    QSizePolicy, QFrame, QDialog,
 )
 from PySide6.QtCore import Qt, Signal, QTimer, QRect, QPoint
 from PySide6.QtGui import QPainter, QColor, QPen, QPixmap, QIcon, QFont
@@ -564,3 +564,96 @@ class BreathingDot(QWidget):
         p.setBrush(dot)
         p.drawEllipse(int(cx - dot_r), int(cy - dot_r),
                       int(dot_r * 2),  int(dot_r * 2))
+
+
+# ── RoundedDialog ─────────────────────────────────────────────────────────────
+class RoundedDialog(QDialog):
+    """Base dialog with rounded corners, translucent background, and X button.
+
+    Usage
+    -----
+    class MyDialog(RoundedDialog):
+        def __init__(self, parent=None):
+            super().__init__(title="My Title", width=480, parent=parent)
+            # add widgets to self.body_layout (QVBoxLayout)
+
+    The dialog renders:
+        ┌─ card (white, border-radius 12px) ──────────────┐
+        │  [ title ]                             [×]       │  ← header
+        ├─────────────────────────────────────────────────┤
+        │  self.body_layout                               │  ← body
+        └─────────────────────────────────────────────────┘
+    """
+
+    def __init__(self, title: str = "", width: int = 480,
+                 body_margins: tuple = (20, 16, 20, 20),
+                 parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(title)
+        self.setFixedWidth(width)
+        self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+
+        self._card = QWidget()
+        self._card.setObjectName("roundedCard")
+        self._card.setStyleSheet(
+            f"#roundedCard {{ background:{BG}; border-radius:12px; "
+            f"border:1px solid {BORDER}; }}"
+        )
+        outer.addWidget(self._card)
+
+        self._root = QVBoxLayout(self._card)
+        self._root.setContentsMargins(0, 0, 0, 0)
+        self._root.setSpacing(0)
+
+        # header
+        hdr = QWidget(); hdr.setFixedHeight(52)
+        hdr.setStyleSheet("background:transparent;")
+        h_lay = QHBoxLayout(hdr)
+        h_lay.setContentsMargins(20, 0, 16, 0)
+        if title:
+            t_lbl = QLabel(title)
+            t_lbl.setStyleSheet(f"font-size:15px; font-weight:700; color:{FG};")
+            h_lay.addWidget(t_lbl)
+        h_lay.addStretch()
+        x_btn = QPushButton()
+        x_btn.setIcon(QIcon(icon_pixmap("x", 14, FG_MUTED)))
+        x_btn.setFixedSize(30, 30)
+        x_btn.setCursor(Qt.PointingHandCursor)
+        x_btn.setStyleSheet(
+            f"QPushButton {{ background:transparent; border:none; border-radius:6px; }}"
+            f"QPushButton:hover {{ background:{BG_SUBTLE}; }}"
+        )
+        x_btn.clicked.connect(self.reject)
+        h_lay.addWidget(x_btn)
+        self._root.addWidget(hdr)
+
+        # separator
+        sep = QFrame(); sep.setFixedHeight(1)
+        sep.setStyleSheet(f"background:{BORDER}; border:none;")
+        self._root.addWidget(sep)
+
+        # body
+        body = QWidget(); body.setStyleSheet("background:transparent;")
+        self.body_layout = QVBoxLayout(body)
+        l, t, r, b = body_margins
+        self.body_layout.setContentsMargins(l, t, r, b)
+        self.body_layout.setSpacing(14)
+        self._root.addWidget(body, 1)
+
+    def add_footer(self) -> QHBoxLayout:
+        """Add a standard footer bar and return its QHBoxLayout."""
+        sep = QFrame(); sep.setFixedHeight(1)
+        sep.setStyleSheet(f"background:{BORDER}; border:none;")
+        self._root.addWidget(sep)
+
+        footer = QWidget(); footer.setFixedHeight(60)
+        footer.setStyleSheet("background:transparent;")
+        lay = QHBoxLayout(footer)
+        lay.setContentsMargins(20, 0, 20, 0)
+        lay.setSpacing(10)
+        self._root.addWidget(footer)
+        return lay

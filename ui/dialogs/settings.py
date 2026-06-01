@@ -21,12 +21,17 @@ class SettingsDialog(QDialog):
         self.setWindowTitle("Settings")
         self.setFixedWidth(520)
         self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
-        self.setObjectName("settingsDialog")
-        self.setStyleSheet(
-            f"#settingsDialog {{ background:{BG}; border-radius:10px; border:1px solid {BORDER}; }}"
-        )
+        self.setAttribute(Qt.WA_TranslucentBackground)
 
-        root = QVBoxLayout(self)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        card = QWidget()
+        card.setObjectName("settingsCard")
+        card.setStyleSheet(
+            f"#settingsCard {{ background:{BG}; border-radius:12px; border:1px solid {BORDER}; }}"
+        )
+        outer.addWidget(card)
+        root = QVBoxLayout(card)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 

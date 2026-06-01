@@ -35,12 +35,17 @@ class DiagnosticsDialog(QDialog):
         self.setWindowTitle("Send diagnostics")
         self.setFixedWidth(580)
         self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
-        self.setObjectName("diagnosticsDialog")
-        self.setStyleSheet(
-            f"#diagnosticsDialog {{ background:{BG}; border-radius:10px; border:1px solid {BORDER}; }}"
-        )
+        self.setAttribute(Qt.WA_TranslucentBackground)
 
-        self._root = QVBoxLayout(self)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        card = QWidget()
+        card.setObjectName("diagnosticsDialog")
+        card.setStyleSheet(
+            f"#diagnosticsDialog {{ background:{BG}; border-radius:12px; border:1px solid {BORDER}; }}"
+        )
+        outer.addWidget(card)
+        self._root = QVBoxLayout(card)
         self._root.setContentsMargins(0, 0, 0, 0)
         self._root.setSpacing(0)
         self._root.addWidget(self._build_header())
@@ -359,4 +364,3 @@ class _BundleRow(QWidget):
         self._box.checked = self._checked
         self.toggled.emit(self._checked)
         super().mousePressEvent(event)
-            p.drawRoundedRect(0, 0, 16, 16, 4, 4)
