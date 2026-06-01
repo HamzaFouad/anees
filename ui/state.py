@@ -109,12 +109,18 @@ class AppState(QObject):
             self._worker.stop()
             self._worker.wait(3000)
             self._worker = None
-        # reset active playlists back to queued
+        # reset active playlists and any in-progress video stages back to queued
         for p in self._playlists:
             if p.status == "active":
                 p.status = "queued"
+                for v in p.videos:
+                    if v.stage not in ("done", "failed", "queued"):
+                        v.stage = "queued"
+                        v.progress = 0.0
         self.playlists_changed.emit()
         self._set_run_state(RunState.IDLE)
+        # rebuild detail panel so spinner rows re-render as queued dots
+        self.selection_changed.emit(self._selected)
 
     def retry_video(self, pid: str, video_idx: int) -> None:
         self.retry_videos(pid, [video_idx])
