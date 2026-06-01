@@ -588,6 +588,7 @@ class RoundedDialog(QDialog):
     def __init__(self, title: str = "", width: int = 480,
                  body_margins: tuple = (20, 16, 20, 20),
                  header_separator: bool = True,
+                 header_height: int = 52,
                  parent=None):
         super().__init__(parent)
         self.setWindowTitle(title)
@@ -611,7 +612,7 @@ class RoundedDialog(QDialog):
         self._root.setSpacing(0)
 
         # header
-        hdr = QWidget(); hdr.setFixedHeight(52)
+        hdr = QWidget(); hdr.setFixedHeight(header_height)
         hdr.setStyleSheet("background:transparent;")
         h_lay = QHBoxLayout(hdr)
         h_lay.setContentsMargins(20, 0, 16, 0)
@@ -646,13 +647,13 @@ class RoundedDialog(QDialog):
         self.body_layout.setSpacing(14)
         self._root.addWidget(body, 1)
 
-    def add_footer(self) -> QHBoxLayout:
+    def add_footer(self, height: int = 60) -> QHBoxLayout:
         """Add a standard footer bar and return its QHBoxLayout."""
         sep = QFrame(); sep.setFixedHeight(1)
         sep.setStyleSheet(f"background:{BORDER}; border:none;")
         self._root.addWidget(sep)
 
-        footer = QWidget(); footer.setFixedHeight(60)
+        footer = QWidget(); footer.setFixedHeight(height)
         footer.setStyleSheet("background:transparent;")
         lay = QHBoxLayout(footer)
         lay.setContentsMargins(20, 0, 20, 0)

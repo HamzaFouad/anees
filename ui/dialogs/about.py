@@ -49,9 +49,9 @@ class AboutDialog(RoundedDialog):
     def __init__(self, parent=None):
         # Empty title — about page has no header text, just the close button
         super().__init__(title="", width=480, body_margins=(0, 0, 0, 0),
-                         header_separator=False, parent=parent)
+                         header_separator=False, header_height=36, parent=parent)
         self.setWindowTitle("About أنيس")
-        self.setMinimumHeight(600)
+        self.setMinimumHeight(560)
 
         # ── scrollable content inside body_layout ─────────────────────────────
         scroll = QScrollArea()
@@ -174,7 +174,7 @@ class AboutDialog(RoundedDialog):
         self.body_layout.addWidget(scroll)
 
         # footer
-        f_lay = self.add_footer()
+        f_lay = self.add_footer(height=34)
         left = QLabel(f"yt-dlp {_yt_dlp_version()} · ffmpeg {_ffmpeg_version()}")
         left.setStyleSheet(
             f"font-family:'JetBrains Mono',monospace; font-size:11px; color:{FG_SUBTLE};"
