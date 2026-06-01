@@ -50,6 +50,7 @@ class AboutDialog(RoundedDialog):
         # Empty title — about page has no header text, just the close button
         super().__init__(title="", width=480, body_margins=(0, 0, 0, 0), parent=parent)
         self.setWindowTitle("About أنيس")
+        self.setMinimumHeight(680)
 
         # ── scrollable content inside body_layout ─────────────────────────────
         scroll = QScrollArea()
@@ -72,7 +73,7 @@ class AboutDialog(RoundedDialog):
             icon_lbl.setPixmap(px.scaled(100, 100, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         icon_lbl.setAlignment(Qt.AlignCenter)
         b.addWidget(icon_lbl, 0, Qt.AlignHCenter)
-        b.addSpacing(14)
+        b.addSpacing(4)
 
         # name
         name_lbl = QLabel(APP_NAME_AR)
