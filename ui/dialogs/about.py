@@ -6,7 +6,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
-    QFrame, QHBoxLayout, QLabel, QScrollArea, QSizePolicy, QVBoxLayout, QWidget,
+    QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget,
 )
 
 from ui.statusbar import _ffmpeg_version, _yt_dlp_version
@@ -53,13 +53,7 @@ class AboutDialog(RoundedDialog):
         self.setWindowTitle("About أنيس")
         self.setMinimumHeight(560)
 
-        # ── scrollable content inside body_layout ─────────────────────────────
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.NoFrame)
-        scroll.setStyleSheet(f"QScrollArea {{ background:{BG}; border:none; }}")
-        scroll.viewport().setStyleSheet(f"background:{BG};")
-
+        # ── content ───────────────────────────────────────────────────────────
         inner = QWidget(); inner.setStyleSheet("background:transparent;")
         b = QVBoxLayout(inner)
         b.setContentsMargins(32, 0, 32, 24)
@@ -170,8 +164,7 @@ class AboutDialog(RoundedDialog):
         dua_lbl.setLayoutDirection(Qt.RightToLeft)
         b.addWidget(dua_lbl)
 
-        scroll.setWidget(inner)
-        self.body_layout.addWidget(scroll)
+        self.body_layout.addWidget(inner)
 
         # footer
         f_lay = self.add_footer(height=34)
