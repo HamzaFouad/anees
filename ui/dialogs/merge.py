@@ -567,6 +567,8 @@ class _SplitterSection(QWidget):
 
     def update_count(self, n: int) -> None:
         self._count = n
+        if self._clips:
+            self._status_lbl.setText(f"{n} clips")
         self._refresh_list()
 
     def update_preview(self, text: str) -> None:
@@ -582,7 +584,8 @@ class _SplitterSection(QWidget):
 
     def _on_fetched(self, clips: list) -> None:
         self._clips = clips
-        self._status_lbl.setText(f"{len(clips)} clips available")
+        self._status_lbl.setText(f"{self._count} clips")
+
         self._refresh_list()
 
     def _on_fetch_error(self, msg: str) -> None:
