@@ -228,12 +228,16 @@ class _DetailHeader(QWidget):
         t = QLabel(pl.title)
         t.setTextFormat(Qt.PlainText)
         t.setStyleSheet(f"font-size:16px; font-weight:600; letter-spacing:-0.01em; color:{FG};")
+        t.setTextInteractionFlags(Qt.TextSelectableByMouse)
         title_col.addWidget(t)
-        url_lbl = QLabel(pl.url)
-        url_lbl.setTextFormat(Qt.PlainText)
+        url_lbl = QLabel(f'<a href="{pl.url}" style="color:{FG_MUTED}; text-decoration:none;">{pl.url}</a>')
+        url_lbl.setTextFormat(Qt.RichText)
+        url_lbl.setOpenExternalLinks(True)
+        url_lbl.setCursor(Qt.PointingHandCursor)
         url_lbl.setStyleSheet(
-            f"font-size:11px; color:{FG_MUTED}; font-family:'JetBrains Mono',monospace;"
+            f"font-size:11px; font-family:'JetBrains Mono',monospace;"
         )
+        url_lbl.setToolTip(pl.url)
         url_lbl.setMaximumWidth(500)
         title_col.addWidget(url_lbl)
         top.addWidget(title_w, 1)
@@ -446,6 +450,7 @@ class VideoRow(QWidget):
         self._title_lbl.setWordWrap(True)
         self._title_lbl.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         self._title_lbl.setStyleSheet(f"font-size:12px; color:{FG};")
+        self._title_lbl.setTextInteractionFlags(Qt.TextSelectableByMouse)
         title_col.addWidget(self._title_lbl)
         if is_failed and video.error:
             err_row = QHBoxLayout()
@@ -455,6 +460,7 @@ class VideoRow(QWidget):
             err_row.addWidget(err_icon)
             err_lbl = QLabel(video.error)
             err_lbl.setStyleSheet(f"font-size:10.5px; color:{ERROR_DARK};")
+            err_lbl.setTextInteractionFlags(Qt.TextSelectableByMouse)
             err_row.addWidget(err_lbl, 1)
             if video.retry_count > 0:
                 rc = QLabel(f"· retried {video.retry_count}×")
