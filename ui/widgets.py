@@ -211,12 +211,15 @@ class SlimProgressBar(QWidget):
 class PipelineStrip(QWidget):
     def __init__(self, active_stage: str = "download",
                  split_enabled: bool = True, compact: bool = False,
-                 running: bool = False, parent=None):
+                 running: bool = False,
+                 stage_counts: dict | None = None,
+                 parent=None):
         super().__init__(parent)
         self._active  = active_stage
         self._split   = split_enabled
         self._compact = compact
         self._running = running
+        self._counts  = stage_counts or {}
         self._build()
 
     def _stage_index(self, key: str) -> int:
@@ -270,7 +273,12 @@ class PipelineStrip(QWidget):
                 dot_w.setStyleSheet(f"background:{dot}; border-radius:3px;")
             pl.addWidget(dot_w)
 
-            txt = QLabel(short if self._compact else label)
+            if key in self._counts and not self._compact:
+                done, total = self._counts[key]
+                display = f"{label}  {done}/{total}"
+            else:
+                display = short if self._compact else label
+            txt = QLabel(display)
             txt.setTextFormat(Qt.PlainText)
             txt.setStyleSheet(
                 f"color:{fg}; font-size:{'10' if self._compact else '11'}px; font-weight:500; "
@@ -289,11 +297,14 @@ class PipelineStrip(QWidget):
         lay.addStretch()
 
     def update_stage(self, active_stage: str, split_enabled: bool,
-                     running: bool | None = None):
+                     running: bool | None = None,
+                     stage_counts: dict | None = None):
         self._active = active_stage
         self._split  = split_enabled
         if running is not None:
             self._running = running
+        if stage_counts is not None:
+            self._counts = stage_counts
         self._build()
 
 

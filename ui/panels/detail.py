@@ -300,8 +300,22 @@ class _DetailHeader(QWidget):
             f"font-size:10px; color:{FG_MUTED}; font-weight:500; letter-spacing:0.04em;"
         )
         pipe_row.addWidget(pl_lbl)
+        # count videos that have completed each stage (moved past it)
+        _past = {
+            "download": {"mp3", "split", "speed", "done"},
+            "mp3":      {"split", "speed", "done"},
+            "split":    {"speed", "done"},
+            "speed":    {"done"},
+        }
+        total = len(pl.videos)
+        stage_counts = {
+            k: (sum(1 for v in pl.videos if v.stage in past), total)
+            for k, past in _past.items()
+        } if total else {}
+
         pipe = PipelineStrip(pl.active_stage, pl.split_enabled,
-                             running=(pl.status == "active"))
+                             running=(pl.status == "active"),
+                             stage_counts=stage_counts)
         pipe_row.addWidget(pipe)
         pipe_row.addStretch()
         self._lay.addWidget(pipe_w)
