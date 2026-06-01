@@ -26,7 +26,7 @@ HADITH_TEXT   = "«احرِصْ على ما يَنفَعُكَ واستَعِن�
 HADITH_SOURCE = "رواه مسلم"
 AYAH_TEXT     = "﴿وَاصْبِرْ وَمَا صَبْرُكَ إِلَّا بِاللَّهِ﴾"
 AYAH_SOURCE   = "سورة النحل ١٢٧"
-DUA_TEXT      = "نسأل اللهَ أن يجعلَه بابَ نفعٍ وسكينةٍ وثبات."
+DUA_TEXT      = "أسأل اللهَ أن يجعلَه بابَ نفعٍ وسكينةٍ وثبات."
 
 ARABIC_SERIF = "'Amiri','Apple Arabic','Arabic Typesetting','Traditional Arabic',serif"
 ARABIC_SANS  = "'IBM Plex Sans Arabic','.AppleSystemUIFont','Segoe UI',sans-serif"
@@ -108,10 +108,10 @@ class AboutDialog(QDialog):
 
         # logo
         icon_lbl = QLabel()
-        icon_lbl.setFixedSize(72, 72)
-        px = QIcon(str(_app_icon_path())).pixmap(128, 128)
+        icon_lbl.setFixedSize(100, 100)
+        px = QIcon(str(_app_icon_path())).pixmap(256, 256)
         if not px.isNull():
-            icon_lbl.setPixmap(px.scaled(72, 72, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+            icon_lbl.setPixmap(px.scaled(100, 100, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         icon_lbl.setAlignment(Qt.AlignCenter)
         b_lay.addWidget(icon_lbl, 0, Qt.AlignHCenter)
         b_lay.addSpacing(14)
@@ -231,7 +231,7 @@ class AboutDialog(QDialog):
         f_lay.addWidget(left)
         f_lay.addStretch()
 
-        right = QLabel(f"{_platform_label()} · MIT")
+        right = QLabel(_platform_label())
         right.setStyleSheet(
             f"font-family:'JetBrains Mono',monospace; font-size:11px; color:{FG_SUBTLE};"
         )
