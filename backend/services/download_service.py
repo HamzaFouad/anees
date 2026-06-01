@@ -32,6 +32,8 @@ def _playlist_folder(pl: Playlist) -> str:
 
 
 class DownloadService:
+    _debug_failed: set[int] = set()  # DEBUG: class-level, shared across all instances
+
     def __init__(
         self,
         output_root:     str | None = None,
@@ -47,9 +49,9 @@ class DownloadService:
         self._on_video_meta   = on_video_meta   or (lambda *_: None)
         self._on_log          = on_log          or (lambda *_: None)
         self._on_complete     = on_complete     or (lambda: None)
-        self._client  = YtdlpClient()
-        self._stop    = threading.Event()
-        self._pause   = threading.Event()
+        self._client       = YtdlpClient()
+        self._stop         = threading.Event()
+        self._pause        = threading.Event()
         self._pause.set()
 
     # ── Public control ────────────────────────────────────────────────────────
@@ -130,8 +132,6 @@ class DownloadService:
             "%(playlist_index)02d_%(title).60s.%(ext)s",
         )
 
-        _force_failed: set[int] = set()  # DEBUG: indices forced into failed state
-
         def _mark_failed(idx: int, error_msg: str) -> None:
             if idx < len(pl.videos):
                 v = pl.videos[idx]
@@ -146,11 +146,12 @@ class DownloadService:
             idx    = max(0, int(info.get("playlist_index") or 1) - 1)
 
             # ── DEBUG: simulate HTTP 403 on the 2nd video ──────────────────────
-            import yt_dlp as _ydl
-            if idx == 1 and status == "downloading" and idx not in _force_failed:
-                _force_failed.add(idx)
+            if idx == 1 and status == "downloading" and idx not in self._debug_failed:
+                self._debug_failed.add(idx)
+                _mark_failed(idx, "DEBUG: HTTP Error 403: Forbidden")  # update UI first
+                import yt_dlp as _ydl
                 raise _ydl.utils.DownloadError("DEBUG: HTTP Error 403: Forbidden")
-            if idx in _force_failed:
+            if idx in self._debug_failed:
                 return
             # ───────────────────────────────────────────────────────────────────
 
@@ -210,10 +211,6 @@ class DownloadService:
                 return
             info     = d.get("info_dict") or {}
             filepath = info.get("filepath") or ""
-            _pidx    = max(0, int(info.get("playlist_index") or 1) - 1)
-            if _pidx in _force_failed:   # DEBUG: keep forced-failed videos failed
-                return
-
             # Check the file directly — avoids depending on postprocessor key
             # name which differs between yt-dlp versions
             if not filepath.lower().endswith(".mp3") or not os.path.exists(filepath):

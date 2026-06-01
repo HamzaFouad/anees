@@ -112,10 +112,9 @@ class Toolbar(QWidget):
         self._on_run_state(state.run_state)
 
     def _on_playlists_changed(self):
-        # only rebuild run controls when idle — during a run this would recreate
-        # _PulseDot (20ms timer) on every progress tick, causing rapid
-        # create/delete cycles that segfault
-        if self._state.run_state == RunState.IDLE:
+        # only rebuild run controls when idle or complete — during a run this
+        # would recreate _PulseDot (20ms timer) on every progress tick causing segfaults
+        if self._state.run_state in (RunState.IDLE, RunState.COMPLETE):
             self._run_controls.refresh()
 
     def _on_run_state(self, rs: RunState):
