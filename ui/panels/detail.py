@@ -68,6 +68,7 @@ class DetailPanel(QWidget):
         if not pl or idx < 0 or idx >= len(pl.videos):
             return
         self._detail.update_row(idx, pl.videos[idx])
+        self._detail.update_pipeline_counts(pl, pl.videos)
 
     def _on_retry(self, idx: int):
         v = self._videos[idx]
@@ -162,6 +163,9 @@ class _Detail(QWidget):
     def update_row(self, idx: int, video: Video) -> None:
         if idx in self._video_rows:
             self._video_rows[idx].refresh(video)
+
+    def update_pipeline_counts(self, pl: "Playlist", videos: list[Video]) -> None:
+        self._header.refresh_pipeline(pl, videos)
 
 
 class _DetailHeader(QWidget):
@@ -313,12 +317,30 @@ class _DetailHeader(QWidget):
             for k, past in _past.items()
         } if total else {}
 
-        pipe = PipelineStrip(pl.active_stage, pl.split_enabled,
-                             running=(pl.status == "active"),
-                             stage_counts=stage_counts)
-        pipe_row.addWidget(pipe)
+        self._pipe = PipelineStrip(pl.active_stage, pl.split_enabled,
+                                   running=(pl.status == "active"),
+                                   stage_counts=stage_counts)
+        pipe_row.addWidget(self._pipe)
         pipe_row.addStretch()
         self._lay.addWidget(pipe_w)
+
+    def refresh_pipeline(self, pl: "Playlist", videos: list[Video]) -> None:
+        if not hasattr(self, "_pipe"):
+            return
+        _past = {
+            "download": {"mp3", "split", "speed", "done"},
+            "mp3":      {"split", "speed", "done"},
+            "split":    {"speed", "done"},
+            "speed":    {"done"},
+        }
+        total = len(videos)
+        stage_counts = {
+            k: (sum(1 for v in videos if v.stage in past), total)
+            for k, past in _past.items()
+        } if total else {}
+        self._pipe.update_stage(pl.active_stage, pl.split_enabled,
+                                running=(pl.status == "active"),
+                                stage_counts=stage_counts)
 
 
 class _ColHeader(QWidget):
