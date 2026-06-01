@@ -82,8 +82,8 @@ class _AppMark(QLabel):
         # request 64px from QIcon so Qt picks the sharpest available size
         px = QIcon(src).pixmap(64, 64)
         if not px.isNull():
-            self.setPixmap(px.scaled(40, 40, Qt.KeepAspectRatio, Qt.SmoothTransformation))
-        self.setFixedSize(40, 40)
+            self.setPixmap(px.scaled(52, 52, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        self.setFixedSize(52, 52)
         self.setAlignment(Qt.AlignCenter)
         self.setStyleSheet("background:transparent;")
 
