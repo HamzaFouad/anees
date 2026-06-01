@@ -265,6 +265,7 @@ Pipeline: **DL → MP3 → /Split → ×Speed**
 | File | Purpose |
 |------|---------|
 | `ui/dialogs/settings.py` | Paths to yt-dlp.exe / ffmpeg.exe / ffprobe.exe, output root, default speed, mono toggle, parallel downloads |
+| `ui/dialogs/about.py` | App branding, version/toolchain info, and Arabic hadith/ayah content |
 | `backend/storage/config_repo.py` | Read/write `~/.anees/config.json` |
 
 ---
@@ -320,6 +321,7 @@ anees/
       merge.py
       diagnostics.py
       settings.py
+      about.py
   backend/                         ← pure Python; never imports from ui/
     models.py                      ← Playlist, Video, HistoryRun, LogEntry dataclasses
     mock_data.py

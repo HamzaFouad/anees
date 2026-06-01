@@ -45,7 +45,7 @@ anees/
     api/             # UI action layer  (RunAPI, QueueAPI, NavAPI)
     workers/         # QThread wrappers (DownloadWorker, InfoWorker)
     panels/          # queue_list, detail, history, logs
-    dialogs/         # add_playlist, merge, diagnostics
+    dialogs/         # add_playlist, merge, diagnostics, settings, about
     state.py         # AppState — owns PySide6 Signals
     theme.py         # design tokens (colors, spacing, typography)
     widgets.py       # shared primitives (Btn, Badge, Spinner, …)
@@ -80,6 +80,7 @@ anees/
 | PyInstaller Windows .exe + macOS .app via GitHub Actions CI | ✅ |
 | Speed processing (atempo filter) | ✅ Phase 6 |
 | Merge to folder + splitter clip | ✅ Phase 7 + 8 |
+| About dialog (branding + Arabic hadith/ayah) | ✅ |
 | SQLite history | 🔜 Phase 9 |
 
 See [`docs/roadmap.md`](docs/roadmap.md) for the full milestone plan.

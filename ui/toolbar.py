@@ -18,6 +18,7 @@ from backend.models import RunState
 class Toolbar(QWidget):
     add_clicked         = Signal()
     settings_clicked    = Signal()
+    about_clicked       = Signal()
 
     def __init__(self, state: AppState, parent=None):
         super().__init__(parent)
@@ -81,6 +82,18 @@ class Toolbar(QWidget):
         lay.addWidget(self._search)
 
         # settings
+        about_btn = QPushButton()
+        about_btn.setIcon(QIcon(icon_pixmap("more", 14, FG_MUTED)))
+        about_btn.setFixedSize(28, 28)
+        about_btn.setCursor(Qt.PointingHandCursor)
+        about_btn.setToolTip("About Anees")
+        about_btn.setStyleSheet(f"""
+            QPushButton {{ background:transparent; border:none; border-radius:6px; }}
+            QPushButton:hover {{ background:{BG_MUTED}; }}
+        """)
+        about_btn.clicked.connect(self.about_clicked)
+        lay.addWidget(about_btn)
+
         s_btn = QPushButton()
         s_btn.setIcon(QIcon(icon_pixmap("settings", 14, FG_MUTED)))
         s_btn.setFixedSize(28, 28)
