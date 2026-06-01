@@ -51,7 +51,7 @@ class AboutDialog(RoundedDialog):
         super().__init__(title="", width=480, body_margins=(0, 0, 0, 0),
                          header_separator=False, header_height=36, parent=parent)
         self.setWindowTitle("About أنيس")
-        self.setMinimumHeight(560)
+        self.setFixedHeight(560)
 
         # ── content ───────────────────────────────────────────────────────────
         inner = QWidget(); inner.setStyleSheet("background:transparent;")
