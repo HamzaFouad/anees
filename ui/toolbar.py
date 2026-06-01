@@ -32,8 +32,8 @@ class Toolbar(QWidget):
         # logo
         from ui.titlebar import _AppMark
         lay.addWidget(_AppMark())
-        name = QLabel("Anees")
-        name.setStyleSheet(f"font-size:{TEXT_LG}px; font-weight:700; letter-spacing:-0.01em; color:{FG};")
+        name = QLabel("أنيس")
+        name.setStyleSheet(f"font-size:{TEXT_LG}px; font-weight:700; color:{FG};")
         lay.addWidget(name)
         lay.addWidget(VSep())
 
