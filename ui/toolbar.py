@@ -76,19 +76,6 @@ class Toolbar(QWidget):
         self._search.textChanged.connect(self._queue_api.search)
         lay.addWidget(self._search)
 
-        # merge to folder
-        m_btn = QPushButton()
-        m_btn.setIcon(QIcon(icon_pixmap("merge", 14, FG_MUTED)))
-        m_btn.setFixedSize(28, 28)
-        m_btn.setCursor(Qt.PointingHandCursor)
-        m_btn.setToolTip("Merge playlists into one flat folder")
-        m_btn.setStyleSheet(f"""
-            QPushButton {{ background:transparent; border:none; border-radius:6px; }}
-            QPushButton:hover {{ background:{BG_MUTED}; }}
-        """)
-        m_btn.clicked.connect(self._on_merge)
-        lay.addWidget(m_btn)
-
         # settings
         s_btn = QPushButton()
         s_btn.setIcon(QIcon(icon_pixmap("settings", 14, FG_MUTED)))
@@ -200,6 +187,20 @@ class RunControls(QWidget):
             """)
             start_btn.clicked.connect(self._do_start)
             self._lay.addWidget(start_btn)
+
+            merge_btn = QPushButton("  Merge folders")
+            merge_btn.setIcon(QIcon(icon_pixmap("merge", 13, FG)))
+            merge_btn.setFixedHeight(32)
+            merge_btn.setCursor(Qt.PointingHandCursor)
+            merge_btn.setStyleSheet(f"""
+                QPushButton {{
+                    background:{BG}; color:{FG}; border:1px solid {BORDER};
+                    border-radius:6px; padding:0 16px; font-size:13px; font-weight:500;
+                }}
+                QPushButton:hover {{ background:{BG_MUTED}; }}
+            """)
+            merge_btn.clicked.connect(self._do_merge)
+            self._lay.addWidget(merge_btn)
 
             if can_start:
                 est = self._state.total_estimate_mb()
