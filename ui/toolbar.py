@@ -38,7 +38,7 @@ class Toolbar(QWidget):
         lay.addWidget(VSep())
 
         # run controls (swappable)
-        self._run_controls = RunControls(state)
+        self._run_controls = RunControls(state, on_merge=self._on_merge)
         lay.addWidget(self._run_controls)
 
         lay.addStretch()
@@ -118,9 +118,10 @@ class Toolbar(QWidget):
 
 
 class RunControls(QWidget):
-    def __init__(self, state: AppState, parent=None):
+    def __init__(self, state: AppState, on_merge=None, parent=None):
         super().__init__(parent)
         self._state = state
+        self._on_merge = on_merge or (lambda: None)
         from ui.api import RunAPI
         self._api = RunAPI(state)
         self._lay = QHBoxLayout(self)
@@ -199,7 +200,7 @@ class RunControls(QWidget):
                 }}
                 QPushButton:hover {{ background:{BG_MUTED}; }}
             """)
-            merge_btn.clicked.connect(self._do_merge)
+            merge_btn.clicked.connect(self._on_merge)
             self._lay.addWidget(merge_btn)
 
             if can_start:
