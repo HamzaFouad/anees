@@ -189,10 +189,15 @@ class RunControls(QWidget):
             start_btn.clicked.connect(self._do_start)
             self._lay.addWidget(start_btn)
 
-            merge_btn = QPushButton("  Merge folders")
+            merge_btn = QPushButton("  Build Card")
             merge_btn.setIcon(QIcon(icon_pixmap("merge", 13, FG)))
             merge_btn.setFixedHeight(32)
             merge_btn.setCursor(Qt.PointingHandCursor)
+            merge_btn.setToolTip(
+                "Merge all processed playlists into one flat folder.\n"
+                "Files are renamed sequentially (1111, 1112, …) with\n"
+                "splitter clips inserted between each playlist."
+            )
             merge_btn.setStyleSheet(f"""
                 QPushButton {{
                     background:{BG}; color:{FG}; border:1px solid {BORDER};
