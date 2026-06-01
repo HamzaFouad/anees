@@ -252,15 +252,6 @@ class _DetailHeader(QWidget):
             retry_all_btn.clicked.connect(self._on_retry_all)
             top.addWidget(retry_all_btn)
 
-        more_btn = QPushButton()
-        more_btn.setIcon(QIcon(icon_pixmap("more", 14, FG_MUTED)))
-        more_btn.setFixedSize(28, 28)
-        more_btn.setCursor(Qt.PointingHandCursor)
-        more_btn.setStyleSheet(f"""
-            QPushButton {{ background:{BG}; border:1px solid {BORDER}; border-radius:6px; }}
-            QPushButton:hover {{ background:{BG_MUTED}; }}
-        """)
-        top.addWidget(more_btn)
         self._lay.addWidget(top_w)
         self._lay.addSpacing(14)
 
