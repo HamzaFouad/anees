@@ -187,7 +187,7 @@ class MergeDialog(QDialog):
         dest_row = QWidget(); dest_row.setStyleSheet("background:transparent;")
         dest_r = QHBoxLayout(dest_row)
         dest_r.setContentsMargins(0, 0, 0, 0); dest_r.setSpacing(8)
-        default_dest = get_output_root().rstrip("/\\") + "/_merged"
+        default_dest = get_output_root().rstrip("/\\")
         self._dest_input = StyledInput(default_dest, mono=True)
         self._dest_input.setText(default_dest)
         dest_r.addWidget(self._dest_input, 1)
