@@ -38,7 +38,7 @@ def _scan_output_root(output_root: str) -> list[Playlist]:
     for entry in sorted(root.iterdir()):
         if not entry.is_dir():
             continue
-        m = re.match(r'^(\w+)_(.+)$', entry.name)
+        m = re.match(r'^(\d+)_(.+)$', entry.name)
         if not m:
             continue
         prefix, title_slug = m.group(1), m.group(2)
@@ -86,11 +86,14 @@ class MergeDialog(QDialog):
         super().__init__(parent)
         self._state = state
 
-        # merge from in-memory queue; fall back to scanning the output folder
-        # so the dialog works after a crash/restart with no queue loaded
-        mem_pls = [p for p in state.playlists if p.completed > 0]
-        disk_pls = _scan_output_root(get_output_root()) if not mem_pls else []
-        self._playlists: list[Playlist] = mem_pls or disk_pls
+        # always merge memory + disk so playlists downloaded in a previous
+        # session (or a crashed run) are never silently omitted
+        mem_pls  = [p for p in state.playlists if p.completed > 0]
+        disk_pls = _scan_output_root(get_output_root())
+        mem_prefixes = {p.prefix for p in mem_pls}
+        # disk entries whose prefix isn't already covered by the in-memory queue
+        extra = [p for p in disk_pls if p.prefix not in mem_prefixes]
+        self._playlists: list[Playlist] = mem_pls + extra
 
         self._selected: set[str] = {p.id for p in self._playlists}
         self._worker = None
