@@ -527,6 +527,23 @@ class VideoRow(QWidget):
 
         lay.addWidget(self._status_w)
 
+    def _overall_pct(self, video: Video) -> int:
+        """Overall completion % weighted across enabled stages."""
+        active_stages = ["download", "mp3"]
+        if self._split:
+            active_stages.append("split")
+        if self._speed:
+            active_stages.append("speed")
+        n = len(active_stages)
+        if video.stage == "done":
+            return 100
+        try:
+            idx = active_stages.index(video.stage)
+        except ValueError:
+            return 0
+        per_stage = 100 / n
+        return min(int(idx * per_stage + (video.progress or 0) * per_stage), 99)
+
     def _build_status(self, video: Video, s_lay: QHBoxLayout) -> None:
         is_failed = video.stage == "failed"
         if video.stage == "done":
@@ -552,7 +569,7 @@ class VideoRow(QWidget):
             r_btn.clicked.connect(lambda _=False, i=idx: self._on_retry_cb(i))
             s_lay.addWidget(r_btn)
         else:
-            pct_lbl = QLabel(f"{int((video.progress or 0) * 100)}%")
+            pct_lbl = QLabel(f"{self._overall_pct(video)}%")
             pct_lbl.setStyleSheet(
                 f"font-size:11px; color:{PRIMARY}; font-weight:500; "
                 f"font-family:'JetBrains Mono',monospace;"
