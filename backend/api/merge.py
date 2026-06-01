@@ -40,10 +40,16 @@ class MergeAPI:
         log = on_log or (lambda _: None)
 
         now = datetime.now()
-        card_name = f"memory_card_{now.day:02d}_{now.month:02d}_{now.year}"
+        base_name = f"memory_card_{now.day:02d}_{now.month:02d}_{now.year}"
+        card_name = base_name
+        counter = 2
+        while os.path.exists(os.path.join(dest_path, card_name)):
+            card_name = f"{base_name}_{counter}"
+            counter += 1
         card_root = os.path.join(dest_path, card_name)
         audio_dest = os.path.join(card_root, "memory_audios")
         Path(audio_dest).mkdir(parents=True, exist_ok=True)
+        log(f"Output folder: {card_root}")
 
         splitter_paths: list[str] | None = None
         if splitter_urls and not stop.is_set():
