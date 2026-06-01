@@ -109,14 +109,14 @@ class AppState(QObject):
             self._worker.stop()
             self._worker.wait(3000)
             self._worker = None
-        # reset active playlists and any in-progress video stages back to queued
+        # reset active playlists; zero progress on in-progress videos
+        # (keep the stage so completed sub-stages retain their checkmarks)
         for p in self._playlists:
             if p.status == "active":
                 p.status = "queued"
                 for v in p.videos:
                     if v.stage not in ("done", "failed", "queued"):
-                        v.stage = "queued"
-                        v.progress = 0.0
+                        v.progress = 0.0  # stage kept — VideoRow renders dot not spinner
         self.playlists_changed.emit()
         self._set_run_state(RunState.IDLE)
         # rebuild detail panel so spinner rows re-render as queued dots

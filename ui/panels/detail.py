@@ -504,8 +504,15 @@ class VideoRow(QWidget):
                 lbl.setStyleSheet(f"color:{SURFACE_ALT}; font-size:12px;")
                 c_lay.addWidget(lbl)
             elif not is_failed and stage_idx == i:
-                sp = Spinner(16, PRIMARY)
-                c_lay.addWidget(sp)
+                if (video.progress or 0) > 0:
+                    sp = Spinner(16, PRIMARY)
+                    c_lay.addWidget(sp)
+                else:
+                    # progress == 0 means stopped/not yet started — static dot
+                    dot = QLabel()
+                    dot.setFixedSize(6, 6)
+                    dot.setStyleSheet(f"background:{PRIMARY}; border-radius:3px;")
+                    c_lay.addWidget(dot)
             else:
                 dot = QLabel()
                 dot.setFixedSize(6, 6)
@@ -628,8 +635,15 @@ class VideoRow(QWidget):
                 lbl.setStyleSheet(f"color:{SURFACE_ALT}; font-size:12px;")
                 c_lay.addWidget(lbl)
             elif not is_failed and stage_idx == i:
-                sp = Spinner(16, PRIMARY)
-                c_lay.addWidget(sp)
+                if (video.progress or 0) > 0:
+                    sp = Spinner(16, PRIMARY)
+                    c_lay.addWidget(sp)
+                else:
+                    # progress == 0 means stopped/not yet started — static dot
+                    dot = QLabel()
+                    dot.setFixedSize(6, 6)
+                    dot.setStyleSheet(f"background:{PRIMARY}; border-radius:3px;")
+                    c_lay.addWidget(dot)
             else:
                 dot = QLabel()
                 dot.setFixedSize(6, 6)
