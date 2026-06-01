@@ -105,16 +105,17 @@ class MergeService:
             on_progress(moved, total)
 
         if moved > 0:
-            self._write_csv(entries, dest_path)
+            self._write_summary_csv(entries, dest_path)
+            self._write_detail_csv(entries, dest_path)
 
         self._on_log(f"Merge complete — {moved}/{total} files in {dest_path}")
         return moved
 
-    def _write_csv(self, entries: list[_Entry], dest_path: str) -> None:
-        csv_path = os.path.join(
-            str(Path(dest_path).parent),
-            f"{Path(dest_path).name}_summary.csv",
-        )
+    def _csv_base(self, dest_path: str) -> str:
+        return os.path.join(str(Path(dest_path).parent), Path(dest_path).name)
+
+    def _write_summary_csv(self, entries: list[_Entry], dest_path: str) -> None:
+        csv_path = self._csv_base(dest_path) + "_summary.csv"
         rows = []
         i = 0
         while i < len(entries):
@@ -130,7 +131,6 @@ class MergeService:
                 "joc_end":       JOC_BASE + j - 1,
             })
             i = j
-
         try:
             with open(csv_path, "w", newline="", encoding="utf-8") as f:
                 w = csv.DictWriter(f, fieldnames=["playlist_name", "start", "end", "joc_start", "joc_end"])
@@ -138,4 +138,24 @@ class MergeService:
                 w.writerows(rows)
             self._on_log(f"Summary CSV: {csv_path}")
         except OSError as exc:
-            self._on_log(f"CSV write failed: {exc}")
+            self._on_log(f"Summary CSV failed: {exc}")
+
+    def _write_detail_csv(self, entries: list[_Entry], dest_path: str) -> None:
+        """One row per file: joc_number, original_filename, playlist_name."""
+        csv_path = self._csv_base(dest_path) + "_detail.csv"
+        rows = [
+            {
+                "joc_number":       JOC_BASE + seq,
+                "original_filename": os.path.basename(e.src) if not e.is_splitter else "splitter",
+                "playlist_name":    e.playlist_name,
+            }
+            for seq, e in enumerate(entries)
+        ]
+        try:
+            with open(csv_path, "w", newline="", encoding="utf-8") as f:
+                w = csv.DictWriter(f, fieldnames=["joc_number", "original_filename", "playlist_name"])
+                w.writeheader()
+                w.writerows(rows)
+            self._on_log(f"Detail CSV: {csv_path}")
+        except OSError as exc:
+            self._on_log(f"Detail CSV failed: {exc}")
