@@ -602,8 +602,7 @@ class RoundedDialog(QDialog):
         self._card = QWidget()
         self._card.setObjectName("roundedCard")
         self._card.setStyleSheet(
-            f"#roundedCard {{ background:{BG}; border-radius:12px; "
-            f"border:1px solid {BORDER}; }}"
+            f"#roundedCard {{ background:{BG}; border-radius:12px; border:none; }}"
         )
         outer.addWidget(self._card)
 

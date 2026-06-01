@@ -46,8 +46,7 @@ class AddPlaylistDialog(QDialog):
         card = QWidget()
         card.setObjectName("addCard")
         card.setStyleSheet(
-            f"#addCard {{ background:{BG}; border-radius:12px; "
-            f"border:1px solid {BORDER}; }}"
+            f"#addCard {{ background:{BG}; border-radius:12px; border:none; }}"
         )
         outer.addWidget(card)
 

@@ -109,8 +109,7 @@ class MergeDialog(QDialog):
         card = QWidget()
         card.setObjectName("mergeCard")
         card.setStyleSheet(
-            f"#mergeCard {{ background:{BG}; border-radius:12px; "
-            f"border:1px solid {BORDER}; }}"
+            f"#mergeCard {{ background:{BG}; border-radius:12px; border:none; }}"
         )
         outer.addWidget(card)
 

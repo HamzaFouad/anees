@@ -42,7 +42,7 @@ class DiagnosticsDialog(QDialog):
         card = QWidget()
         card.setObjectName("diagnosticsDialog")
         card.setStyleSheet(
-            f"#diagnosticsDialog {{ background:{BG}; border-radius:12px; border:1px solid {BORDER}; }}"
+            f"#diagnosticsDialog {{ background:{BG}; border-radius:12px; border:none; }}"
         )
         outer.addWidget(card)
         self._root = QVBoxLayout(card)
