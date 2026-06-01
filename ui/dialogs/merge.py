@@ -146,14 +146,14 @@ class MergeDialog(QDialog):
         title_lay.setContentsMargins(0, 0, 0, 0)
         title_lay.setSpacing(8)
         title_lay.addWidget(icon_label("merge", 15, FG))
-        title_lbl = QLabel("Merge to single folder")
+        title_lbl = QLabel("Build JOC Card")
         title_lbl.setStyleSheet(f"font-size:15px; font-weight:700; color:{FG};")
         title_lay.addWidget(title_lbl)
         text_lay.addWidget(title_row)
 
         desc = QLabel(
-            "Moves the processed <b>.mp3</b> files from every selected playlist "
-            "into one flat folder — handy for syncing to a phone, MP3 player, or car."
+            "Assembles your playlists into a single memory card folder ready for a JOC device. "
+            "Files are numbered sequentially (1111, 1112, …) with a splitter clip before each playlist."
         )
         desc.setStyleSheet(f"font-size:12px; color:{FG_MUTED};")
         desc.setWordWrap(True)
