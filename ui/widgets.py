@@ -237,20 +237,12 @@ class PipelineStrip(QWidget):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(4 if self._compact else 6)
 
-        ai = 99 if self._active == "done" else self._stage_index(self._active)
         stages = [(k, lbl, short, ico) for k, lbl, short, ico in PIPELINE_STAGES
                   if self._split or k != "split"]
 
         for i, (key, label, short, _) in enumerate(stages):
-            is_done   = ai > i or self._active == "done"
-            is_active = ai == i
-
-            if is_done:
-                bg, fg, dot = SUCCESS_BG, SUCCESS_DARK, SUCCESS
-            elif is_active:
-                bg, fg, dot = PRIMARY_TINT_8, PRIMARY, PRIMARY
-            else:
-                bg, fg, dot = BG_SUBTLE, FG_MUTED, SURFACE_ALT
+            # All visible stages are always blue; grey only if explicitly disabled
+            bg, fg, dot_color = PRIMARY_TINT_8, PRIMARY, PRIMARY
 
             pill = QWidget()
             pill.setToolTip(label)
@@ -261,17 +253,9 @@ class PipelineStrip(QWidget):
                                   2 if self._compact else 4)
             pl.setSpacing(4)
 
-            if is_active and self._running:
-                dot_w = Spinner(14 if not self._compact else 10, PRIMARY)
-            elif is_active:
-                # queued but not yet running — static dot same as active color
-                dot_w = QLabel()
-                dot_w.setFixedSize(6, 6)
-                dot_w.setStyleSheet(f"background:{PRIMARY}; border-radius:3px;")
-            else:
-                dot_w = QLabel()
-                dot_w.setFixedSize(6, 6)
-                dot_w.setStyleSheet(f"background:{dot}; border-radius:3px;")
+            dot_w = QLabel()
+            dot_w.setFixedSize(6, 6)
+            dot_w.setStyleSheet(f"background:{dot_color}; border-radius:3px;")
             pl.addWidget(dot_w)
 
             if key in self._counts and not self._compact:
