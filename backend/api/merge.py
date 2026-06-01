@@ -57,10 +57,22 @@ class MergeAPI:
                 except Exception as exc:
                     log(f"Splitter {i + 1} download failed: {exc} — skipping")
 
-        return MergeService(on_log=log).merge(
+        result = MergeService(on_log=log).merge(
             playlists, output_root, audio_dest,
             splitter_paths=splitter_paths or None,
             on_progress=on_progress,
             stop=stop,
             csv_dir=card_root,
         )
+
+        # clean up splitter temp folders
+        import shutil
+        for i in range(len(splitter_urls or [])):
+            tmp_dir = os.path.join(card_root, f"_splitter_tmp_{i}")
+            if os.path.isdir(tmp_dir):
+                try:
+                    shutil.rmtree(tmp_dir)
+                except OSError:
+                    pass
+
+        return result
