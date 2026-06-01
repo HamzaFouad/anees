@@ -210,11 +210,13 @@ class SlimProgressBar(QWidget):
 # ── PipelineStrip ─────────────────────────────────────────────────────────────
 class PipelineStrip(QWidget):
     def __init__(self, active_stage: str = "download",
-                 split_enabled: bool = True, compact: bool = False, parent=None):
+                 split_enabled: bool = True, compact: bool = False,
+                 running: bool = False, parent=None):
         super().__init__(parent)
-        self._active = active_stage
-        self._split = split_enabled
+        self._active  = active_stage
+        self._split   = split_enabled
         self._compact = compact
+        self._running = running
         self._build()
 
     def _stage_index(self, key: str) -> int:
@@ -256,7 +258,9 @@ class PipelineStrip(QWidget):
             pl.setSpacing(4)
 
             if is_active:
-                dot_w = BreathingDot(PRIMARY, size=14 if not self._compact else 10)
+                dot_w = BreathingDot(PRIMARY,
+                                     size=14 if not self._compact else 10,
+                                     running=self._running)
             else:
                 dot_w = QLabel()
                 dot_w.setFixedSize(6, 6)
@@ -281,9 +285,12 @@ class PipelineStrip(QWidget):
 
         lay.addStretch()
 
-    def update_stage(self, active_stage: str, split_enabled: bool):
+    def update_stage(self, active_stage: str, split_enabled: bool,
+                     running: bool | None = None):
         self._active = active_stage
-        self._split = split_enabled
+        self._split  = split_enabled
+        if running is not None:
+            self._running = running
         self._build()
 
 
@@ -495,16 +502,28 @@ class BreathingDot(QWidget):
     (e.g. SUCCESS for a live/healthy indicator).
     """
 
-    def __init__(self, color: str = PRIMARY, size: int = 14, parent=None):
+    def __init__(self, color: str = PRIMARY, size: int = 14,
+                 running: bool = True, parent=None):
         super().__init__(parent)
-        self._color = QColor(color)
-        self._size = size
-        self._phase = 0.0          # 0..1, drives cosine
+        self._color   = QColor(color)
+        self._size    = size
+        self._phase   = 0.0
+        self._running = running
         self.setFixedSize(size, size)
 
-        t = QTimer(self)
-        t.timeout.connect(self._tick)
-        t.start(20)                # 50 fps ≈ 70 steps/cycle at 1.4 s
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self._tick)
+        if running:
+            self._timer.start(20)   # 50 fps ≈ 70 steps/cycle at 1.4 s
+
+    def set_running(self, running: bool) -> None:
+        self._running = running
+        if running:
+            self._timer.start(20)
+        else:
+            self._timer.stop()
+            self._phase = 0.0
+            self.update()
 
     def _tick(self) -> None:
         self._phase = (self._phase + 1 / 70) % 1.0
@@ -515,29 +534,30 @@ class BreathingDot(QWidget):
         p.setRenderHint(QPainter.Antialiasing)
         p.setPen(Qt.NoPen)
 
-        # cosine oscillation: 1.0 at phase=0, 0.0 at phase=0.5
-        cos_t = (math.cos(self._phase * 2 * math.pi) + 1) / 2
-        scale   = 0.8 + cos_t * 0.2    # 0.8 → 1.0
-        opacity = 0.55 + cos_t * 0.45  # 0.55 → 1.0
-
         cx = cy = self._size / 2
 
-        # halo ring
-        halo_r = self._size / 2 * scale
+        if self._running:
+            # cosine oscillation: 1.0 at phase=0, 0.0 at phase=0.5
+            cos_t   = (math.cos(self._phase * 2 * math.pi) + 1) / 2
+            scale   = 0.8 + cos_t * 0.2    # 0.8 → 1.0
+            opacity = 0.55 + cos_t * 0.45  # 0.55 → 1.0
+        else:
+            scale, opacity = 1.0, 1.0
+
+        # Both radii are derived from the same dot_r so they stay in lockstep.
+        # dot_r  = base dot radius × scale
+        # ring_r = dot_r + ring_width  (ring_width proportional to size)
+        dot_r  = self._size * 0.22 * scale
+        ring_r = dot_r + self._size * 0.21   # fixed 3 px ring at size=14
+
         halo = QColor(self._color)
         halo.setAlphaF(0.18 * opacity)
         p.setBrush(halo)
-        p.drawEllipse(
-            int(cx - halo_r), int(cy - halo_r),
-            int(halo_r * 2),  int(halo_r * 2),
-        )
+        p.drawEllipse(int(cx - ring_r), int(cy - ring_r),
+                      int(ring_r * 2),  int(ring_r * 2))
 
-        # solid dot (40 % of total widget size)
-        dot_r = self._size * 0.22 * scale
         dot = QColor(self._color)
         dot.setAlphaF(opacity)
         p.setBrush(dot)
-        p.drawEllipse(
-            int(cx - dot_r), int(cy - dot_r),
-            int(dot_r * 2),  int(dot_r * 2),
-        )
+        p.drawEllipse(int(cx - dot_r), int(cy - dot_r),
+                      int(dot_r * 2),  int(dot_r * 2))

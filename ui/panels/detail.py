@@ -300,7 +300,8 @@ class _DetailHeader(QWidget):
             f"font-size:10px; color:{FG_MUTED}; font-weight:500; letter-spacing:0.04em;"
         )
         pipe_row.addWidget(pl_lbl)
-        pipe = PipelineStrip(pl.active_stage, pl.split_enabled)
+        pipe = PipelineStrip(pl.active_stage, pl.split_enabled,
+                             running=(pl.status == "active"))
         pipe_row.addWidget(pipe)
         pipe_row.addStretch()
         self._lay.addWidget(pipe_w)
