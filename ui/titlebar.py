@@ -18,7 +18,7 @@ class TitleBar(QWidget):
         lay.setSpacing(8)
 
         # app mark
-        self._mark = _AppMark()
+        self._mark = _AppMark(size=18)
         lay.addWidget(self._mark)
         lay.addSpacing(4)
 
@@ -71,19 +71,17 @@ class TitleBar(QWidget):
 
 
 class _AppMark(QLabel):
-    def __init__(self, parent=None):
+    def __init__(self, size: int = 20, parent=None):
         super().__init__(parent)
         import sys
         base = Path(sys._MEIPASS) / "images" if getattr(sys, "frozen", False) else Path(__file__).parent / "images"  # type: ignore[attr-defined]
-        # prefer high-res .icns on macOS, fall back to .ico
         icns = base / "anees.icns"
         ico  = base / "anees.ico"
         src  = str(icns if icns.exists() else ico)
-        # request 64px from QIcon so Qt picks the sharpest available size
-        px = QIcon(src).pixmap(64, 64)
+        px = QIcon(src).pixmap(128, 128)
         if not px.isNull():
-            self.setPixmap(px.scaled(52, 52, Qt.KeepAspectRatio, Qt.SmoothTransformation))
-        self.setFixedSize(52, 52)
+            self.setPixmap(px.scaled(size, size, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        self.setFixedSize(size, size)
         self.setAlignment(Qt.AlignCenter)
         self.setStyleSheet("background:transparent;")
 
