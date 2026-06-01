@@ -51,7 +51,6 @@ class DownloadService:
         self._stop    = threading.Event()
         self._pause   = threading.Event()
         self._pause.set()
-        self._current_idx = 0
 
     # ── Public control ────────────────────────────────────────────────────────
     def execute(self, playlists: list[Playlist]) -> None:
@@ -105,7 +104,6 @@ class DownloadService:
         self._download(pl)
 
     def _download(self, pl: Playlist) -> None:
-        self._current_idx = 0
         _done_fps: set[str] = set()    # dedup by MP3 filepath
         _logged_pct: list[int] = [-1]  # last milestone logged (reset per video)
 
@@ -128,7 +126,8 @@ class DownloadService:
 
         def on_progress(d: dict) -> None:
             status = d.get("status")
-            idx    = self._current_idx
+            info   = d.get("info_dict") or {}
+            idx    = max(0, int(info.get("playlist_index") or 1) - 1)
             if status == "downloading":
                 total = d.get("total_bytes") or d.get("total_bytes_estimate") or 1
                 done  = d.get("downloaded_bytes") or 0
@@ -191,7 +190,7 @@ class DownloadService:
                 return
             _done_fps.add(filepath)
 
-            idx      = self._current_idx
+            idx      = max(0, int(info.get("playlist_index") or 1) - 1)
             title    = info.get("title") or f"Video {idx+1}"
             duration = int(info.get("duration") or 0)
             size_mb  = os.path.getsize(filepath) / 1024 / 1024
@@ -210,9 +209,6 @@ class DownloadService:
                 self._log("info", f"[{idx+1}] {title}  ({size_mb:.1f} MB)")
                 self._on_video_stage(pl.id, idx, "done", 1.0)
 
-            # Increment immediately — yt-dlp uses this to attribute the next
-            # video's progress to the correct index
-            self._current_idx += 1
 
         try:
             self._client.download(
