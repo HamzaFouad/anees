@@ -48,7 +48,8 @@ def _platform_label() -> str:
 class AboutDialog(RoundedDialog):
     def __init__(self, parent=None):
         # Empty title — about page has no header text, just the close button
-        super().__init__(title="", width=480, body_margins=(0, 0, 0, 0), parent=parent)
+        super().__init__(title="", width=480, body_margins=(0, 0, 0, 0),
+                         header_separator=False, parent=parent)
         self.setWindowTitle("About أنيس")
         self.setMinimumHeight(680)
 

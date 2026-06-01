@@ -587,6 +587,7 @@ class RoundedDialog(QDialog):
 
     def __init__(self, title: str = "", width: int = 480,
                  body_margins: tuple = (20, 16, 20, 20),
+                 header_separator: bool = True,
                  parent=None):
         super().__init__(parent)
         self.setWindowTitle(title)
@@ -631,10 +632,11 @@ class RoundedDialog(QDialog):
         h_lay.addWidget(x_btn)
         self._root.addWidget(hdr)
 
-        # separator
-        sep = QFrame(); sep.setFixedHeight(1)
-        sep.setStyleSheet(f"background:{BORDER}; border:none;")
-        self._root.addWidget(sep)
+        # separator (optional)
+        if header_separator:
+            sep = QFrame(); sep.setFixedHeight(1)
+            sep.setStyleSheet(f"background:{BORDER}; border:none;")
+            self._root.addWidget(sep)
 
         # body
         body = QWidget(); body.setStyleSheet("background:transparent;")
