@@ -51,7 +51,7 @@ class AboutDialog(RoundedDialog):
         super().__init__(title="", width=480, body_margins=(0, 0, 0, 0),
                          header_separator=False, parent=parent)
         self.setWindowTitle("About أنيس")
-        self.setMinimumHeight(680)
+        self.setMinimumHeight(600)
 
         # ── scrollable content inside body_layout ─────────────────────────────
         scroll = QScrollArea()
@@ -62,7 +62,7 @@ class AboutDialog(RoundedDialog):
 
         inner = QWidget(); inner.setStyleSheet("background:transparent;")
         b = QVBoxLayout(inner)
-        b.setContentsMargins(32, 8, 32, 28)
+        b.setContentsMargins(32, 0, 32, 24)
         b.setSpacing(0)
         b.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
 
