@@ -2,7 +2,7 @@ from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QPushButton
 from PySide6.QtCore import Qt, Signal, QRectF
 from PySide6.QtGui import QIcon, QPainter, QColor
 
-from ui.theme import PRIMARY, PRIMARY_TINT_8, FG, FG_MUTED, BG, BORDER
+from ui.theme import PRIMARY, FG, FG_MUTED, BG, BORDER
 from ui.widgets import icon_pixmap, BreathingDot
 from ui.state import AppState
 from backend.models import RunState
@@ -13,7 +13,7 @@ class TabBar(QWidget):
         super().__init__(parent)
         self._state = state
         self.setFixedHeight(36)
-        self.setStyleSheet(f"background:{BG};")
+        self.setStyleSheet(f"background:{BG}; border-bottom:1px solid {BORDER};")
 
         lay = QHBoxLayout(self)
         lay.setContentsMargins(14, 0, 14, 0)
@@ -138,6 +138,6 @@ class _LockPill(QWidget):
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
         p.setPen(Qt.NoPen)
-        p.setBrush(QColor(PRIMARY_TINT_8))
+        p.setBrush(QColor(0, 68, 255, 20))   # rgba(0,68,255,0.08) — Qt needs int alpha 0-255
         r = self.height() / 2
         p.drawRoundedRect(QRectF(self.rect()), r, r)
