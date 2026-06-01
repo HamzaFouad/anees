@@ -103,7 +103,13 @@ class DownloadService:
         self._log("info", f"Downloading {len(pl.videos)} videos → {self._root}/{folder}/")
         self._download(pl)
 
-    def _download(self, pl: Playlist) -> None:
+    def retry_videos(self, pl: Playlist, playlist_items: str) -> None:
+        """Re-download specific videos by a 1-based playlist_items string (e.g. '2,4,7')."""
+        self._stop.clear()
+        self._pause.set()
+        self._download(pl, playlist_items=playlist_items)
+
+    def _download(self, pl: Playlist, playlist_items: str | None = None) -> None:
         _done_fps: set[str] = set()    # dedup by MP3 filepath
         _logged_pct: list[int] = [-1]  # last milestone logged (reset per video)
 
@@ -124,10 +130,30 @@ class DownloadService:
             "%(playlist_index)02d_%(title).60s.%(ext)s",
         )
 
+        _force_failed: set[int] = set()  # DEBUG: indices forced into failed state
+
+        def _mark_failed(idx: int, error_msg: str) -> None:
+            if idx < len(pl.videos):
+                v = pl.videos[idx]
+                v.failed_at = v.stage if v.stage not in ("queued", "failed") else "download"
+                v.error = error_msg
+            self._on_video_stage(pl.id, idx, "failed", 0.0)
+            self._log("error", f"[{idx+1}] failed: {error_msg}")
+
         def on_progress(d: dict) -> None:
             status = d.get("status")
             info   = d.get("info_dict") or {}
             idx    = max(0, int(info.get("playlist_index") or 1) - 1)
+
+            # ── DEBUG: simulate HTTP 403 on the 2nd video ──────────────────────
+            import yt_dlp as _ydl
+            if idx == 1 and status == "downloading" and idx not in _force_failed:
+                _force_failed.add(idx)
+                raise _ydl.utils.DownloadError("DEBUG: HTTP Error 403: Forbidden")
+            if idx in _force_failed:
+                return
+            # ───────────────────────────────────────────────────────────────────
+
             if status == "downloading":
                 total = d.get("total_bytes") or d.get("total_bytes_estimate") or 1
                 done  = d.get("downloaded_bytes") or 0
@@ -143,6 +169,9 @@ class DownloadService:
                 _logged_pct[0] = -1
                 self._on_video_stage(pl.id, idx, "mp3", 0.5)
                 self._log("debug", f"[{idx+1}] converting to mono MP3…")
+            elif status == "error":
+                error_msg = str(d.get("error") or "Download failed")
+                _mark_failed(idx, error_msg)
 
         def _do_postprocess(idx: int, title: str, filepath: str) -> None:
             """Runs in the thread pool — concurrent with the NEXT video's download.
@@ -181,6 +210,9 @@ class DownloadService:
                 return
             info     = d.get("info_dict") or {}
             filepath = info.get("filepath") or ""
+            _pidx    = max(0, int(info.get("playlist_index") or 1) - 1)
+            if _pidx in _force_failed:   # DEBUG: keep forced-failed videos failed
+                return
 
             # Check the file directly — avoids depending on postprocessor key
             # name which differs between yt-dlp versions
@@ -216,6 +248,7 @@ class DownloadService:
                 on_progress, on_postprocess,
                 self._stop, self._pause,
                 on_log=lambda lvl, msg: self._log(lvl, msg),
+                playlist_items=playlist_items,
             )
         except Exception as exc:
             self._log("error", f"Download failed: {pl.title} — {exc}")

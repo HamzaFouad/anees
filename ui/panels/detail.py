@@ -82,15 +82,18 @@ class DetailPanel(QWidget):
             self._state.retry_video(pl.id, idx)
 
     def _on_retry_all(self):
-        for v in self._videos:
-            if v.stage == "failed":
-                v.stage = v.failed_at or "download"
-                v.progress = 0.0
-                v.retry_count += 1
-                v.error = None
+        failed_indices = [i for i, v in enumerate(self._videos) if v.stage == "failed"]
+        for i in failed_indices:
+            v = self._videos[i]
+            v.stage = "download"
+            v.progress = 0.0
+            v.retry_count += 1
+            v.error = None
         pl = self._state.selected_playlist()
         if pl:
             self._detail.set_playlist(pl, self._videos)
+            if failed_indices:
+                self._state.retry_videos(pl.id, failed_indices)
 
 
 class _Detail(QWidget):

@@ -36,4 +36,7 @@ class DownloadAPI:
     def resume(self) -> None: self._svc.resume()
 
     def retry_video(self, pl: Playlist, video_idx: int) -> None:
-        self._svc.retry_video(pl, video_idx)
+        self._svc.retry_videos(pl, ",".join([str(video_idx + 1)]))
+
+    def retry_videos(self, pl: Playlist, playlist_items: str) -> None:
+        self._svc.retry_videos(pl, playlist_items)

@@ -116,12 +116,15 @@ class AppState(QObject):
         self._set_run_state(RunState.IDLE)
 
     def retry_video(self, pid: str, video_idx: int) -> None:
-        """Re-download a single failed video in a background thread."""
+        self.retry_videos(pid, [video_idx])
+
+    def retry_videos(self, pid: str, video_indices: list[int]) -> None:
+        """Re-download one or more failed videos in a background thread."""
         pl = next((p for p in self._playlists if p.id == pid), None)
-        if not pl or video_idx >= len(pl.videos):
+        if not pl or not video_indices:
             return
         from ui.workers.retry_worker import RetryVideoWorker
-        worker = RetryVideoWorker(pl, video_idx, self._output_root, self)
+        worker = RetryVideoWorker(pl, video_indices, self._output_root, self)
         worker.video_stage.connect(self._on_video_stage)
         worker.video_meta.connect(self._on_video_meta)
         worker.log_added.connect(self._on_log)
