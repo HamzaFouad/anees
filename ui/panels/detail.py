@@ -319,7 +319,8 @@ class _DetailHeader(QWidget):
 
         self._pipe = PipelineStrip(pl.active_stage, pl.split_enabled,
                                    running=(pl.status == "active"),
-                                   stage_counts=stage_counts)
+                                   stage_counts=stage_counts,
+                                   speed_enabled=(pl.speed != 1.0))
         pipe_row.addWidget(self._pipe)
         pipe_row.addStretch()
         self._lay.addWidget(pipe_w)

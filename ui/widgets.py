@@ -213,10 +213,12 @@ class PipelineStrip(QWidget):
                  split_enabled: bool = True, compact: bool = False,
                  running: bool = False,
                  stage_counts: dict | None = None,
+                 speed_enabled: bool = True,
                  parent=None):
         super().__init__(parent)
         self._active       = active_stage
         self._split        = split_enabled
+        self._speed        = speed_enabled
         self._compact      = compact
         self._running      = running
         self._counts       = stage_counts or {}
@@ -238,7 +240,8 @@ class PipelineStrip(QWidget):
         lay.setSpacing(4 if self._compact else 6)
 
         stages = [(k, lbl, short, ico) for k, lbl, short, ico in PIPELINE_STAGES
-                  if self._split or k != "split"]
+                  if (self._split or k != "split")
+                  and (self._speed or k != "speed")]
 
         for i, (key, label, short, _) in enumerate(stages):
             # All visible stages are always blue; grey only if explicitly disabled
@@ -284,13 +287,16 @@ class PipelineStrip(QWidget):
 
     def update_stage(self, active_stage: str, split_enabled: bool,
                      running: bool | None = None,
-                     stage_counts: dict | None = None):
+                     stage_counts: dict | None = None,
+                     speed_enabled: bool | None = None):
         self._active = active_stage
         self._split  = split_enabled
         if running is not None:
             self._running = running
         if stage_counts is not None:
             self._counts = stage_counts
+        if speed_enabled is not None:
+            self._speed = speed_enabled
         self._build()
 
     def update_counts_only(self, stage_counts: dict) -> None:
