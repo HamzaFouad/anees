@@ -1,7 +1,7 @@
 from pathlib import Path
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QPushButton
 from PySide6.QtCore import Qt, QPoint
-from PySide6.QtGui import QPainter, QColor, QPixmap
+from PySide6.QtGui import QPainter, QColor, QPixmap, QIcon
 
 from ui.theme import PRIMARY, FG, FG_MUTED, BG, BORDER, WIN_CLOSE_HOVER, ON_PRIMARY, TEXT_MD
 
