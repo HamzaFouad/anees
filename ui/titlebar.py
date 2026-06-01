@@ -74,11 +74,13 @@ class _AppMark(QLabel):
     def __init__(self, parent=None):
         super().__init__(parent)
         import sys
-        if getattr(sys, "frozen", False):
-            ico = Path(sys._MEIPASS) / "images" / "anees.ico"  # type: ignore[attr-defined]
-        else:
-            ico = Path(__file__).parent / "images" / "anees.ico"
-        px = QPixmap(str(ico))
+        base = Path(sys._MEIPASS) / "images" if getattr(sys, "frozen", False) else Path(__file__).parent / "images"  # type: ignore[attr-defined]
+        # prefer high-res .icns on macOS, fall back to .ico
+        icns = base / "anees.icns"
+        ico  = base / "anees.ico"
+        src  = str(icns if icns.exists() else ico)
+        # request 64px from QIcon so Qt picks the sharpest available size
+        px = QIcon(src).pixmap(64, 64)
         if not px.isNull():
             self.setPixmap(px.scaled(20, 20, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         self.setFixedSize(20, 20)
