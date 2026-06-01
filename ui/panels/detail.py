@@ -13,7 +13,7 @@ from ui.theme import (
     WARN_DARK,
     PIPELINE_STAGES, fmt_dur, fmt_mb,
 )
-from ui.widgets import Badge, Btn, PipelineStrip, SlimProgressBar, Spinner, icon_pixmap, icon_label
+from ui.widgets import Badge, Btn, PipelineStrip, SlimProgressBar, Spinner, BreathingDot, icon_pixmap, icon_label
 from ui.state import AppState
 from backend.models import Playlist, Video
 
@@ -139,6 +139,7 @@ class _Detail(QWidget):
         # widget if we only use deleteLater() without stopping it first
         for sp in self._rows_widget.findChildren(Spinner):
             sp.stop()
+        # BreathingDot timers are owned by the widget and die with deleteLater
 
         while self._rows_lay.count() > 1:
             item = self._rows_lay.takeAt(0)
@@ -461,7 +462,7 @@ class VideoRow(QWidget):
                 lbl.setStyleSheet(f"color:{SURFACE_ALT}; font-size:12px;")
                 c_lay.addWidget(lbl)
             elif not is_failed and stage_idx == i:
-                sp = Spinner(16, PRIMARY)
+                sp = BreathingDot(PRIMARY, size=20)
                 c_lay.addWidget(sp)
             else:
                 dot = QLabel()
@@ -548,6 +549,7 @@ class VideoRow(QWidget):
                 if w is not None:
                     if isinstance(w, Spinner):
                         w.stop()
+                    # BreathingDot: QTimer dies automatically with the widget
                     w.hide()
                     w.deleteLater()
                     c_lay.takeAt(j)
@@ -566,7 +568,7 @@ class VideoRow(QWidget):
                 lbl.setStyleSheet(f"color:{SURFACE_ALT}; font-size:12px;")
                 c_lay.addWidget(lbl)
             elif not is_failed and stage_idx == i:
-                sp = Spinner(16, PRIMARY)
+                sp = BreathingDot(PRIMARY, size=20)
                 c_lay.addWidget(sp)
             else:
                 dot = QLabel()

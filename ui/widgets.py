@@ -255,12 +255,12 @@ class PipelineStrip(QWidget):
                                   2 if self._compact else 4)
             pl.setSpacing(4)
 
-            dot_w = QLabel()
-            dot_w.setFixedSize(6, 6)
-            dot_w.setStyleSheet(
-                f"background:{dot}; border-radius:3px;"
-                + (f" border: 3px solid {PRIMARY_TINT_18};" if is_active else "")
-            )
+            if is_active:
+                dot_w = BreathingDot(PRIMARY, size=14 if not self._compact else 10)
+            else:
+                dot_w = QLabel()
+                dot_w.setFixedSize(6, 6)
+                dot_w.setStyleSheet(f"background:{dot}; border-radius:3px;")
             pl.addWidget(dot_w)
 
             txt = QLabel(short if self._compact else label)
