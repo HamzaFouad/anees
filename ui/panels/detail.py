@@ -67,8 +67,12 @@ class DetailPanel(QWidget):
         pl = self._state.selected_playlist()
         if not pl or idx < 0 or idx >= len(pl.videos):
             return
-        self._detail.update_row(idx, pl.videos[idx])
+        video = pl.videos[idx]
+        self._detail.update_row(idx, video)
         self._detail.update_pipeline_counts(pl, pl.videos)
+        # refresh header when a video transitions to/from failed (updates retry-all button)
+        if video.stage in ("failed", "done"):
+            self._detail.refresh_header(pl, pl.videos)
 
     def _on_retry(self, idx: int):
         v = self._videos[idx]
@@ -171,6 +175,9 @@ class _Detail(QWidget):
 
     def update_pipeline_counts(self, pl: "Playlist", videos: list[Video]) -> None:
         self._header.refresh_pipeline(pl, videos)
+
+    def refresh_header(self, pl: "Playlist", videos: list[Video]) -> None:
+        self._header.refresh(pl, videos)
 
 
 class _DetailHeader(QWidget):
