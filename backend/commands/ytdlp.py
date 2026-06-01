@@ -93,6 +93,7 @@ class YtdlpClient:
         stop:           threading.Event,
         pause:          threading.Event,
         on_log:         Callable[[str, str], None] | None = None,
+        playlist_items: str | None = None,
     ) -> None:
         """Download *url* using the given output template.
 
@@ -142,6 +143,7 @@ class YtdlpClient:
             "no_warnings":         True,
             "progress_hooks":      [_progress],
             "postprocessor_hooks": [on_postprocess],
+            **({"playlist_items": playlist_items} if playlist_items else {}),
         }
 
         try:

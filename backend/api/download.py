@@ -34,3 +34,6 @@ class DownloadAPI:
     def stop(self)   -> None: self._svc.stop()
     def pause(self)  -> None: self._svc.pause()
     def resume(self) -> None: self._svc.resume()
+
+    def retry_video(self, pl: Playlist, video_idx: int) -> None:
+        self._svc.retry_video(pl, video_idx)
