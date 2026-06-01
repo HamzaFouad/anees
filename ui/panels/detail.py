@@ -338,8 +338,14 @@ class _DetailHeader(QWidget):
             k: (sum(1 for v in videos if v.stage in past), total)
             for k, past in _past.items()
         } if total else {}
-        # Update text labels in-place — never rebuild the strip during a run
-        self._pipe.update_counts_only(stage_counts)
+        running = (pl.status == "active")
+        # Rebuild only when the active stage or running state changes (rare).
+        # For pure count updates (progress ticks) just swap text in-place.
+        if pl.active_stage != self._pipe._active or running != self._pipe._running:
+            self._pipe.update_stage(pl.active_stage, pl.split_enabled,
+                                    running=running, stage_counts=stage_counts)
+        else:
+            self._pipe.update_counts_only(stage_counts)
 
 
 class _ColHeader(QWidget):

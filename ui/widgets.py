@@ -230,8 +230,11 @@ class PipelineStrip(QWidget):
         return -1
 
     def _build(self):
-        # clear
+        # stop any running spinners before deleting their parents
+        for sp in self.findChildren(Spinner):
+            sp.stop()
         for child in self.findChildren(QWidget):
+            child.hide()
             child.deleteLater()
         lay = QHBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
