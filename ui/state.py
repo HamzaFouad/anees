@@ -15,6 +15,7 @@ class AppState(QObject):
     view_changed      = Signal(str)
     query_changed     = Signal(str)
     logs_changed      = Signal()
+    retry_complete    = Signal()   # emitted after all retry workers finish
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -129,6 +130,7 @@ class AppState(QObject):
         worker.video_meta.connect(self._on_video_meta)
         worker.log_added.connect(self._add_log)
         worker.completed.connect(worker.deleteLater)
+        worker.completed.connect(self.retry_complete)
         worker.start()
 
     # kept for toolbar compatibility — maps to the right method
