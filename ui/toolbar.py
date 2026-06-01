@@ -44,11 +44,12 @@ class Toolbar(QWidget):
 
         lay.addStretch()
 
-        # add playlist
-        self._add_btn = QPushButton("  Add playlist")
-        self._add_btn.setIcon(QIcon(icon_pixmap("plus", 13, FG_MUTED)))
+        # build card button (permanent, right side)
+        self._add_btn = QPushButton("  Build Card")
+        self._add_btn.setIcon(QIcon(icon_pixmap("merge", 13, FG_MUTED)))
         self._add_btn.setFixedHeight(30)
         self._add_btn.setCursor(Qt.PointingHandCursor)
+        self._add_btn.setToolTip("Assembles your playlists into a JOC memory card folder")
         self._add_btn.setStyleSheet(f"""
             QPushButton {{
                 background:{BG}; color:{FG}; border:1px solid {BORDER};
@@ -57,7 +58,7 @@ class Toolbar(QWidget):
             QPushButton:hover {{ background:{BG_MUTED}; }}
             QPushButton:disabled {{ background:{DISABLED_BG}; color:{DISABLED_FG}; opacity:0.7; }}
         """)
-        self._add_btn.clicked.connect(self.add_clicked)
+        self._add_btn.clicked.connect(self._on_merge)
         lay.addWidget(self._add_btn)
 
         # search
@@ -103,11 +104,6 @@ class Toolbar(QWidget):
             self._run_controls.refresh()
 
     def _on_run_state(self, rs: RunState):
-        locked = rs in (RunState.RUNNING, RunState.PAUSED)
-        self._add_btn.setDisabled(locked)
-        self._add_btn.setToolTip(
-            "Queue is locked while a run is in progress" if locked else "Add a YouTube playlist to the queue"
-        )
         self._run_controls.refresh()
 
     def _on_view(self, view: str):
