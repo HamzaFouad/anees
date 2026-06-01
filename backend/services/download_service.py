@@ -32,8 +32,6 @@ def _playlist_folder(pl: Playlist) -> str:
 
 
 class DownloadService:
-    _debug_failed: set[int] = set()  # DEBUG: class-level, shared across all instances
-
     def __init__(
         self,
         output_root:     str | None = None,
@@ -144,16 +142,6 @@ class DownloadService:
             status = d.get("status")
             info   = d.get("info_dict") or {}
             idx    = max(0, int(info.get("playlist_index") or 1) - 1)
-
-            # ── DEBUG: simulate HTTP 403 on the 2nd video ──────────────────────
-            if idx == 1 and status == "downloading" and idx not in self._debug_failed:
-                self._debug_failed.add(idx)
-                _mark_failed(idx, "DEBUG: HTTP Error 403: Forbidden")  # update UI first
-                import yt_dlp as _ydl
-                raise _ydl.utils.DownloadError("DEBUG: HTTP Error 403: Forbidden")
-            if idx in self._debug_failed:
-                return
-            # ───────────────────────────────────────────────────────────────────
 
             if status == "downloading":
                 total = d.get("total_bytes") or d.get("total_bytes_estimate") or 1
