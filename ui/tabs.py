@@ -3,7 +3,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QIcon
 
 from ui.theme import PRIMARY, PRIMARY_TINT_8, FG, FG_MUTED, BG, BORDER
-from ui.widgets import icon_pixmap
+from ui.widgets import icon_pixmap, BreathingDot
 from ui.state import AppState
 from backend.models import RunState
 
@@ -125,15 +125,13 @@ class _LockPill(QWidget):
         lay.setContentsMargins(10, 4, 10, 4)
         lay.setSpacing(6)
 
-        dot = QLabel()
-        dot.setFixedSize(6, 6)
-        dot.setStyleSheet(f"background:{PRIMARY}; border-radius:3px;")
-        lay.addWidget(dot)
+        lay.addWidget(_BreathingDot())
 
         lbl = QLabel("Queue locked — run in progress")
         lbl.setStyleSheet(f"font-size:11px; font-weight:500; color:{PRIMARY};")
         lay.addWidget(lbl)
 
+        self.setAttribute(Qt.WA_StyledBackground, True)
         self.setStyleSheet(
             f"background:{PRIMARY_TINT_8}; border-radius:99px;"
         )

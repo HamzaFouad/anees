@@ -1,4 +1,5 @@
 from __future__ import annotations
+import math
 from PySide6.QtWidgets import (
     QWidget, QLabel, QPushButton, QLineEdit, QHBoxLayout, QVBoxLayout,
     QSizePolicy, QFrame,
@@ -483,3 +484,60 @@ class EmptyState(QWidget):
             sub.setAlignment(Qt.AlignHCenter)
             sub.setWordWrap(True)
             lay.addWidget(sub)
+
+
+# ── BreathingDot ──────────────────────────────────────────────────────────────
+class BreathingDot(QWidget):
+    """Pulsing status dot with a soft halo ring.
+
+    The dot and its halo breathe together — scale 1.0↔0.8, opacity 1.0↔0.55 —
+    over a 1.4 s cosine cycle.  Pass *color* to reuse for other states
+    (e.g. SUCCESS for a live/healthy indicator).
+    """
+
+    def __init__(self, color: str = PRIMARY, size: int = 14, parent=None):
+        super().__init__(parent)
+        self._color = QColor(color)
+        self._size = size
+        self._phase = 0.0          # 0..1, drives cosine
+        self.setFixedSize(size, size)
+
+        t = QTimer(self)
+        t.timeout.connect(self._tick)
+        t.start(20)                # 50 fps ≈ 70 steps/cycle at 1.4 s
+
+    def _tick(self) -> None:
+        self._phase = (self._phase + 1 / 70) % 1.0
+        self.update()
+
+    def paintEvent(self, _) -> None:
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        p.setPen(Qt.NoPen)
+
+        # cosine oscillation: 1.0 at phase=0, 0.0 at phase=0.5
+        cos_t = (math.cos(self._phase * 2 * math.pi) + 1) / 2
+        scale   = 0.8 + cos_t * 0.2    # 0.8 → 1.0
+        opacity = 0.55 + cos_t * 0.45  # 0.55 → 1.0
+
+        cx = cy = self._size / 2
+
+        # halo ring
+        halo_r = self._size / 2 * scale
+        halo = QColor(self._color)
+        halo.setAlphaF(0.18 * opacity)
+        p.setBrush(halo)
+        p.drawEllipse(
+            int(cx - halo_r), int(cy - halo_r),
+            int(halo_r * 2),  int(halo_r * 2),
+        )
+
+        # solid dot (40 % of total widget size)
+        dot_r = self._size * 0.22 * scale
+        dot = QColor(self._color)
+        dot.setAlphaF(opacity)
+        p.setBrush(dot)
+        p.drawEllipse(
+            int(cx - dot_r), int(cy - dot_r),
+            int(dot_r * 2),  int(dot_r * 2),
+        )
