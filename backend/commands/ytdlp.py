@@ -151,3 +151,7 @@ class YtdlpClient:
                 ydl.download([url])
         except yt_dlp.utils.DownloadCancelled:
             pass   # normal stop — caller already set stop flag
+        except Exception as exc:
+            if on_log:
+                on_log("error", f"yt-dlp: {exc}")
+            raise

@@ -55,7 +55,12 @@ class DownloadService:
     # ── Public control ────────────────────────────────────────────────────────
     def execute(self, playlists: list[Playlist]) -> None:
         self._stop.clear()
-        Path(self._root).mkdir(parents=True, exist_ok=True)
+        try:
+            Path(self._root).mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            self._log("error", f"Cannot create output folder: {self._root} — {exc}")
+            self._on_complete()
+            return
         self._log("info", f"Run started — output: {self._root}")
 
         for pl in playlists:

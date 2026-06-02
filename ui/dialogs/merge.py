@@ -326,9 +326,21 @@ class MergeDialog(QDialog):
         self._splitter_section.update_preview("\n".join(lines[:12]))
 
     def _on_merge(self) -> None:
+        import tempfile
         dest = self._dest_input.text().strip()
         if not dest:
             self._footer_info.setText("Please enter a destination folder.")
+            return
+        # check destination is writable before starting
+        try:
+            from pathlib import Path as _P
+            _P(dest).mkdir(parents=True, exist_ok=True)
+            _test = os.path.join(dest, ".anees_write_test")
+            with open(_test, "w") as _f:
+                _f.write("")
+            os.remove(_test)
+        except OSError as exc:
+            self._footer_info.setText(f"Destination not writable: {exc}")
             return
 
         selected_pls = [p for p in self._playlists if p.id in self._selected]
@@ -336,6 +348,9 @@ class MergeDialog(QDialog):
             return
 
         splitter_urls = self._splitter_section.get_urls(len(selected_pls))
+        if splitter_urls is None:
+            self._footer_info.setText("Splitter playlist failed to load — cannot merge.")
+            return
         if not splitter_urls:
             self._footer_info.setText("Splitter playlist still loading — please wait.")
             return
@@ -373,6 +388,12 @@ class MergeDialog(QDialog):
 
     def reject(self) -> None:
         if self._worker and self._worker.isRunning():
+            try:
+                self._worker.progress.disconnect()
+                self._worker.completed.disconnect()
+                self._worker.failed.disconnect()
+            except RuntimeError:
+                pass  # already disconnected
             self._worker.stop()
             self._worker.wait(2000)
         super().reject()
@@ -478,9 +499,9 @@ SPLITTER_PLAYLIST = "https://www.youtube.com/playlist?list=PLoOpuURvl_OMoX3iDm8W
 class _SplitterSection(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        # list of (url, title, duration_sec) from the splitter playlist
         self._clips: list[tuple[str, str, int]] = []
-        self._count = 0  # how many playlists are selected
+        self._count = 0
+        self._fetch_failed = False
         self._fetch_thread: QThread | None = None
 
         self.setObjectName("splitterSection")
@@ -562,7 +583,9 @@ class _SplitterSection(QWidget):
 
     # ── public API ────────────────────────────────────────────────────────────
 
-    def get_urls(self, n: int) -> list[str]:
+    def get_urls(self, n: int) -> list[str] | None:
+        if self._fetch_failed:
+            return None  # distinct from "still loading"
         if not self._clips:
             return []
         return [self._clips[i % len(self._clips)][0] for i in range(n)]
@@ -591,6 +614,7 @@ class _SplitterSection(QWidget):
         self._refresh_list()
 
     def _on_fetch_error(self, msg: str) -> None:
+        self._fetch_failed = True
         self._status_lbl.setText("Failed to load — retry later")
 
     # ── list rendering ────────────────────────────────────────────────────────

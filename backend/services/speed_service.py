@@ -41,11 +41,11 @@ class SpeedService:
                 try:
                     os.replace(tmp, path)
                 except OSError as exc:
-                    self._on_log(f"speed: rename failed — {exc}")
                     try:
                         os.remove(tmp)
                     except OSError:
                         pass
+                    raise RuntimeError(f"Speed: cannot replace file — {exc}") from exc
             else:
                 try:
                     os.remove(tmp)

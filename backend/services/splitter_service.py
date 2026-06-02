@@ -36,7 +36,10 @@ class SplitterService:
         if stop is None:
             stop = threading.Event()
 
-        Path(dest_folder).mkdir(parents=True, exist_ok=True)
+        try:
+            Path(dest_folder).mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            raise RuntimeError(f"Cannot create splitter folder: {exc}") from exc
         out_tmpl = os.path.join(dest_folder, "_splitter.%(ext)s")
 
         downloaded: list[str] = []

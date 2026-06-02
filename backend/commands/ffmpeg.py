@@ -65,7 +65,11 @@ class FfmpegClient:
             for line in proc.stdout:
                 if stop.is_set():
                     proc.terminate()
-                    proc.wait(timeout=5)
+                    try:
+                        proc.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        proc.kill()
+                        proc.wait()
                     return False
                 on_log(line.rstrip())
             return proc.wait() == 0
@@ -117,7 +121,11 @@ class FfmpegClient:
             for line in proc.stdout:
                 if stop.is_set():
                     proc.terminate()
-                    proc.wait(timeout=5)
+                    try:
+                        proc.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        proc.kill()
+                        proc.wait()
                     return False
                 on_log(line.rstrip())
             return proc.wait() == 0

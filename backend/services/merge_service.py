@@ -58,7 +58,12 @@ class MergeService:
         if on_progress is None:
             on_progress = lambda *_: None
 
-        Path(dest_path).mkdir(parents=True, exist_ok=True)
+        try:
+            Path(dest_path).mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            msg = f"Cannot create destination folder: {exc}"
+            self._on_log(msg)
+            raise RuntimeError(msg) from exc
 
         ordered = sorted(playlists, key=lambda p: p.prefix)
 

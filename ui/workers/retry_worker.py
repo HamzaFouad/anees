@@ -19,16 +19,19 @@ class RetryVideoWorker(QThread):
         self._api: DownloadAPI | None = None
 
     def run(self) -> None:
-        self._api = DownloadAPI(
-            output_root    = self._output_root,
-            on_video_stage = lambda pid, idx, stage, pct: self.video_stage.emit(pid, idx, stage, pct),
-            on_video_meta  = lambda pid, idx, title, dur: self.video_meta.emit(pid, idx, title, dur),
-            on_log         = lambda lvl, src, msg: self.log_added.emit(lvl, src, msg),
-        )
-        # 1-based, comma-separated list yt-dlp understands
-        playlist_items = ",".join(str(i + 1) for i in sorted(self._video_indices))
-        self._api.retry_videos(self._pl, playlist_items)
-        self.completed.emit()
+        try:
+            self._api = DownloadAPI(
+                output_root    = self._output_root,
+                on_video_stage = lambda pid, idx, stage, pct: self.video_stage.emit(pid, idx, stage, pct),
+                on_video_meta  = lambda pid, idx, title, dur: self.video_meta.emit(pid, idx, title, dur),
+                on_log         = lambda lvl, src, msg: self.log_added.emit(lvl, src, msg),
+            )
+            playlist_items = ",".join(str(i + 1) for i in sorted(self._video_indices))
+            self._api.retry_videos(self._pl, playlist_items)
+        except Exception as exc:
+            self.log_added.emit("error", "retry", str(exc))
+        finally:
+            self.completed.emit()
 
     def stop(self) -> None:
         if self._api:
