@@ -64,6 +64,13 @@ def main():
     if _icon.exists():
         app.setWindowIcon(QIcon(str(_icon)))
     apply_global_stylesheet(app)
+
+    from backend.commands.ffmpeg import ffmpeg_ok
+    if not ffmpeg_ok():
+        from ui.dialogs.ffmpeg_missing import FfmpegMissingDialog
+        FfmpegMissingDialog().exec()
+        sys.exit(1)
+
     window = MainWindow()
     window.show()
     sys.exit(app.exec())

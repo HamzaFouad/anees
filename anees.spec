@@ -18,10 +18,16 @@ yt_dlp_datas, yt_dlp_binaries, yt_dlp_hiddenimports = collect_all("yt_dlp")
 
 # Bundle the platform-specific ffmpeg binary so users don't need to install it
 _ffmpeg_bin = []
-if sys.platform == "win32" and os.path.exists("vendor/win-x64/ffmpeg.exe"):
-    _ffmpeg_bin = [("vendor/win-x64/ffmpeg.exe", ".")]
-elif sys.platform == "darwin" and os.path.exists("vendor/macos/ffmpeg"):
-    _ffmpeg_bin = [("vendor/macos/ffmpeg", ".")]
+if sys.platform == "win32":
+    for name in ("ffmpeg.exe", "ffprobe.exe"):
+        src = f"vendor/win-x64/{name}"
+        if os.path.exists(src):
+            _ffmpeg_bin.append((src, "."))
+elif sys.platform == "darwin":
+    for name in ("ffmpeg", "ffprobe"):
+        src = f"vendor/macos/{name}"
+        if os.path.exists(src):
+            _ffmpeg_bin.append((src, "."))
 
 block_cipher = None
 

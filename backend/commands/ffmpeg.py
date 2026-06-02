@@ -21,6 +21,16 @@ def _find_ffmpeg() -> str:
     return "ffmpeg"
 
 
+def ffmpeg_ok() -> bool:
+    """Return True if ffmpeg can actually be executed."""
+    exe = _find_ffmpeg()
+    try:
+        r = subprocess.run([exe, "-version"], capture_output=True, timeout=5)
+        return r.returncode == 0
+    except Exception:
+        return False
+
+
 class FfmpegClient:
     """Thin wrapper around the ffmpeg binary for post-processing operations."""
 
