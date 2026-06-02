@@ -7,18 +7,18 @@ from typing import Callable
 from backend.models import Video
 
 
-def _find_ffmpeg() -> str | None:
-    """Return the ffmpeg binary path when running from a PyInstaller bundle.
-
-    When frozen, ffmpeg.exe / ffmpeg is extracted alongside the app in the
-    _MEIPASS temp directory.  Returns None when running from source so that
-    yt-dlp falls back to searching PATH (developer machines have ffmpeg installed).
-    """
-    if not getattr(sys, "frozen", False):
-        return None
-    name = "ffmpeg.exe" if sys.platform == "win32" else "ffmpeg"
-    path = os.path.join(sys._MEIPASS, name)  # type: ignore[attr-defined]
-    return path if os.path.exists(path) else None
+def _find_ffmpeg() -> str:
+    """Return the ffmpeg binary path — bundled first, then Homebrew, then PATH."""
+    if getattr(sys, "frozen", False):
+        name = "ffmpeg.exe" if sys.platform == "win32" else "ffmpeg"
+        path = os.path.join(sys._MEIPASS, name)  # type: ignore[attr-defined]
+        if os.path.exists(path):
+            return path
+    if sys.platform == "darwin":
+        for candidate in ["/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg"]:
+            if os.path.exists(candidate):
+                return candidate
+    return "ffmpeg"
 
 
 class YtdlpClient:
@@ -127,7 +127,7 @@ class YtdlpClient:
         ffmpeg = _find_ffmpeg()
         opts = {
             "format":          "bestaudio/best",
-            **({"ffmpeg_location": ffmpeg} if ffmpeg else {}),
+            "ffmpeg_location": ffmpeg,
             "postprocessors":  [
                 {
                     "key":              "FFmpegExtractAudio",
