@@ -21,6 +21,21 @@ def _playlist_folder(pl: Playlist) -> str:
     return f"{pl.prefix}_{_safe_name(pl.title)}"
 
 
+def _find_playlist_folder(output_root: str, prefix: str) -> str | None:
+    """Scan output_root for the first directory whose name starts with '{prefix}_'.
+
+    Scanning by prefix rather than reconstructing the exact name avoids mismatches
+    when the on-disk folder was sanitized differently from the in-memory title.
+    """
+    try:
+        for entry in os.scandir(output_root):
+            if entry.is_dir() and entry.name.startswith(f"{prefix}_"):
+                return entry.path
+    except OSError:
+        pass
+    return None
+
+
 @dataclass
 class _Entry:
     src: str
@@ -68,19 +83,27 @@ class MergeService:
         ordered = sorted(playlists, key=lambda p: p.prefix)
 
         entries: list[_Entry] = []
-        for idx, pl in enumerate(ordered):
-            folder = os.path.join(output_root, _playlist_folder(pl))
-            if not os.path.isdir(folder):
-                self._on_log(f"folder not found, skipping: {folder}")
+        skipped: list[str] = []
+        found_count = 0
+        for pl in ordered:
+            folder = _find_playlist_folder(output_root, pl.prefix)
+            if folder is None:
+                msg = f"folder not found for prefix {pl.prefix!r} — skipped from merge"
+                self._on_log(msg)
+                skipped.append(pl.title or pl.prefix)
                 continue
             mp3s = sorted(f for f in os.listdir(folder) if f.lower().endswith(".mp3"))
             if not mp3s:
+                msg = f"no MP3s in {folder} — folder may have been partially merged already"
+                self._on_log(msg)
+                skipped.append(pl.title or pl.prefix)
                 continue
 
-            # insert splitter before this playlist
-            if splitter_paths and idx < len(splitter_paths):
+            # insert splitter before this playlist — use found_count, not enumerate idx,
+            # so skipped playlists don't shift the splitter assignment
+            if splitter_paths and found_count < len(splitter_paths):
                 entries.append(_Entry(
-                    splitter_paths[idx], is_splitter=True, playlist_name="splitter"
+                    splitter_paths[found_count], is_splitter=True, playlist_name="splitter"
                 ))
 
             for fname in mp3s:
@@ -89,6 +112,10 @@ class MergeService:
                     is_splitter=False,
                     playlist_name=pl.title,
                 ))
+            found_count += 1
+
+        if skipped:
+            self._on_log(f"WARNING: {len(skipped)} playlist(s) skipped: {', '.join(skipped)}")
 
         total = len(entries)
         moved = 0
@@ -116,7 +143,7 @@ class MergeService:
             self._write_detail_csv(entries, out_dir)
 
         self._on_log(f"Merge complete — {moved}/{total} files in {dest_path}")
-        return moved
+        return moved, skipped
 
     def _write_summary_csv(self, entries: list[_Entry], csv_dir: str) -> None:
         csv_path = os.path.join(csv_dir, "summary.csv")

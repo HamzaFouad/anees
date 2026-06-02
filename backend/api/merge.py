@@ -63,7 +63,7 @@ class MergeAPI:
                 except Exception as exc:
                     log(f"Splitter {i + 1} download failed: {exc} — skipping")
 
-        result = MergeService(on_log=log).merge(
+        moved, skipped = MergeService(on_log=log).merge(
             playlists, output_root, audio_dest,
             splitter_paths=splitter_paths or None,
             on_progress=on_progress,
@@ -81,4 +81,4 @@ class MergeAPI:
                 except OSError:
                     pass
 
-        return result
+        return moved, skipped

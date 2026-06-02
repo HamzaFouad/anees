@@ -10,7 +10,7 @@ from backend.models import Playlist
 class MergeWorker(QThread):
     progress  = Signal(int, int)   # copied, total
     log_added = Signal(str, str)   # level, message
-    completed = Signal(int)        # total files
+    completed = Signal(int, object)  # total files, skipped list[str]
     failed    = Signal(str)        # error message
 
     def __init__(
@@ -30,7 +30,7 @@ class MergeWorker(QThread):
 
     def run(self) -> None:
         try:
-            n = MergeAPI().merge(
+            n, skipped = MergeAPI().merge(
                 self._playlists,
                 self._output_root,
                 self._dest_path,
@@ -40,7 +40,7 @@ class MergeWorker(QThread):
                 stop=self._stop,
             )
             if not self._stop.is_set():
-                self.completed.emit(n)
+                self.completed.emit(n, skipped)
         except Exception as exc:
             self.failed.emit(str(exc))
 

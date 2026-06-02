@@ -10,7 +10,7 @@ from PySide6.QtGui import QIcon
 from ui.theme import (
     PRIMARY, PRIMARY_HOVER, ON_PRIMARY, PRIMARY_TINT_3,
     FG, FG_MUTED, BG, BG_SUBTLE, BORDER,
-    SUCCESS, SUCCESS_BG, SUCCESS_DARK,
+    SUCCESS, SUCCESS_BG, SUCCESS_DARK, ERROR_DARK,
 )
 from ui.widgets import (
     icon_pixmap, icon_label, Checkbox, StyledInput,
@@ -366,12 +366,19 @@ class MergeDialog(QDialog):
         self._worker.progress.connect(
             lambda c, t: self._footer_info.setText(f"Copying files… ({c}/{t})")
         )
-        self._worker.completed.connect(self._on_complete)
+        self._worker.completed.connect(self._on_complete)  # (n, skipped)
         self._worker.failed.connect(self._on_failed)
         self._worker.start()
 
-    def _on_complete(self, n: int) -> None:
-        self._footer_info.setText(f"Done — {n} files copied.")
+    def _on_complete(self, n: int, skipped: list) -> None:
+        if skipped:
+            self._footer_info.setText(
+                f"Done — {n} files. {len(skipped)} playlist(s) skipped (folder missing or empty): "
+                + ", ".join(skipped)
+            )
+            self._footer_info.setStyleSheet(f"font-size:11px; color:{ERROR_DARK};")
+        else:
+            self._footer_info.setText(f"Done — {n} files copied.")
         self._merge_btn.setEnabled(True)
         self._merge_btn.setText("  Done")
         self._merge_btn.setStyleSheet(
