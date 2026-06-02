@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget, QFrame
 from PySide6.QtCore import Qt, QRectF
-from PySide6.QtGui import QPainter, QColor, QPainterPath
+from PySide6.QtGui import QPainter, QColor, QPainterPath, QPen
 
 from ui.state import AppState
 from ui.titlebar import TitleBar
@@ -23,8 +23,10 @@ class MainWindow(QWidget):
         self.setMinimumSize(1100, 720)
         self.resize(1100, 720)
         self.setObjectName("mainWindow")
-        from ui.theme import BG
+        from ui.theme import BG, FRAME_BORDER, FRAME_RADIUS
         self._bg_color = QColor(BG)
+        self._frame_border = QColor(FRAME_BORDER)
+        self._frame_radius = FRAME_RADIUS
 
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
@@ -112,9 +114,16 @@ class MainWindow(QWidget):
     def paintEvent(self, event):
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
-        p.setPen(Qt.NoPen)
+        has_border = self._frame_border.alpha() > 0
+        rect = QRectF(self.rect())
+        if has_border:
+            # inset by 0.5px so the 1px stroke is fully inside the widget bounds
+            rect = rect.adjusted(0.5, 0.5, -0.5, -0.5)
+            p.setPen(QPen(self._frame_border, 1))
+        else:
+            p.setPen(Qt.NoPen)
         p.setBrush(self._bg_color)
         path = QPainterPath()
-        path.addRoundedRect(QRectF(self.rect()), 12, 12)
+        path.addRoundedRect(rect, self._frame_radius, self._frame_radius)
         p.drawPath(path)
 

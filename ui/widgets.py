@@ -19,6 +19,7 @@ from ui.theme import (
     TEXT_XS, TEXT_SM, TEXT_MD,
     SPACE_4, SPACE_8,
     RADIUS_SM, RADIUS_MD, RADIUS_LG, RADIUS_PILL,
+    DIALOG_RADIUS, DIALOG_BORDER,
     PIPELINE_STAGES, make_icon_svg, fmt_dur,
 )
 
@@ -614,7 +615,8 @@ class RoundedDialog(QDialog):
         self._card = QWidget()
         self._card.setObjectName("roundedCard")
         self._card.setStyleSheet(
-            f"#roundedCard {{ background:{BG}; border-radius:12px; border:none; }}"
+            f"#roundedCard {{ background:{BG}; border-radius:{DIALOG_RADIUS}px;"
+            f" border:1px solid {DIALOG_BORDER}; }}"
         )
         outer.addWidget(self._card)
 

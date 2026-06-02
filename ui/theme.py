@@ -1,4 +1,18 @@
+import sys
 from PySide6.QtWidgets import QApplication
+
+# ── Platform ──────────────────────────────────────────────────────────────────
+# All Mac vs Windows visual differences live here; nothing else should branch on
+# sys.platform for frame/dialog chrome.
+_IS_WIN = sys.platform == "win32"
+
+# App frame (MainWindow)
+FRAME_RADIUS = 8   if _IS_WIN else 12   # corner radius of the main window
+FRAME_BORDER = "#B8BEC8" if _IS_WIN else "transparent"  # 1px outline stroke
+
+# Modal dialogs (RoundedDialog and subclasses)
+DIALOG_RADIUS = 8   if _IS_WIN else 12
+DIALOG_BORDER = "#B8BEC8" if _IS_WIN else "transparent"
 
 # ── Colors ────────────────────────────────────────────────────────────────────
 PRIMARY       = "#0044FF"
