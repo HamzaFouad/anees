@@ -33,7 +33,7 @@ class DetailPanel(QWidget):
         self._stack_lay.setContentsMargins(0, 0, 0, 0)
         root.addWidget(self._stack)
 
-        self._empty = _NoSelection()
+        self._empty = _NoSelection(on_add=self._open_add_dialog)
         self._detail = _Detail(self._on_retry, self._on_retry_all)
 
         self._stack_lay.addWidget(self._empty)
@@ -98,6 +98,11 @@ class DetailPanel(QWidget):
             self._detail.set_playlist(pl, self._videos)
             if failed_indices:
                 self._state.retry_videos(pl.id, failed_indices)
+
+    def _open_add_dialog(self):
+        if not self._state.locked:
+            from ui.dialogs.add_playlist import AddPlaylistDialog
+            AddPlaylistDialog(self._state, self.window()).exec()
 
 
 class _Detail(QWidget):
@@ -668,27 +673,91 @@ class VideoRow(QWidget):
 
 
 class _NoSelection(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, on_add=None, parent=None):
         super().__init__(parent)
         self.setStyleSheet("background:transparent;")
-        lay = QVBoxLayout(self)
-        lay.setAlignment(Qt.AlignCenter)
-        lay.setSpacing(12)
 
+        outer = QVBoxLayout(self)
+        outer.setAlignment(Qt.AlignCenter)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        # fixed-width inner column so content doesn't stretch on wide windows
+        inner = QWidget()
+        inner.setFixedWidth(360)
+        inner.setStyleSheet("background:transparent;")
+        lay = QVBoxLayout(inner)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(0)
+
+        # icon container
         icon_w = QWidget()
-        icon_w.setFixedSize(60, 60)
-        icon_w.setStyleSheet(f"background:{BG}; border:1px solid {BORDER}; border-radius:12px;")
+        icon_w.setFixedSize(76, 76)
+        icon_w.setStyleSheet(f"background:{BG_SUBTLE}; border-radius:16px;")
         i_lay = QHBoxLayout(icon_w)
         i_lay.setContentsMargins(0, 0, 0, 0)
-        i_lay.addWidget(icon_label("music", 28, FG_MUTED), alignment=Qt.AlignCenter)
+        i_lay.addWidget(icon_label("list", 34, FG_MUTED), alignment=Qt.AlignCenter)
         lay.addWidget(icon_w, alignment=Qt.AlignHCenter)
 
-        t = QLabel("Nothing to show")
-        t.setStyleSheet(f"font-size:14px; font-weight:600; color:{FG};")
-        t.setAlignment(Qt.AlignHCenter)
-        lay.addWidget(t)
+        lay.addSpacing(20)
 
-        sub = QLabel("Add a YouTube playlist on the left to see its\nvideos and pipeline progress here.")
-        sub.setStyleSheet(f"font-size:12px; color:{FG_MUTED};")
-        sub.setAlignment(Qt.AlignHCenter)
-        lay.addWidget(sub)
+        heading = QLabel("Your queue is empty. Let's get started.")
+        heading.setStyleSheet(f"font-size:16px; font-weight:600; color:{FG};")
+        heading.setAlignment(Qt.AlignHCenter)
+        heading.setWordWrap(True)
+        lay.addWidget(heading)
+
+        lay.addSpacing(28)
+
+        steps = [
+            ("1", "Add a YouTube Playlist",  "Paste a playlist URL to begin."),
+            ("2", "Start the Run",            'Click "Start run" to download & process.'),
+            ("3", "Build Your Memory Card",   'Use "Build Card" to prepare files.'),
+        ]
+        for num, title, subtitle in steps:
+            row = QWidget()
+            row.setStyleSheet("background:transparent;")
+            row_lay = QHBoxLayout(row)
+            row_lay.setContentsMargins(0, 0, 0, 0)
+            row_lay.setSpacing(14)
+            row_lay.setAlignment(Qt.AlignTop)
+
+            badge = QLabel(num)
+            badge.setFixedSize(32, 32)
+            badge.setAlignment(Qt.AlignCenter)
+            badge.setStyleSheet(
+                f"background:{PRIMARY}; color:#fff; border-radius:16px;"
+                f" font-size:13px; font-weight:700;"
+            )
+            row_lay.addWidget(badge, alignment=Qt.AlignTop)
+
+            col = QWidget()
+            col.setStyleSheet("background:transparent;")
+            col_lay = QVBoxLayout(col)
+            col_lay.setContentsMargins(0, 2, 0, 0)
+            col_lay.setSpacing(2)
+            t = QLabel(title)
+            t.setStyleSheet(f"font-size:13px; font-weight:600; color:{FG};")
+            col_lay.addWidget(t)
+            s = QLabel(subtitle)
+            s.setStyleSheet(f"font-size:12px; color:{FG_MUTED};")
+            col_lay.addWidget(s)
+            row_lay.addWidget(col, 1)
+
+            lay.addWidget(row)
+            lay.addSpacing(16)
+
+        lay.addSpacing(8)
+
+        if on_add:
+            cta = QPushButton("Add a YouTube playlist to begin.")
+            cta.setFlat(True)
+            cta.setCursor(Qt.PointingHandCursor)
+            cta.setStyleSheet(
+                f"color:{PRIMARY}; font-size:13px; background:transparent;"
+                f" border:none; padding:0; text-align:center;"
+            )
+            cta.clicked.connect(on_add)
+            lay.addWidget(cta, alignment=Qt.AlignHCenter)
+
+        outer.addWidget(inner, alignment=Qt.AlignHCenter)
