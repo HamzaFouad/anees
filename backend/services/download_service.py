@@ -165,8 +165,8 @@ class DownloadService:
         def _do_postprocess(idx: int, title: str, filepath: str) -> None:
             """Runs in the thread pool — concurrent with the NEXT video's download.
 
-            Handles split → speed in sequence. Either or both may be skipped
-            depending on playlist settings.
+            Handles split → speed in sequence. Either or both may be skipped.
+            Failures call _mark_failed so the row shows the broken stage + error.
             """
             if self._stop.is_set():
                 self._on_video_stage(pl.id, idx, "done", 1.0)
@@ -181,7 +181,8 @@ class DownloadService:
                     )
                     self._log("info", f"[{idx+1}] {title}  → {len(files)} part(s)")
                 except Exception as exc:
-                    self._log("error", f"[{idx+1}] split failed: {exc}")
+                    _mark_failed(idx, f"Split failed: {exc}")
+                    return
 
             if pl.speed != 1.0 and not self._stop.is_set():
                 self._on_video_stage(pl.id, idx, "speed", 0.1)
@@ -189,15 +190,25 @@ class DownloadService:
                     SpeedService(on_log=_ffmpeg_log).apply_speed(files, pl.speed, self._stop)
                     self._log("info", f"[{idx+1}] ×{pl.speed} applied to {len(files)} file(s)")
                 except Exception as exc:
-                    self._log("error", f"[{idx+1}] speed failed: {exc}")
+                    _mark_failed(idx, f"Speed ×{pl.speed} failed: {exc}")
+                    return
 
-            # Always advance to "done" — even if a step failed the files still exist
             self._on_video_stage(pl.id, idx, "done", 1.0)
 
         def on_postprocess(d: dict) -> None:
-            if d.get("status") != "finished":
+            status = d.get("status")
+            info   = d.get("info_dict") or {}
+
+            # Postprocessor failure (e.g. ffmpeg not found, corrupt audio)
+            if status == "error":
+                error_msg = str(d.get("error") or
+                                f"{d.get('postprocessor', 'postprocessor')} failed")
+                idx = max(0, int(info.get("playlist_index") or 1) - 1)
+                _mark_failed(idx, error_msg)
                 return
-            info     = d.get("info_dict") or {}
+
+            if status != "finished":
+                return
             filepath = info.get("filepath") or ""
             # Check the file directly — avoids depending on postprocessor key
             # name which differs between yt-dlp versions
