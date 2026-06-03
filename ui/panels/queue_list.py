@@ -58,6 +58,7 @@ class QueueList(QWidget):
         self._list_widget.reorder_requested.connect(
             lambda pid, idx: self._api.reorder(pid, idx)
         )
+        self._list_widget.drag_ended.connect(self._on_drag_ended)
         self._list_layout = QVBoxLayout(self._list_widget)
         self._list_layout.setContentsMargins(0, 0, 0, 0)
         self._list_layout.setSpacing(0)
@@ -87,6 +88,8 @@ class QueueList(QWidget):
         f_lay.addWidget(self._add_btn)
         root.addWidget(footer)
 
+        self._rebuild_pending = False
+
         self._add_btn.clicked.connect(self._on_add)
         state.playlists_changed.connect(self._rebuild)
         state.selection_changed.connect(self._refresh_selection)
@@ -95,6 +98,10 @@ class QueueList(QWidget):
         from ui.api import QueueAPI
         self._api = QueueAPI(state)
         self._rebuild()
+
+    def _on_drag_ended(self):
+        if self._rebuild_pending:
+            self._rebuild()
 
     def _on_add(self):
         if not self._state.locked:
@@ -109,6 +116,15 @@ class QueueList(QWidget):
         self._rebuild()
 
     def _rebuild(self):
+        # defer if any row is mid-drag; the drop/release will trigger a rebuild anyway
+        if any(isinstance(self._list_layout.itemAt(i).widget(), PlaylistRow)
+               and self._list_layout.itemAt(i).widget()._drag_start is not None
+               for i in range(self._list_layout.count())
+               if self._list_layout.itemAt(i).widget()):
+            self._rebuild_pending = True
+            return
+        self._rebuild_pending = False
+
         # remove old rows (except stretch)
         while self._list_layout.count() > 1:
             item = self._list_layout.takeAt(0)
@@ -159,6 +175,7 @@ class PlaylistRow(QWidget):
         self._pl = pl
         self._selected = is_selected
         self._locked = locked
+        self._drag_start = None   # QPoint | None; cleared after every drag
         self.setCursor(Qt.PointingHandCursor)
 
         outer = QHBoxLayout(self)
@@ -255,20 +272,29 @@ class PlaylistRow(QWidget):
             self.selected.emit(True)
         super().mousePressEvent(event)
 
+    def mouseReleaseEvent(self, event):
+        self._drag_start = None
+        super().mouseReleaseEvent(event)
+
     def mouseMoveEvent(self, event):
         if not (event.buttons() & Qt.LeftButton) or self._locked:
             return
-        if not hasattr(self, '_drag_start'):
+        if self._drag_start is None:
             return
         if (event.position().toPoint() - self._drag_start).manhattanLength() < 12:
             return
-        drag = QDrag(self)
+        start = self._drag_start
+        self._drag_start = None   # clear before exec so stale point never lingers
+
+        # Parent the QDrag on the window, not on self. If _rebuild() fires during
+        # drag.exec() (e.g. a video completes) it calls deleteLater() on this row,
+        # which would also destroy a self-parented QDrag mid-flight and crash.
+        drag = QDrag(self.window())
         mime = QMimeData()
         mime.setText(self._pl.id)
         drag.setMimeData(mime)
-        px = self.grab()
-        drag.setPixmap(px)
-        drag.setHotSpot(self._drag_start)
+        drag.setPixmap(self.grab())
+        drag.setHotSpot(start)
         drag.exec(Qt.MoveAction)
 
     def set_selected(self, sel: bool):
@@ -301,6 +327,7 @@ class PlaylistRow(QWidget):
 class _DroppableList(QWidget):
     """Inner list widget that accepts playlist drag-drops and shows a drop indicator."""
     reorder_requested = Signal(str, int)   # playlist_id, target_index
+    drag_ended = Signal()                  # emitted when drag leaves or drops
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -321,6 +348,7 @@ class _DroppableList(QWidget):
     def dragLeaveEvent(self, event):
         self._drop_idx = -1
         self.update()
+        self.drag_ended.emit()
 
     def dropEvent(self, event):
         if event.mimeData().hasText():
@@ -329,6 +357,7 @@ class _DroppableList(QWidget):
             self._drop_idx = -1
             self.update()
             self.reorder_requested.emit(pid, idx)
+            self.drag_ended.emit()
             event.acceptProposedAction()
 
     # ── drop indicator ────────────────────────────────────────────────────────
