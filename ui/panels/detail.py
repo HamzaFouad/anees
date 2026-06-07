@@ -33,7 +33,10 @@ class DetailPanel(QWidget):
         self._stack_lay.setContentsMargins(0, 0, 0, 0)
         root.addWidget(self._stack)
 
-        self._empty = _NoSelection(on_add=self._open_add_dialog)
+        self._empty = _NoSelection(
+            on_add=self._open_add_dialog,
+            on_settings=self._open_settings_dialog,
+        )
         self._detail = _Detail(self._on_retry, self._on_retry_all)
 
         self._stack_lay.addWidget(self._empty)
@@ -103,6 +106,10 @@ class DetailPanel(QWidget):
         if not self._state.locked:
             from ui.dialogs.add_playlist import AddPlaylistDialog
             AddPlaylistDialog(self._state, self.window()).exec()
+
+    def _open_settings_dialog(self):
+        from ui.dialogs.settings import SettingsDialog
+        SettingsDialog(self._state, self.window()).exec()
 
 
 class _Detail(QWidget):
@@ -673,7 +680,7 @@ class VideoRow(QWidget):
 
 
 class _NoSelection(QWidget):
-    def __init__(self, on_add=None, parent=None):
+    def __init__(self, on_add=None, on_settings=None, parent=None):
         super().__init__(parent)
         self.setStyleSheet("background:transparent;")
 
@@ -760,12 +767,33 @@ class _NoSelection(QWidget):
             cta.clicked.connect(on_add)
             lay.addWidget(cta, alignment=Qt.AlignHCenter)
 
-        lay.addSpacing(14)
+        lay.addSpacing(20)
 
-        tip = QLabel("You can set a starting prefix in Settings — default is 0.")
-        tip.setStyleSheet(f"font-size:11px; color:{FG_MUTED};")
-        tip.setAlignment(Qt.AlignHCenter)
-        tip.setWordWrap(True)
-        lay.addWidget(tip)
+        import os
+        from backend.api.config import get_output_root, get_prefix_start
+        _root = get_output_root()
+        _home = os.path.expanduser("~")
+        _display_root = _root.replace(_home, "~", 1) if _root.startswith(_home) else _root
+        _prefix = get_prefix_start()
+
+        desc = QLabel(
+            f"Files save to {_display_root}  ·  starting prefix: {_prefix}"
+        )
+        desc.setStyleSheet(f"font-size:11px; color:{FG_MUTED};")
+        desc.setAlignment(Qt.AlignHCenter)
+        desc.setWordWrap(True)
+        lay.addWidget(desc)
+
+        if on_settings:
+            lay.addSpacing(6)
+            settings_cta = QPushButton("Open Settings to change these.")
+            settings_cta.setFlat(True)
+            settings_cta.setCursor(Qt.PointingHandCursor)
+            settings_cta.setStyleSheet(
+                f"color:{PRIMARY}; font-size:13px; background:transparent;"
+                f" border:none; padding:0; text-align:center;"
+            )
+            settings_cta.clicked.connect(on_settings)
+            lay.addWidget(settings_cta, alignment=Qt.AlignHCenter)
 
         outer.addWidget(inner, alignment=Qt.AlignHCenter)
