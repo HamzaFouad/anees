@@ -43,7 +43,7 @@ def get_prefix_start() -> int:
 
 
 def set_prefix_start(n: int) -> None:
-    set("prefix_start", max(0, int(n)))
+    set("prefix_start", max(0, min(9999, int(n))))
 
 
 def check_disk_space(

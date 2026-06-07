@@ -192,7 +192,7 @@ class PlaylistRow(QWidget):
 
         # prefix
         pfx = QLabel(pl.prefix)
-        pfx.setFixedWidth(22)
+        pfx.setFixedWidth(36)
         pfx.setAlignment(Qt.AlignCenter)
         pfx.setStyleSheet(
             f"font-family:'JetBrains Mono',monospace; font-size:11px; "
