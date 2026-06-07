@@ -136,7 +136,7 @@ class QueueList(QWidget):
         self._count_lbl.setText(f"Playlists ({len(pls)})")
 
         if not pls:
-            empty = EmptyState("list", "Queue is empty", "Add a YouTube playlist to begin.")
+            empty = EmptyState("list", "Queue is empty", "Add YouTube playlists to begin.")
             self._list_layout.insertWidget(0, empty)
         else:
             for i, pl in enumerate(pls):

@@ -757,7 +757,7 @@ class _NoSelection(QWidget):
         lay.addSpacing(8)
 
         if on_add:
-            cta = QPushButton("Add a YouTube playlist to begin.")
+            cta = QPushButton("Add YouTube playlists to begin.")
             cta.setFlat(True)
             cta.setCursor(Qt.PointingHandCursor)
             cta.setStyleSheet(
