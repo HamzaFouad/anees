@@ -776,24 +776,21 @@ class _NoSelection(QWidget):
         _display_root = _root.replace(_home, "~", 1) if _root.startswith(_home) else _root
         _prefix = get_prefix_start()
 
-        desc = QLabel(
-            f"Files save to {_display_root}  ·  starting prefix: {_prefix}"
+        _settings_part = (
+            f' · <a href="settings" style="color:{PRIMARY}; text-decoration:none;">Settings</a>'
+            if on_settings else ""
         )
-        desc.setStyleSheet(f"font-size:11px; color:{FG_MUTED};")
-        desc.setAlignment(Qt.AlignHCenter)
-        desc.setWordWrap(True)
-        lay.addWidget(desc)
-
+        info = QLabel(
+            f'<span style="color:{FG_MUTED};">'
+            f"Saves to {_display_root} · prefix {_prefix}"
+            f"</span>{_settings_part}"
+        )
+        info.setStyleSheet("font-size:11px;")
+        info.setAlignment(Qt.AlignHCenter)
+        info.setWordWrap(True)
+        info.setOpenExternalLinks(False)
         if on_settings:
-            lay.addSpacing(6)
-            settings_cta = QPushButton("Open Settings to change these.")
-            settings_cta.setFlat(True)
-            settings_cta.setCursor(Qt.PointingHandCursor)
-            settings_cta.setStyleSheet(
-                f"color:{PRIMARY}; font-size:13px; background:transparent;"
-                f" border:none; padding:0; text-align:center;"
-            )
-            settings_cta.clicked.connect(on_settings)
-            lay.addWidget(settings_cta, alignment=Qt.AlignHCenter)
+            info.linkActivated.connect(lambda _: on_settings())
+        lay.addWidget(info)
 
         outer.addWidget(inner, alignment=Qt.AlignHCenter)
