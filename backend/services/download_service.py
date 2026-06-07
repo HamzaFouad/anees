@@ -135,7 +135,11 @@ class DownloadService:
     def _scan_existing(self, pl: Playlist) -> list[int]:
         """Scan the playlist output folder for already-processed MP3s.
 
-        Marks found videos as done via _on_video_stage.
+        The highest-index file found is deleted and re-queued for download:
+        it was the last video being processed when the run was stopped and
+        may be truncated or corrupted. All lower-index files are trusted.
+
+        Marks confirmed-complete videos as done via _on_video_stage.
         Returns the list of 1-based yt-dlp playlist indices still needing download.
         """
         folder_path = os.path.join(self._root, _playlist_folder(pl))
@@ -146,18 +150,37 @@ class DownloadService:
         except OSError:
             return list(range(1, len(pl.videos) + 1))
 
-        pending = []
+        found: list[int] = []   # 1-based indices with files on disk
         for i in range(len(pl.videos)):
             prefix = f"{i + 1:02d}_"
-            found = any(
+            if any(
                 f.startswith(prefix) and f.endswith(".mp3") and not f.endswith(".spd.mp3")
                 for f in existing
-            )
-            if found:
-                self._on_video_stage(pl.id, i, VideoStage.DONE, 1.0)
-            else:
-                pending.append(i + 1)   # 1-based for yt-dlp playlist_items
-        return pending
+            ):
+                found.append(i + 1)
+
+        if not found:
+            return list(range(1, len(pl.videos) + 1))
+
+        # Delete the last found file(s) — may have been interrupted mid-processing
+        last = max(found)
+        last_prefix = f"{last:02d}_"
+        for fname in existing:
+            if fname.startswith(last_prefix) and fname.endswith(".mp3"):
+                try:
+                    os.remove(os.path.join(folder_path, fname))
+                    self._log("info", f"[{last}] deleted possibly-incomplete file — will re-download")
+                except OSError as exc:
+                    self._log("warn", f"[{last}] could not delete {fname}: {exc}")
+        found.remove(last)
+
+        # Mark the remaining confirmed-complete videos as done in the UI
+        for idx_1based in found:
+            self._on_video_stage(pl.id, idx_1based - 1, VideoStage.DONE, 1.0)
+
+        # pending = every index not confirmed complete (including the deleted last)
+        confirmed = set(found)
+        return [i + 1 for i in range(len(pl.videos)) if (i + 1) not in confirmed]
 
     def retry_videos(self, pl: Playlist, playlist_items: str) -> None:
         """Re-download specific videos by a 1-based playlist_items string (e.g. '2,4,7')."""
