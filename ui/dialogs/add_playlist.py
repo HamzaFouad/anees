@@ -23,13 +23,13 @@ from backend.types import PlaylistStatus, VideoStage
 _PLAYLIST_RE = re.compile(
     r"^https?://"
     r"("
-    # YouTube playlist
-    r"(www\.)?youtube\.com/playlist\?.*list=[\w-]+"
+    # YouTube playlist (www, m, or no subdomain)
+    r"(www\.|m\.)?youtube\.com/playlist\?.*list=[\w-]+"
     r"|youtu\.be/[\w-]+\?.*list=[\w-]+"
-    r"|(www\.)?youtube\.com/watch\?.*list=[\w-]+"
-    r"|(www\.)?youtube\.com/@[\w.-]+(/[\w-]+)?"
-    r"|(www\.)?youtube\.com/channel/[\w-]+"
-    r"|(www\.)?youtube\.com/user/[\w-]+"
+    r"|(www\.|m\.)?youtube\.com/watch\?.*list=[\w-]+"
+    r"|(www\.|m\.)?youtube\.com/@[\w.-]+(/[\w-]+)?"
+    r"|(www\.|m\.)?youtube\.com/channel/[\w-]+"
+    r"|(www\.|m\.)?youtube\.com/user/[\w-]+"
     # SoundCloud sets
     r"|soundcloud\.com/[\w-]+/sets/[\w-]+"
     r")",
@@ -42,20 +42,37 @@ def _is_valid_playlist_url(url: str) -> bool:
 
 
 def _normalize_url(url: str) -> str:
-    """Rewrite a video-in-playlist URL to its canonical playlist form.
+    """Rewrite ambiguous YouTube URLs to their canonical playlist form.
 
-    youtube.com/watch?v=XYZ&list=ABC&index=1
-      → youtube.com/playlist?list=ABC
-
-    yt-dlp treats watch?v= URLs as single videos even when list= is present,
-    so we strip the video/index params before passing the URL downstream.
+    Cases handled:
+      watch?v=XYZ&list=ABC  → playlist?list=ABC  (yt-dlp fetches single video otherwise)
+      youtu.be/XYZ?list=ABC → playlist?list=ABC  (same issue via short URL)
+      m.youtube.com/...     → www.youtube.com/... (mobile URLs work but keep it consistent)
     """
     from urllib.parse import urlparse, parse_qs
     parsed = urlparse(url.strip())
-    if parsed.netloc in ("www.youtube.com", "youtube.com") and parsed.path == "/watch":
+    netloc = parsed.netloc.lower()
+
+    # Normalise mobile subdomain first
+    if netloc == "m.youtube.com":
+        url = url.replace("m.youtube.com", "www.youtube.com", 1)
+        parsed = urlparse(url)
+        netloc = parsed.netloc.lower()
+
+    yt = netloc in ("www.youtube.com", "youtube.com")
+
+    # watch?v=...&list=... or watch?list=... → playlist?list=...
+    if yt and parsed.path == "/watch":
         params = parse_qs(parsed.query)
         if "list" in params:
             return f"https://www.youtube.com/playlist?list={params['list'][0]}"
+
+    # youtu.be/VIDEO?list=PLAYLIST → playlist?list=PLAYLIST
+    if netloc == "youtu.be":
+        params = parse_qs(parsed.query)
+        if "list" in params:
+            return f"https://www.youtube.com/playlist?list={params['list'][0]}"
+
     return url.strip()
 
 
