@@ -33,7 +33,10 @@ class DetailPanel(QWidget):
         self._stack_lay.setContentsMargins(0, 0, 0, 0)
         root.addWidget(self._stack)
 
-        self._empty = _NoSelection(on_add=self._open_add_dialog)
+        self._empty = _NoSelection(
+            on_add=self._open_add_dialog,
+            on_settings=self._open_settings_dialog,
+        )
         self._detail = _Detail(self._on_retry, self._on_retry_all)
 
         self._stack_lay.addWidget(self._empty)
@@ -103,6 +106,10 @@ class DetailPanel(QWidget):
         if not self._state.locked:
             from ui.dialogs.add_playlist import AddPlaylistDialog
             AddPlaylistDialog(self._state, self.window()).exec()
+
+    def _open_settings_dialog(self):
+        from ui.dialogs.settings import SettingsDialog
+        SettingsDialog(self._state, self.window()).exec()
 
 
 class _Detail(QWidget):
@@ -673,7 +680,7 @@ class VideoRow(QWidget):
 
 
 class _NoSelection(QWidget):
-    def __init__(self, on_add=None, parent=None):
+    def __init__(self, on_add=None, on_settings=None, parent=None):
         super().__init__(parent)
         self.setStyleSheet("background:transparent;")
 
@@ -759,5 +766,31 @@ class _NoSelection(QWidget):
             )
             cta.clicked.connect(on_add)
             lay.addWidget(cta, alignment=Qt.AlignHCenter)
+
+        lay.addSpacing(20)
+
+        import os
+        from backend.api.config import get_output_root, get_prefix_start
+        _root = get_output_root()
+        _home = os.path.expanduser("~")
+        _display_root = _root.replace(_home, "~", 1) if _root.startswith(_home) else _root
+        _prefix = get_prefix_start()
+
+        _settings_part = (
+            f' · <a href="settings" style="color:{PRIMARY}; text-decoration:none;">Settings</a>'
+            if on_settings else ""
+        )
+        info = QLabel(
+            f'<span style="color:{FG_MUTED};">'
+            f"Saves to {_display_root} · prefix {_prefix}"
+            f"</span>{_settings_part}"
+        )
+        info.setStyleSheet("font-size:11px;")
+        info.setAlignment(Qt.AlignHCenter)
+        info.setWordWrap(True)
+        info.setOpenExternalLinks(False)
+        if on_settings:
+            info.linkActivated.connect(lambda _: on_settings())
+        lay.addWidget(info)
 
         outer.addWidget(inner, alignment=Qt.AlignHCenter)
