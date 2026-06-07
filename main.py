@@ -58,11 +58,26 @@ def main():
         print("[startup] ERROR: yt-dlp not found — run: pip install yt-dlp", flush=True)
         sys.exit(1)
 
+    # Windows: set AUMID before creating QApplication so the taskbar groups the
+    # app under its own identity (not under the Python interpreter's icon).
+    if sys.platform == "win32":
+        import ctypes
+        try:
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("ai.ginni.anees")
+        except Exception:
+            pass
+
     app = QApplication(sys.argv)
     app.setApplicationName("Anees")
-    _icon = Path(__file__).parent / "ui" / "images" / "anees.ico"
-    if _icon.exists():
-        app.setWindowIcon(QIcon(str(_icon)))
+
+    # Resolve the icon path whether running from source or a PyInstaller bundle.
+    if getattr(sys, "frozen", False):
+        _icon = Path(sys._MEIPASS) / "images" / "anees.ico"  # type: ignore[attr-defined]
+    else:
+        _icon = Path(__file__).parent / "ui" / "images" / "anees.ico"
+    _qicon = QIcon(str(_icon)) if _icon.exists() else QIcon()
+    app.setWindowIcon(_qicon)
+
     apply_global_stylesheet(app)
 
     from backend.commands.ffmpeg import ffmpeg_ok
@@ -72,6 +87,7 @@ def main():
         sys.exit(1)
 
     window = MainWindow()
+    window.setWindowIcon(_qicon)
     window.show()
     sys.exit(app.exec())
 
