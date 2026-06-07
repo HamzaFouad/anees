@@ -53,6 +53,7 @@ anees/
     api/             # public interface for ui/ (DownloadAPI, InfoAPI, stats)
     services/        # internal orchestration (DownloadService, InfoService)
     commands/        # tool wrappers — only place that imports yt_dlp
+    platform/        # runtime paths + ffmpeg/ffprobe discovery/version checks
     utils/           # pure utilities (audio size estimation, …)
     models.py        # Playlist, Video, RunState, … dataclasses
   docs/

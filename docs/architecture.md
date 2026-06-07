@@ -83,6 +83,7 @@ Pure Python. No PySide6 imports anywhere.
 | `backend/api/` | Public gateway. `ui/` imports only from here (plus `backend.models`). Each module is a thin facade delegating to services. |
 | `backend/services/` | Orchestration. `DownloadService` drives the queue; `SplitService` runs ffmpeg; `InfoService` fetches metadata. Never imported by `ui/`. |
 | `backend/commands/` | Tool wrappers. `YtdlpClient` (only file importing `yt_dlp`); `FfmpegClient` (subprocess wrapper). |
+| `backend/platform/` | Runtime/platform helpers: frozen resource paths, external tool discovery/version checks. |
 | `backend/utils/` | Pure functions: `audio.estimate_size_mb()`, `config.get/set_output_root()`, `config.check_disk_space()`. |
 | `backend/models.py` | `@dataclass` definitions: `Playlist`, `Video`, `RunState`, `LogEntry`, …. Shared between `ui/` and `backend/`. |
 

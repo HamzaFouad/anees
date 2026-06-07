@@ -1,7 +1,7 @@
-from pathlib import Path
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QPushButton
 from PySide6.QtCore import Qt, QPoint
 from PySide6.QtGui import QPainter, QColor, QPixmap, QIcon
+from backend.platform.resources import images_dir
 
 from ui.theme import PRIMARY, FG, FG_MUTED, BG, BORDER, WIN_CLOSE_HOVER, ON_PRIMARY, TEXT_MD
 
@@ -73,8 +73,7 @@ class TitleBar(QWidget):
 class _AppMark(QLabel):
     def __init__(self, size: int = 20, parent=None):
         super().__init__(parent)
-        import sys
-        base = Path(sys._MEIPASS) / "images" if getattr(sys, "frozen", False) else Path(__file__).parent / "images"  # type: ignore[attr-defined]
+        base = images_dir()
         icns = base / "anees.icns"
         ico  = base / "anees.ico"
         src  = str(icns if icns.exists() else ico)

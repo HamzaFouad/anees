@@ -2,7 +2,6 @@ import os
 import sys
 import threading
 import traceback
-from pathlib import Path
 
 
 def _filter_macos_stderr() -> None:
@@ -35,6 +34,7 @@ def _filter_macos_stderr() -> None:
     threading.Thread(target=_drain, daemon=True, name="stderr-filter").start()
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QIcon
+from backend.platform.resources import app_icon_path
 from ui.theme import apply_global_stylesheet
 from ui.main_window import MainWindow
 
@@ -70,11 +70,7 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName("Anees")
 
-    # Resolve the icon path whether running from source or a PyInstaller bundle.
-    if getattr(sys, "frozen", False):
-        _icon = Path(sys._MEIPASS) / "images" / "anees.ico"  # type: ignore[attr-defined]
-    else:
-        _icon = Path(__file__).parent / "ui" / "images" / "anees.ico"
+    _icon = app_icon_path()
     _qicon = QIcon(str(_icon)) if _icon.exists() else QIcon()
     app.setWindowIcon(_qicon)
 
