@@ -3,6 +3,7 @@ import threading
 from typing import Callable
 
 from backend.models import Video
+from backend.types import VideoStage
 from backend.platform.tools import ffmpeg_exe
 
 
@@ -47,7 +48,7 @@ class YtdlpClient:
                         videos.append(Video(
                             title        = entry.get("title") or f"Video {len(videos)+1}",
                             duration_sec = int(entry.get("duration") or 0),
-                            stage        = "queued",
+                            stage        = VideoStage.QUEUED,
                         ))
         except Exception as exc:
             raise RuntimeError(f"fetch_info failed: {exc}") from exc

@@ -17,6 +17,7 @@ from ui.theme import (
 from ui.widgets import Toggle, StyledInput, icon_pixmap
 from ui.state import AppState
 from backend.models import Playlist
+from backend.types import PlaylistStatus, VideoStage
 
 
 _PLAYLIST_RE = re.compile(
@@ -278,8 +279,8 @@ class AddPlaylistDialog(QDialog):
             url          = url,
             video_count  = 0,
             completed    = 0,
-            status       = "queued",
-            active_stage = "download",
+            status       = PlaylistStatus.QUEUED,
+            active_stage = VideoStage.DOWNLOAD,
             speed        = speed,
             split_enabled= split_on,
             split_min    = split_min,

@@ -19,6 +19,7 @@ from ui.widgets import (
 from ui.state import AppState
 from backend.models import Playlist, Video
 from backend.api.config import get_output_root
+from backend.types import PlaylistStatus, VideoStage
 
 
 def _scan_output_root(output_root: str) -> list[Playlist]:
@@ -53,14 +54,14 @@ def _scan_output_root(output_root: str) -> list[Playlist]:
             url          = "",
             video_count  = len(mp3s),
             completed    = len(mp3s),
-            status       = "done",
-            active_stage = "done",
+            status       = PlaylistStatus.DONE,
+            active_stage = VideoStage.DONE,
             speed        = 1.0,
             split_enabled= False,
             split_min    = 30,
             size_mb      = round(size_mb, 1),
             added_at     = "",
-            videos       = [Video(f.stem, 0, "done") for f in mp3s],
+            videos       = [Video(f.stem, 0, VideoStage.DONE) for f in mp3s],
         )
         playlists.append(pl)
     return playlists

@@ -5,6 +5,7 @@ from pathlib import Path
 from PySide6.QtCore import QObject, Signal, QTimer
 from backend.models import Playlist, Video, LogEntry, RunState
 from backend.mock_data import MOCK_LOGS
+from backend.types import PlaylistStatus, VideoStage
 
 
 class AppState(QObject):
@@ -60,7 +61,7 @@ class AppState(QObject):
         return sum(
             playlist_size_estimate(pl)
             for pl in self._playlists
-            if pl.status != "done"
+            if pl.status != PlaylistStatus.DONE
         )
 
     def disk_space_ok(self) -> tuple[bool, float, float]:
@@ -69,18 +70,18 @@ class AppState(QObject):
         return check_disk_space(self.total_estimate_mb(), self._output_root)
 
     def counts(self) -> dict:
-        queued = sum(1 for p in self._playlists if p.status in ("queued", "active"))
-        done   = sum(1 for p in self._playlists if p.status == "done")
+        queued = sum(1 for p in self._playlists if p.status in (PlaylistStatus.QUEUED, PlaylistStatus.ACTIVE))
+        done   = sum(1 for p in self._playlists if p.status == PlaylistStatus.DONE)
         vdone   = sum(p.completed for p in self._playlists)
         vtotal  = sum(p.video_count for p in self._playlists)
-        vfailed = sum(sum(1 for v in p.videos if v.stage == "failed") for p in self._playlists)
+        vfailed = sum(sum(1 for v in p.videos if v.stage == VideoStage.FAILED) for p in self._playlists)
         return {"queued": queued, "done": done,
                 "videos_done": vdone, "videos_total": vtotal, "videos_failed": vfailed}
 
     # ── Run lifecycle ─────────────────────────────────────────────────────────
     def start_run(self) -> None:
         from ui.workers.download_worker import DownloadWorker  # kept here to avoid circular import
-        pending = [p for p in self._playlists if p.status != "done"]
+        pending = [p for p in self._playlists if p.status != PlaylistStatus.DONE]
         print(f"[state] start_run called — pending={len(pending)}", flush=True)
         if not pending:
             print("[state] no pending playlists, aborting", flush=True)
@@ -112,10 +113,10 @@ class AppState(QObject):
         # reset active playlists; zero progress on in-progress videos
         # (keep the stage so completed sub-stages retain their checkmarks)
         for p in self._playlists:
-            if p.status == "active":
-                p.status = "queued"
+            if p.status == PlaylistStatus.ACTIVE:
+                p.status = PlaylistStatus.QUEUED
                 for v in p.videos:
-                    if v.stage not in ("done", "failed", "queued"):
+                    if v.stage not in (VideoStage.DONE, VideoStage.FAILED, VideoStage.QUEUED):
                         v.progress = 0.0  # stage kept — VideoRow renders dot not spinner
         self.playlists_changed.emit()
         self._set_run_state(RunState.IDLE)
@@ -160,7 +161,7 @@ class AppState(QObject):
             return
         pl.videos      = list(videos)
         pl.video_count = len(videos)
-        pl.status      = "active"
+        pl.status      = PlaylistStatus.ACTIVE
         if real_title:
             pl.title = real_title
         self.playlists_changed.emit()
@@ -173,14 +174,14 @@ class AppState(QObject):
             return
         # extend video list if needed (yt-dlp can report more items than info fetch)
         while idx >= len(pl.videos):
-            pl.videos.append(Video(title=f"Video {len(pl.videos)+1}", duration_sec=0, stage="queued"))
+            pl.videos.append(Video(title=f"Video {len(pl.videos)+1}", duration_sec=0, stage=VideoStage.QUEUED))
         v = pl.videos[idx]
         stage_changed = v.stage != stage
         v.stage    = stage
         v.progress = progress
-        if stage == "done":
-            pl.completed = sum(1 for vv in pl.videos if vv.stage == "done")
-            pl.status    = "done" if pl.completed >= pl.video_count else "active"
+        if stage == VideoStage.DONE:
+            pl.completed = sum(1 for vv in pl.videos if vv.stage == VideoStage.DONE)
+            pl.status    = PlaylistStatus.DONE if pl.completed >= pl.video_count else PlaylistStatus.ACTIVE
             # sidebar needs updating when a video completes
             self._dirty_pids.add(pid)
             if not self._refresh_timer.isActive():
