@@ -84,6 +84,7 @@ Pure Python. No PySide6 imports anywhere.
 | `backend/services/` | Orchestration. `DownloadService` drives the queue; `SplitService` runs ffmpeg; `InfoService` fetches metadata. Never imported by `ui/`. |
 | `backend/commands/` | Tool wrappers. `YtdlpClient` (only file importing `yt_dlp`); `FfmpegClient` (subprocess wrapper). |
 | `backend/platform/` | Runtime/platform helpers: frozen resource paths, external tool discovery/version checks. |
+| `backend/app_state/` | Run orchestration helpers (worker lifecycle/controller logic extracted from `AppState`). |
 | `backend/utils/` | Pure functions: `audio.estimate_size_mb()`, `config.get/set_output_root()`, `config.check_disk_space()`. |
 | `backend/models.py` | `@dataclass` definitions: `Playlist`, `Video`, `RunState`, `LogEntry`, …. Shared between `ui/` and `backend/`. |
 | `backend/types.py` | Shared typed enums for pipeline stages and playlist status values. |

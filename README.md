@@ -54,6 +54,7 @@ anees/
     services/        # internal orchestration (DownloadService, InfoService)
     commands/        # tool wrappers — only place that imports yt_dlp
     platform/        # runtime paths + ffmpeg/ffprobe discovery/version checks
+    app_state/       # run/worker orchestration helpers
     utils/           # pure utilities (audio size estimation, …)
     models.py        # Playlist, Video, RunState, … dataclasses
     types.py         # shared status/stage enums
