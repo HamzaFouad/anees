@@ -8,8 +8,12 @@ from backend.commands.ffmpeg import FfmpegClient
 
 
 class SplitService:
-    def __init__(self, on_log: Callable[[str], None] | None = None):
-        self._client = FfmpegClient()
+    def __init__(
+        self,
+        on_log: Callable[[str], None] | None = None,
+        client: FfmpegClient | None = None,
+    ):
+        self._client = client or FfmpegClient()
         self._on_log = on_log or (lambda _: None)
 
     def split_file(

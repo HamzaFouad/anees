@@ -88,6 +88,7 @@ Pure Python. No PySide6 imports anywhere.
 | `backend/utils/` | Pure functions: `audio.estimate_size_mb()`, `config.get/set_output_root()`, `config.check_disk_space()`. |
 | `backend/models.py` | `@dataclass` definitions: `Playlist`, `Video`, `RunState`, `LogEntry`, …. Shared between `ui/` and `backend/`. |
 | `backend/types.py` | Shared typed enums for pipeline stages and playlist status values. |
+| `backend/errors.py` | Minimal typed app errors with user-facing messages and stable error codes. |
 
 ## Signal flow during a download
 

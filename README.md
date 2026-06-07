@@ -58,6 +58,7 @@ anees/
     utils/           # pure utilities (audio size estimation, …)
     models.py        # Playlist, Video, RunState, … dataclasses
     types.py         # shared status/stage enums
+    errors.py        # typed app errors with user-safe messages and error codes
   docs/
     roadmap.md        # milestone/phase plan
     architecture.md   # layer diagram and signal flow
