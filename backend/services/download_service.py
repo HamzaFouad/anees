@@ -117,9 +117,47 @@ class DownloadService:
         if self._stop.is_set():
             return
 
+        pending = self._scan_existing(pl)
+
+        if not pending:
+            self._log("info", f"{pl.title} — all {len(pl.videos)} video(s) already on disk, skipping")
+            return
+
+        already = len(pl.videos) - len(pending)
+        if already:
+            self._log("info", f"Resuming — {already}/{len(pl.videos)} already downloaded, fetching {len(pending)} remaining")
+
+        playlist_items = ",".join(str(i) for i in pending) if already else None
         folder = _playlist_folder(pl)
-        self._log("info", f"Downloading {len(pl.videos)} videos → {self._root}/{folder}/")
-        self._download(pl)
+        self._log("info", f"Downloading {len(pending)} video(s) → {self._root}/{folder}/")
+        self._download(pl, playlist_items=playlist_items)
+
+    def _scan_existing(self, pl: Playlist) -> list[int]:
+        """Scan the playlist output folder for already-processed MP3s.
+
+        Marks found videos as done via _on_video_stage.
+        Returns the list of 1-based yt-dlp playlist indices still needing download.
+        """
+        folder_path = os.path.join(self._root, _playlist_folder(pl))
+        if not os.path.isdir(folder_path):
+            return list(range(1, len(pl.videos) + 1))
+        try:
+            existing = set(os.listdir(folder_path))
+        except OSError:
+            return list(range(1, len(pl.videos) + 1))
+
+        pending = []
+        for i in range(len(pl.videos)):
+            prefix = f"{i + 1:02d}_"
+            found = any(
+                f.startswith(prefix) and f.endswith(".mp3") and not f.endswith(".spd.mp3")
+                for f in existing
+            )
+            if found:
+                self._on_video_stage(pl.id, i, VideoStage.DONE, 1.0)
+            else:
+                pending.append(i + 1)   # 1-based for yt-dlp playlist_items
+        return pending
 
     def retry_videos(self, pl: Playlist, playlist_items: str) -> None:
         """Re-download specific videos by a 1-based playlist_items string (e.g. '2,4,7')."""
