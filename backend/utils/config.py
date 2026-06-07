@@ -7,7 +7,8 @@ _DIR  = Path.home() / ".anees"
 _FILE = _DIR / "config.json"
 
 _DEFAULTS: dict = {
-    "output_root": str(Path.home() / "Downloads" / "Anees"),
+    "output_root":   str(Path.home() / "Downloads" / "Anees"),
+    "prefix_start":  0,
 }
 
 
@@ -35,6 +36,14 @@ def get_output_root() -> str:
 
 def set_output_root(path: str) -> None:
     set("output_root", path)
+
+
+def get_prefix_start() -> int:
+    return int(get("prefix_start", 0))
+
+
+def set_prefix_start(n: int) -> None:
+    set("prefix_start", max(0, int(n)))
 
 
 def check_disk_space(

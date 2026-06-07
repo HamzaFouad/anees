@@ -1,7 +1,7 @@
 from __future__ import annotations
 from PySide6.QtWidgets import QFileDialog, QHBoxLayout, QLabel, QPushButton, QWidget
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QIntValidator
 
 from ui.theme import PRIMARY, ON_PRIMARY, PRIMARY_HOVER, FG, FG_MUTED, BG, BG_SUBTLE, BORDER
 from ui.widgets import RoundedDialog, StyledInput, icon_pixmap
@@ -45,6 +45,30 @@ class SettingsDialog(RoundedDialog):
         hint = QLabel("Each playlist is saved to a subfolder: prefix_playlist-name/")
         hint.setStyleSheet(f"font-size:11px; color:{FG_MUTED};")
         self.body_layout.addWidget(hint)
+
+        self.body_layout.addSpacing(18)
+
+        self.body_layout.addWidget(self._make_label("Starting playlist prefix"))
+
+        from backend.api.config import get_prefix_start
+        pfx_row = QWidget(); pfx_row.setStyleSheet("background:transparent;")
+        pfx_lay = QHBoxLayout(pfx_row)
+        pfx_lay.setContentsMargins(0, 0, 0, 0)
+        pfx_lay.setSpacing(0)
+        self._prefix_input = StyledInput(str(get_prefix_start()), mono=True)
+        self._prefix_input.setValidator(QIntValidator(0, 9999, self._prefix_input))
+        self._prefix_input.setFixedWidth(80)
+        pfx_lay.addWidget(self._prefix_input)
+        pfx_lay.addStretch()
+        self.body_layout.addWidget(pfx_row)
+
+        pfx_hint = QLabel(
+            "First playlist added in this session gets this number. "
+            "Increase it between runs to keep folder names sequential across separate downloads."
+        )
+        pfx_hint.setStyleSheet(f"font-size:11px; color:{FG_MUTED};")
+        pfx_hint.setWordWrap(True)
+        self.body_layout.addWidget(pfx_hint)
 
         # ── footer ────────────────────────────────────────────────────────────
         f_lay = self.add_footer()
@@ -94,4 +118,9 @@ class SettingsDialog(RoundedDialog):
         path = self._path_input.text().strip()
         if path:
             self._state.set_output_root(path)
+        try:
+            from backend.api.config import set_prefix_start
+            set_prefix_start(int(self._prefix_input.text()))
+        except (ValueError, TypeError):
+            pass
         self.accept()

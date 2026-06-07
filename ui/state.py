@@ -252,8 +252,10 @@ class AppState(QObject):
             target_index -= 1
         target_index = max(0, min(target_index, len(pls)))
         pls.insert(target_index, pl)
+        from backend.api.config import get_prefix_start
+        start = get_prefix_start()
         for i, p in enumerate(pls):
-            p.prefix = str(i).zfill(2)
+            p.prefix = str(start + i).zfill(2)
         self._playlists = pls
         self.playlists_changed.emit()
 

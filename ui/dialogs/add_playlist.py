@@ -123,7 +123,8 @@ class AddPlaylistDialog(QDialog):
         b_lay.addWidget(url_w)
 
         # PREFIX | SPEED | SPLIT row
-        next_prefix = str(len(state.playlists)).zfill(2)
+        from backend.api.config import get_prefix_start
+        next_prefix = str(get_prefix_start() + len(state.playlists)).zfill(2)
         row = QWidget(); row.setStyleSheet("background:transparent;")
         r_lay = QHBoxLayout(row)
         r_lay.setContentsMargins(0, 0, 0, 0)
@@ -255,7 +256,8 @@ class AddPlaylistDialog(QDialog):
             )
             return
 
-        prefix   = self._prefix_input.text().strip() or str(len(self._state.playlists)).zfill(2)
+        from backend.api.config import get_prefix_start
+        prefix   = self._prefix_input.text().strip() or str(get_prefix_start() + len(self._state.playlists)).zfill(2)
         speed_on = self._speed_toggle._checked
         split_on = self._split_toggle._checked
 

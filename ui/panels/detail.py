@@ -760,4 +760,12 @@ class _NoSelection(QWidget):
             cta.clicked.connect(on_add)
             lay.addWidget(cta, alignment=Qt.AlignHCenter)
 
+        lay.addSpacing(14)
+
+        tip = QLabel("You can set a starting prefix in Settings — default is 0.")
+        tip.setStyleSheet(f"font-size:11px; color:{FG_MUTED};")
+        tip.setAlignment(Qt.AlignHCenter)
+        tip.setWordWrap(True)
+        lay.addWidget(tip)
+
         outer.addWidget(inner, alignment=Qt.AlignHCenter)
