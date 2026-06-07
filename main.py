@@ -80,7 +80,7 @@ def main():
 
     apply_global_stylesheet(app)
 
-    from backend.commands.ffmpeg import ffmpeg_ok
+    from backend.api.health import ffmpeg_ok
     if not ffmpeg_ok():
         from ui.dialogs.ffmpeg_missing import FfmpegMissingDialog
         FfmpegMissingDialog().exec()

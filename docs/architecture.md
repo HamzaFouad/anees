@@ -39,6 +39,10 @@
 ### `ui/`
 PySide6 only. No file I/O, no subprocess, no SQLite.
 
+Import boundary:
+- allowed: `backend.api`, `backend.models`, `backend.types`
+- forbidden: `backend.services.*`, `backend.commands.*`, `backend.utils.config`
+
 | Sub-package | Responsibility |
 |-------------|----------------|
 | `ui/api/` | All state mutations — `RunAPI.start()`, `QueueAPI.add()`, `NavAPI.go()`. Panels never call `state.*` directly except read access. |

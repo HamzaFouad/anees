@@ -305,13 +305,13 @@ class MergeDialog(QDialog):
         self._merge_btn.setEnabled(bool(n_sel))
 
     def _update_preview(self) -> None:
-        from backend.services.merge_service import JOC_BASE
+        from backend.api.merge import get_joc_base
         selected_pls = sorted(
             (p for p in self._playlists if p.id in self._selected),
             key=lambda p: p.prefix,
         )
         lines: list[str] = []
-        joc = JOC_BASE
+        joc = get_joc_base()
         for idx, pl in enumerate(selected_pls):
             lines.append(f"{joc}.mp3  ← splitter")
             joc += 1
