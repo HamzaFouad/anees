@@ -3,9 +3,8 @@ from __future__ import annotations
 
 import os
 import threading
-from io import StringIO
 from pathlib import Path
-from unittest.mock import MagicMock, call, mock_open, patch
+from unittest.mock import mock_open, patch
 
 import pytest
 
@@ -35,11 +34,9 @@ def _playlist(prefix: str, title: str = "My Playlist") -> Playlist:
     )
 
 
-def _folder_name(pl: Playlist) -> str:
-    """Mirror _playlist_folder() from merge_service."""
-    import re
-    safe = re.sub(r'[^\w\s-]', '_', pl.title).strip('_ ')[:60].strip('_ ')
-    return f"{pl.prefix}_{safe}"
+def _fake_find(root, prefix):
+    """Return a deterministic fake folder path for any prefix."""
+    return f"{root}/{prefix}_folder"
 
 
 # ---------------------------------------------------------------------------
@@ -53,23 +50,40 @@ class TestSkipMissingFolder:
 
         with (
             patch("backend.services.merge_service.Path") as MockPath,
-            patch("backend.services.merge_service.os.path.isdir", return_value=False),
-            patch("backend.services.merge_service.os.listdir"),
-            patch("backend.services.merge_service.shutil.move"),
-            patch("backend.services.merge_service.shutil.copy2"),
+            patch("backend.services.merge_service._find_playlist_folder", return_value=None),
             patch("builtins.open", mock_open()),
         ):
-            # mkdir must not raise
             MockPath.return_value.mkdir.return_value = None
             MockPath.return_value.parent = Path("/tmp/out")
 
-            result = svc.merge(
+            moved, skipped = svc.merge(
                 playlists=[pl],
                 output_root="/tmp/root",
                 dest_path="/tmp/out/dest",
             )
 
-        assert result == 0
+        assert moved == 0
+        assert len(skipped) == 1
+
+    def test_missing_folder_skipped_list_contains_title(self):
+        svc = MergeService()
+        pl = _playlist("A001", "My Great Playlist")
+
+        with (
+            patch("backend.services.merge_service.Path") as MockPath,
+            patch("backend.services.merge_service._find_playlist_folder", return_value=None),
+            patch("builtins.open", mock_open()),
+        ):
+            MockPath.return_value.mkdir.return_value = None
+            MockPath.return_value.parent = Path("/tmp/out")
+
+            moved, skipped = svc.merge(
+                playlists=[pl],
+                output_root="/tmp/root",
+                dest_path="/tmp/out/dest",
+            )
+
+        assert "My Great Playlist" in skipped
 
     def test_missing_folder_logs_warning(self):
         logs = []
@@ -78,7 +92,7 @@ class TestSkipMissingFolder:
 
         with (
             patch("backend.services.merge_service.Path") as MockPath,
-            patch("backend.services.merge_service.os.path.isdir", return_value=False),
+            patch("backend.services.merge_service._find_playlist_folder", return_value=None),
             patch("builtins.open", mock_open()),
         ):
             MockPath.return_value.mkdir.return_value = None
@@ -86,7 +100,55 @@ class TestSkipMissingFolder:
 
             svc.merge(playlists=[pl], output_root="/tmp/root", dest_path="/tmp/out/dest")
 
-        assert any("skipping" in m for m in logs)
+        assert any("skip" in m.lower() for m in logs)
+
+    def test_empty_mp3_folder_added_to_skipped(self):
+        svc = MergeService()
+        pl = _playlist("A001", "Empty Playlist")
+
+        with (
+            patch("backend.services.merge_service.Path") as MockPath,
+            patch("backend.services.merge_service._find_playlist_folder", return_value="/tmp/root/A001_folder"),
+            patch("backend.services.merge_service.os.listdir", return_value=[]),
+            patch("builtins.open", mock_open()),
+        ):
+            MockPath.return_value.mkdir.return_value = None
+            MockPath.return_value.parent = Path("/tmp/out")
+
+            moved, skipped = svc.merge(
+                playlists=[pl],
+                output_root="/tmp/root",
+                dest_path="/tmp/out/dest",
+            )
+
+        assert moved == 0
+        assert "Empty Playlist" in skipped
+
+    def test_multiple_playlists_partial_skip(self):
+        pl1 = _playlist("A001", "Found")
+        pl2 = _playlist("A002", "Missing")
+
+        def fake_find(root, prefix):
+            return "/tmp/root/A001_folder" if prefix == "A001" else None
+
+        with (
+            patch("backend.services.merge_service.Path") as MockPath,
+            patch("backend.services.merge_service._find_playlist_folder", side_effect=fake_find),
+            patch("backend.services.merge_service.os.listdir", return_value=["track.mp3"]),
+            patch("backend.services.merge_service.shutil.move"),
+            patch("builtins.open", mock_open()),
+        ):
+            MockPath.return_value.mkdir.return_value = None
+            MockPath.return_value.parent = Path("/tmp/out")
+
+            moved, skipped = MergeService().merge(
+                playlists=[pl1, pl2],
+                output_root="/tmp/root",
+                dest_path="/tmp/out/dest",
+            )
+
+        assert moved == 1
+        assert skipped == ["Missing"]
 
 
 # ---------------------------------------------------------------------------
@@ -96,7 +158,6 @@ class TestSkipMissingFolder:
 class TestJocNaming:
     def test_files_renamed_sequentially_from_joc_base(self):
         pl = _playlist("A001", "Alpha")
-        folder = f"/tmp/root/{_folder_name(pl)}"
         moved_to: list[str] = []
 
         def fake_move(src, dst):
@@ -104,7 +165,7 @@ class TestJocNaming:
 
         with (
             patch("backend.services.merge_service.Path") as MockPath,
-            patch("backend.services.merge_service.os.path.isdir", return_value=True),
+            patch("backend.services.merge_service._find_playlist_folder", return_value="/tmp/root/A001_folder"),
             patch("backend.services.merge_service.os.listdir", return_value=["a.mp3", "b.mp3"]),
             patch("backend.services.merge_service.shutil.move", side_effect=fake_move),
             patch("builtins.open", mock_open()),
@@ -112,18 +173,46 @@ class TestJocNaming:
             MockPath.return_value.mkdir.return_value = None
             MockPath.return_value.parent = Path("/tmp/out")
 
-            result = MergeService().merge(
+            moved, skipped = MergeService().merge(
                 playlists=[pl],
                 output_root="/tmp/root",
                 dest_path="/tmp/out/dest",
             )
 
-        assert result == 2
+        assert moved == 2
+        assert skipped == []
         assert moved_to[0] == os.path.join("/tmp/out/dest", f"{JOC_BASE}.mp3")
         assert moved_to[1] == os.path.join("/tmp/out/dest", f"{JOC_BASE + 1}.mp3")
 
     def test_joc_base_is_1111(self):
         assert JOC_BASE == 1111
+
+    def test_two_playlists_numbered_consecutively(self):
+        pl1 = _playlist("A001", "Alpha")
+        pl2 = _playlist("A002", "Beta")
+        moved_to: list[str] = []
+
+        def fake_move(src, dst):
+            moved_to.append(dst)
+
+        with (
+            patch("backend.services.merge_service.Path") as MockPath,
+            patch("backend.services.merge_service._find_playlist_folder", side_effect=_fake_find),
+            patch("backend.services.merge_service.os.listdir", return_value=["t.mp3"]),
+            patch("backend.services.merge_service.shutil.move", side_effect=fake_move),
+            patch("builtins.open", mock_open()),
+        ):
+            MockPath.return_value.mkdir.return_value = None
+            MockPath.return_value.parent = Path("/tmp/out")
+
+            MergeService().merge(
+                playlists=[pl1, pl2],
+                output_root="/tmp/root",
+                dest_path="/tmp/out/dest",
+            )
+
+        assert moved_to[0] == os.path.join("/tmp/out/dest", f"{JOC_BASE}.mp3")
+        assert moved_to[1] == os.path.join("/tmp/out/dest", f"{JOC_BASE + 1}.mp3")
 
 
 # ---------------------------------------------------------------------------
@@ -144,16 +233,10 @@ class TestSplitterInsertion:
         def fake_move(src, dst):
             moved.append(dst)
 
-        def fake_isdir(path):
-            return True
-
-        def fake_listdir(path):
-            return ["track.mp3"]
-
         with (
             patch("backend.services.merge_service.Path") as MockPath,
-            patch("backend.services.merge_service.os.path.isdir", side_effect=fake_isdir),
-            patch("backend.services.merge_service.os.listdir", side_effect=fake_listdir),
+            patch("backend.services.merge_service._find_playlist_folder", side_effect=_fake_find),
+            patch("backend.services.merge_service.os.listdir", return_value=["track.mp3"]),
             patch("backend.services.merge_service.shutil.copy2", side_effect=fake_copy),
             patch("backend.services.merge_service.shutil.move", side_effect=fake_move),
             patch("builtins.open", mock_open()),
@@ -161,7 +244,7 @@ class TestSplitterInsertion:
             MockPath.return_value.mkdir.return_value = None
             MockPath.return_value.parent = Path("/tmp/out")
 
-            result = MergeService().merge(
+            moved_count, skipped = MergeService().merge(
                 playlists=[pl1, pl2],
                 output_root="/tmp/root",
                 dest_path="/tmp/out/dest",
@@ -169,13 +252,47 @@ class TestSplitterInsertion:
             )
 
         # 2 splitters + 2 tracks
-        assert result == 4
-        # first two destinations: spl for pl1, then track for pl1
+        assert moved_count == 4
+        assert skipped == []
+        # first and third positions are splitters
         assert len(copied) == 2
         assert len(moved) == 2
-        # splitters land at JOC_BASE+0 and JOC_BASE+2
         assert copied[0] == os.path.join("/tmp/out/dest", f"{JOC_BASE}.mp3")
         assert copied[1] == os.path.join("/tmp/out/dest", f"{JOC_BASE + 2}.mp3")
+
+    def test_skipped_playlist_does_not_shift_splitter_index(self):
+        pl1 = _playlist("A001", "Missing")
+        pl2 = _playlist("A002", "Found")
+
+        copied: list[str] = []
+
+        def fake_find(root, prefix):
+            return None if prefix == "A001" else f"{root}/{prefix}_folder"
+
+        with (
+            patch("backend.services.merge_service.Path") as MockPath,
+            patch("backend.services.merge_service._find_playlist_folder", side_effect=fake_find),
+            patch("backend.services.merge_service.os.listdir", return_value=["track.mp3"]),
+            patch("backend.services.merge_service.shutil.copy2", side_effect=lambda s, d: copied.append(d)),
+            patch("backend.services.merge_service.shutil.move"),
+            patch("builtins.open", mock_open()),
+        ):
+            MockPath.return_value.mkdir.return_value = None
+            MockPath.return_value.parent = Path("/tmp/out")
+
+            moved_count, skipped = MergeService().merge(
+                playlists=[pl1, pl2],
+                output_root="/tmp/root",
+                dest_path="/tmp/out/dest",
+                splitter_paths=["/spl/s1.mp3", "/spl/s2.mp3"],
+            )
+
+        # only pl2 found → 1 splitter (index 0) + 1 track
+        assert moved_count == 2
+        assert len(skipped) == 1
+        # splitter for pl2 is at found_count=0 → first splitter
+        assert len(copied) == 1
+        assert copied[0] == os.path.join("/tmp/out/dest", f"{JOC_BASE}.mp3")
 
 
 # ---------------------------------------------------------------------------
@@ -190,12 +307,11 @@ class TestStopEvent:
 
         def fake_move(src, dst):
             moved.append(dst)
-            # signal stop after first move so second file is never processed
             stop.set()
 
         with (
             patch("backend.services.merge_service.Path") as MockPath,
-            patch("backend.services.merge_service.os.path.isdir", return_value=True),
+            patch("backend.services.merge_service._find_playlist_folder", return_value="/tmp/root/A001_folder"),
             patch("backend.services.merge_service.os.listdir", return_value=["a.mp3", "b.mp3", "c.mp3"]),
             patch("backend.services.merge_service.shutil.move", side_effect=fake_move),
             patch("builtins.open", mock_open()),
@@ -203,15 +319,14 @@ class TestStopEvent:
             MockPath.return_value.mkdir.return_value = None
             MockPath.return_value.parent = Path("/tmp/out")
 
-            result = MergeService().merge(
+            result_count, _ = MergeService().merge(
                 playlists=[pl],
                 output_root="/tmp/root",
                 dest_path="/tmp/out/dest",
                 stop=stop,
             )
 
-        # Only the first file completed before stop was checked
-        assert result == 1
+        assert result_count == 1
         assert len(moved) == 1
 
     def test_stop_already_set_moves_nothing(self):
@@ -221,7 +336,7 @@ class TestStopEvent:
 
         with (
             patch("backend.services.merge_service.Path") as MockPath,
-            patch("backend.services.merge_service.os.path.isdir", return_value=True),
+            patch("backend.services.merge_service._find_playlist_folder", return_value="/tmp/root/A001_folder"),
             patch("backend.services.merge_service.os.listdir", return_value=["a.mp3", "b.mp3"]),
             patch("backend.services.merge_service.shutil.move") as mock_move,
             patch("builtins.open", mock_open()),
@@ -229,7 +344,7 @@ class TestStopEvent:
             MockPath.return_value.mkdir.return_value = None
             MockPath.return_value.parent = Path("/tmp/out")
 
-            result = MergeService().merge(
+            result_count, _ = MergeService().merge(
                 playlists=[pl],
                 output_root="/tmp/root",
                 dest_path="/tmp/out/dest",
@@ -237,7 +352,7 @@ class TestStopEvent:
             )
 
         mock_move.assert_not_called()
-        assert result == 0
+        assert result_count == 0
 
 
 # ---------------------------------------------------------------------------
@@ -248,7 +363,6 @@ class TestSummaryCsv:
     def test_summary_csv_rows_match_playlists(self):
         pl1 = _playlist("A001", "Alpha")
         pl2 = _playlist("A002", "Beta")
-        # first writerows call is summary, second is detail — capture separately
         summary_rows: list[dict] = []
         call_count = 0
 
@@ -265,7 +379,7 @@ class TestSummaryCsv:
 
         with (
             patch("backend.services.merge_service.Path") as MockPath,
-            patch("backend.services.merge_service.os.path.isdir", return_value=True),
+            patch("backend.services.merge_service._find_playlist_folder", side_effect=_fake_find),
             patch("backend.services.merge_service.os.listdir", return_value=["t.mp3"]),
             patch("backend.services.merge_service.shutil.move"),
             patch("builtins.open", mock_open()),
@@ -298,26 +412,22 @@ class TestDetailCsv:
     def test_detail_csv_has_correct_fields(self):
         pl = _playlist("A001", "Alpha")
         detail_rows: list[dict] = []
-
         call_count = 0
 
         class FakeWriter:
             def __init__(self, f, fieldnames, **kw):
                 self._fields = fieldnames
-
             def writeheader(self):
                 pass
-
             def writerows(self, rows):
                 nonlocal call_count
                 call_count += 1
-                # second call is detail CSV
                 if call_count == 2:
                     detail_rows.extend(rows)
 
         with (
             patch("backend.services.merge_service.Path") as MockPath,
-            patch("backend.services.merge_service.os.path.isdir", return_value=True),
+            patch("backend.services.merge_service._find_playlist_folder", return_value="/tmp/root/A001_folder"),
             patch("backend.services.merge_service.os.listdir", return_value=["song.mp3"]),
             patch("backend.services.merge_service.shutil.move"),
             patch("builtins.open", mock_open()),
@@ -347,10 +457,8 @@ class TestDetailCsv:
         class FakeWriter:
             def __init__(self, f, fieldnames, **kw):
                 pass
-
             def writeheader(self):
                 pass
-
             def writerows(self, rows):
                 nonlocal call_count
                 call_count += 1
@@ -359,7 +467,7 @@ class TestDetailCsv:
 
         with (
             patch("backend.services.merge_service.Path") as MockPath,
-            patch("backend.services.merge_service.os.path.isdir", return_value=True),
+            patch("backend.services.merge_service._find_playlist_folder", return_value="/tmp/root/A001_folder"),
             patch("backend.services.merge_service.os.listdir", return_value=["track.mp3"]),
             patch("backend.services.merge_service.shutil.move"),
             patch("backend.services.merge_service.shutil.copy2"),
@@ -430,7 +538,7 @@ class TestProgressCallback:
 
         with (
             patch("backend.services.merge_service.Path") as MockPath,
-            patch("backend.services.merge_service.os.path.isdir", return_value=True),
+            patch("backend.services.merge_service._find_playlist_folder", return_value="/tmp/root/A001_folder"),
             patch("backend.services.merge_service.os.listdir", return_value=["a.mp3", "b.mp3", "c.mp3"]),
             patch("backend.services.merge_service.shutil.move"),
             patch("builtins.open", mock_open()),
@@ -456,7 +564,7 @@ class TestProgressCallback:
 
         with (
             patch("backend.services.merge_service.Path") as MockPath,
-            patch("backend.services.merge_service.os.path.isdir", return_value=True),
+            patch("backend.services.merge_service._find_playlist_folder", return_value="/tmp/root/A001_folder"),
             patch("backend.services.merge_service.os.listdir", return_value=["a.mp3"]),
             patch("backend.services.merge_service.shutil.move"),
             patch("backend.services.merge_service.shutil.copy2"),
