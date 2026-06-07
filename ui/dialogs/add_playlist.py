@@ -41,6 +41,24 @@ def _is_valid_playlist_url(url: str) -> bool:
     return bool(_PLAYLIST_RE.match(url.strip()))
 
 
+def _normalize_url(url: str) -> str:
+    """Rewrite a video-in-playlist URL to its canonical playlist form.
+
+    youtube.com/watch?v=XYZ&list=ABC&index=1
+      → youtube.com/playlist?list=ABC
+
+    yt-dlp treats watch?v= URLs as single videos even when list= is present,
+    so we strip the video/index params before passing the URL downstream.
+    """
+    from urllib.parse import urlparse, parse_qs
+    parsed = urlparse(url.strip())
+    if parsed.netloc in ("www.youtube.com", "youtube.com") and parsed.path == "/watch":
+        params = parse_qs(parsed.query)
+        if "list" in params:
+            return f"https://www.youtube.com/playlist?list={params['list'][0]}"
+    return url.strip()
+
+
 def _fmt_now() -> str:
     n = _dt.now()
     return f"{n.strftime('%b')} {n.day}, {n.hour}:{n.strftime('%M')}"
@@ -256,6 +274,7 @@ class AddPlaylistDialog(QDialog):
                 "e.g. youtube.com/playlist?list=… or soundcloud.com/user/sets/…"
             )
             return
+        url = _normalize_url(url)
 
         from backend.api.config import get_prefix_start
         prefix   = self._prefix_input.text().strip() or str(get_prefix_start() + len(self._state.playlists)).zfill(2)
