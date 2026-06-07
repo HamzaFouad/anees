@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 
+from backend.errors import InvalidOutputFolderError
 from backend.services.speed_service import SpeedService
 
 
@@ -71,7 +72,7 @@ def test_apply_speed_ffmpeg_failure_deletes_tmp_and_continues(
 
 
 # ---------------------------------------------------------------------------
-# 3. os.replace fails → RuntimeError raised
+# 3. os.replace fails → InvalidOutputFolderError raised
 # ---------------------------------------------------------------------------
 
 def _exists_side_effect(path: str) -> bool:
@@ -91,7 +92,7 @@ def test_apply_speed_replace_failure_raises_runtime_error(
 ):
     svc = _service()
 
-    with pytest.raises(RuntimeError, match="cannot replace file"):
+    with pytest.raises(InvalidOutputFolderError, match="cannot replace file"):
         svc.apply_speed(["/a/file.mp3"], speed=1.5)
 
     # tmp cleanup attempted after failed replace

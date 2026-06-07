@@ -39,6 +39,10 @@
 ### `ui/`
 PySide6 only. No file I/O, no subprocess, no SQLite.
 
+Import boundary:
+- allowed: `backend.api`, `backend.models`, `backend.types`
+- forbidden: `backend.services.*`, `backend.commands.*`, `backend.utils.config`
+
 | Sub-package | Responsibility |
 |-------------|----------------|
 | `ui/api/` | All state mutations — `RunAPI.start()`, `QueueAPI.add()`, `NavAPI.go()`. Panels never call `state.*` directly except read access. |
@@ -79,8 +83,12 @@ Pure Python. No PySide6 imports anywhere.
 | `backend/api/` | Public gateway. `ui/` imports only from here (plus `backend.models`). Each module is a thin facade delegating to services. |
 | `backend/services/` | Orchestration. `DownloadService` drives the queue; `SplitService` runs ffmpeg; `InfoService` fetches metadata. Never imported by `ui/`. |
 | `backend/commands/` | Tool wrappers. `YtdlpClient` (only file importing `yt_dlp`); `FfmpegClient` (subprocess wrapper). |
+| `backend/platform/` | Runtime/platform helpers: frozen resource paths, external tool discovery/version checks. |
+| `backend/app_state/` | Run orchestration helpers (worker lifecycle/controller logic extracted from `AppState`). |
 | `backend/utils/` | Pure functions: `audio.estimate_size_mb()`, `config.get/set_output_root()`, `config.check_disk_space()`. |
 | `backend/models.py` | `@dataclass` definitions: `Playlist`, `Video`, `RunState`, `LogEntry`, …. Shared between `ui/` and `backend/`. |
+| `backend/types.py` | Shared typed enums for pipeline stages and playlist status values. |
+| `backend/errors.py` | Minimal typed app errors with user-facing messages and stable error codes. |
 
 ## Signal flow during a download
 

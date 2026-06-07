@@ -9,7 +9,8 @@ from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget,
 )
 
-from ui.statusbar import _ffmpeg_version, _yt_dlp_version
+from backend.api.health import get_ffmpeg_version, get_ytdlp_version
+from backend.platform.resources import app_icon_path
 from ui.theme import BG, BG_MUTED, BORDER, FG, FG_MUTED, FG_SUBTLE, PRIMARY
 from ui.widgets import RoundedDialog, icon_pixmap
 
@@ -28,15 +29,7 @@ ARABIC_SANS  = "'IBM Plex Sans Arabic','.AppleSystemUIFont','Segoe UI',sans-seri
 
 
 def _app_icon_path() -> Path:
-    if getattr(sys, "frozen", False):
-        base = Path(sys._MEIPASS) / "images"  # type: ignore[attr-defined]
-    else:
-        base = Path(__file__).resolve().parent.parent / "images"
-    if sys.platform == "darwin":
-        icns = base / "anees.icns"
-        if icns.exists():
-            return icns
-    return base / "anees.ico"
+    return app_icon_path()
 
 
 def _platform_label() -> str:
@@ -169,7 +162,7 @@ class AboutDialog(RoundedDialog):
 
         # footer
         f_lay = self.add_footer(height=34)
-        left = QLabel(f"yt-dlp {_yt_dlp_version()} · ffmpeg {_ffmpeg_version()}")
+        left = QLabel(f"yt-dlp {get_ytdlp_version()} · ffmpeg {get_ffmpeg_version()}")
         left.setStyleSheet(
             f"font-family:'JetBrains Mono',monospace; font-size:11px; color:{FG_SUBTLE};"
         )

@@ -3,8 +3,10 @@ import copy
 from datetime import datetime
 from pathlib import Path
 from PySide6.QtCore import QObject, Signal, QTimer
+from backend.app_state.run_controller import RunController
 from backend.models import Playlist, Video, LogEntry, RunState
 from backend.mock_data import MOCK_LOGS
+from backend.types import PlaylistStatus, VideoStage
 
 
 class AppState(QObject):
@@ -25,7 +27,6 @@ class AppState(QObject):
         self._view      = "queue"
         self._query     = ""
         self._logs: list[LogEntry] = copy.deepcopy(MOCK_LOGS)
-        self._worker    = None
         from backend.api import get_output_root
         self._output_root = get_output_root()
         # throttle: batch UI refreshes during active downloads
@@ -34,6 +35,17 @@ class AppState(QObject):
         self._refresh_timer.setSingleShot(True)
         self._refresh_timer.setInterval(300)
         self._refresh_timer.timeout.connect(self._flush_ui)
+        self._run_controller = RunController(
+            make_download_worker=self._make_download_worker,
+            make_retry_worker=self._make_retry_worker,
+            make_info_worker=self._make_info_worker,
+            on_videos_ready=self._on_videos_ready,
+            on_video_stage=self._on_video_stage,
+            on_video_meta=self._on_video_meta,
+            on_log=self._add_log,
+            on_run_complete=self._on_run_complete,
+            on_retry_complete=self.retry_complete.emit,
+        )
 
     # ── Accessors ─────────────────────────────────────────────────────────────
     @property
@@ -60,7 +72,7 @@ class AppState(QObject):
         return sum(
             playlist_size_estimate(pl)
             for pl in self._playlists
-            if pl.status != "done"
+            if pl.status != PlaylistStatus.DONE
         )
 
     def disk_space_ok(self) -> tuple[bool, float, float]:
@@ -69,53 +81,41 @@ class AppState(QObject):
         return check_disk_space(self.total_estimate_mb(), self._output_root)
 
     def counts(self) -> dict:
-        queued = sum(1 for p in self._playlists if p.status in ("queued", "active"))
-        done   = sum(1 for p in self._playlists if p.status == "done")
+        queued = sum(1 for p in self._playlists if p.status in (PlaylistStatus.QUEUED, PlaylistStatus.ACTIVE))
+        done   = sum(1 for p in self._playlists if p.status == PlaylistStatus.DONE)
         vdone   = sum(p.completed for p in self._playlists)
         vtotal  = sum(p.video_count for p in self._playlists)
-        vfailed = sum(sum(1 for v in p.videos if v.stage == "failed") for p in self._playlists)
+        vfailed = sum(sum(1 for v in p.videos if v.stage == VideoStage.FAILED) for p in self._playlists)
         return {"queued": queued, "done": done,
                 "videos_done": vdone, "videos_total": vtotal, "videos_failed": vfailed}
 
     # ── Run lifecycle ─────────────────────────────────────────────────────────
     def start_run(self) -> None:
-        from ui.workers.download_worker import DownloadWorker  # kept here to avoid circular import
-        pending = [p for p in self._playlists if p.status != "done"]
+        pending = [p for p in self._playlists if p.status != PlaylistStatus.DONE]
         print(f"[state] start_run called — pending={len(pending)}", flush=True)
         if not pending:
             print("[state] no pending playlists, aborting", flush=True)
             return
-        self._worker = DownloadWorker(pending, self._output_root, self)
-        self._worker.videos_ready.connect(self._on_videos_ready)
-        self._worker.video_stage.connect(self._on_video_stage)
-        self._worker.video_meta.connect(self._on_video_meta)
-        self._worker.log_added.connect(self._add_log)
-        self._worker.run_complete.connect(self._on_run_complete)
-        self._worker.start()
-        self._set_run_state(RunState.RUNNING)
+        if self._run_controller.start_run(self._playlists, self._output_root):
+            self._set_run_state(RunState.RUNNING)
 
     def pause_run(self) -> None:
-        if self._worker:
-            self._worker.pause()
+        self._run_controller.pause_run()
         self._set_run_state(RunState.PAUSED)
 
     def resume_run(self) -> None:
-        if self._worker:
-            self._worker.resume()
+        self._run_controller.resume_run()
         self._set_run_state(RunState.RUNNING)
 
     def stop_run(self) -> None:
-        if self._worker:
-            self._worker.stop()
-            self._worker.wait(3000)
-            self._worker = None
+        self._run_controller.stop_run(wait_ms=3000)
         # reset active playlists; zero progress on in-progress videos
         # (keep the stage so completed sub-stages retain their checkmarks)
         for p in self._playlists:
-            if p.status == "active":
-                p.status = "queued"
+            if p.status == PlaylistStatus.ACTIVE:
+                p.status = PlaylistStatus.QUEUED
                 for v in p.videos:
-                    if v.stage not in ("done", "failed", "queued"):
+                    if v.stage not in (VideoStage.DONE, VideoStage.FAILED, VideoStage.QUEUED):
                         v.progress = 0.0  # stage kept — VideoRow renders dot not spinner
         self.playlists_changed.emit()
         self._set_run_state(RunState.IDLE)
@@ -130,14 +130,7 @@ class AppState(QObject):
         pl = next((p for p in self._playlists if p.id == pid), None)
         if not pl or not video_indices:
             return
-        from ui.workers.retry_worker import RetryVideoWorker
-        worker = RetryVideoWorker(pl, video_indices, self._output_root, self)
-        worker.video_stage.connect(self._on_video_stage)
-        worker.video_meta.connect(self._on_video_meta)
-        worker.log_added.connect(self._add_log)
-        worker.completed.connect(worker.deleteLater)
-        worker.completed.connect(self.retry_complete)
-        worker.start()
+        self._run_controller.retry_videos(pl, video_indices, self._output_root)
 
     # kept for toolbar compatibility — maps to the right method
     def set_run_state(self, state: RunState) -> None:
@@ -160,7 +153,7 @@ class AppState(QObject):
             return
         pl.videos      = list(videos)
         pl.video_count = len(videos)
-        pl.status      = "active"
+        pl.status      = PlaylistStatus.ACTIVE
         if real_title:
             pl.title = real_title
         self.playlists_changed.emit()
@@ -173,14 +166,14 @@ class AppState(QObject):
             return
         # extend video list if needed (yt-dlp can report more items than info fetch)
         while idx >= len(pl.videos):
-            pl.videos.append(Video(title=f"Video {len(pl.videos)+1}", duration_sec=0, stage="queued"))
+            pl.videos.append(Video(title=f"Video {len(pl.videos)+1}", duration_sec=0, stage=VideoStage.QUEUED))
         v = pl.videos[idx]
         stage_changed = v.stage != stage
         v.stage    = stage
         v.progress = progress
-        if stage == "done":
-            pl.completed = sum(1 for vv in pl.videos if vv.stage == "done")
-            pl.status    = "done" if pl.completed >= pl.video_count else "active"
+        if stage == VideoStage.DONE:
+            pl.completed = sum(1 for vv in pl.videos if vv.stage == VideoStage.DONE)
+            pl.status    = PlaylistStatus.DONE if pl.completed >= pl.video_count else PlaylistStatus.ACTIVE
             # sidebar needs updating when a video completes
             self._dirty_pids.add(pid)
             if not self._refresh_timer.isActive():
@@ -211,7 +204,6 @@ class AppState(QObject):
     def _on_run_complete(self) -> None:
         self._refresh_timer.stop()
         self._dirty_pids.clear()
-        self._worker = None
         self.playlists_changed.emit()             # sidebar update
         if self._selected:
             self.selection_changed.emit(self._selected)   # final detail panel refresh
@@ -272,11 +264,7 @@ class AppState(QObject):
         self._fetch_info_async(pl)
 
     def _fetch_info_async(self, pl: Playlist) -> None:
-        from ui.workers.info_worker import InfoWorker
-        w = InfoWorker(pl.id, pl.url, self)
-        w.info_ready.connect(self._on_videos_ready)
-        w.finished.connect(w.deleteLater)
-        w.start()
+        self._run_controller.fetch_info_async(pl.id, pl.url)
 
     def remove_playlist(self, pid: str) -> None:
         self._playlists = [p for p in self._playlists if p.id != pid]
@@ -287,3 +275,15 @@ class AppState(QObject):
 
     def _playlist(self, pid: str) -> Playlist | None:
         return next((p for p in self._playlists if p.id == pid), None)
+
+    def _make_download_worker(self, playlists: list[Playlist], output_root: str):
+        from ui.workers.download_worker import DownloadWorker
+        return DownloadWorker(playlists, output_root, self)
+
+    def _make_retry_worker(self, pl: Playlist, video_indices: list[int], output_root: str):
+        from ui.workers.retry_worker import RetryVideoWorker
+        return RetryVideoWorker(pl, video_indices, output_root, self)
+
+    def _make_info_worker(self, playlist_id: str, url: str):
+        from ui.workers.info_worker import InfoWorker
+        return InfoWorker(playlist_id, url, self)

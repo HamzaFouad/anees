@@ -9,6 +9,7 @@ from backend.api import (
     DownloadAPI, InfoAPI, SplitAPI,
     playlist_size_estimate, playlist_total_duration,
     get_output_root, set_output_root,
+    ffmpeg_ok, get_ffmpeg_version, get_ytdlp_version,
 )
 ```
 
@@ -83,6 +84,19 @@ total_s  = playlist_total_duration(playlist)  # int — sum of video durations
 root = get_output_root()        # str — reads ~/.anees/config.json, default ~/Downloads/Anees
 set_output_root("/new/path")    # persists to config
 ```
+
+---
+
+### Health
+
+```python
+ok = ffmpeg_ok()                  # bool
+ff_ver = get_ffmpeg_version()     # str
+ytdlp_ver = get_ytdlp_version()   # str
+```
+
+Used by startup checks and status surfaces so UI does not call subprocess/tool
+wrappers directly.
 
 ---
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
+from backend.types import PlaylistStatus, VideoStage
 
 
 class RunState(Enum):
@@ -15,7 +16,8 @@ class RunState(Enum):
 class Video:
     title: str
     duration_sec: int
-    stage: str  # queued / download / mp3 / speed / split / done / failed
+    # Transitional typing: still accepts str while migrating call-sites.
+    stage: VideoStage | str
     progress: float = 0.0
     failed_at: Optional[str] = None
     error: Optional[str] = None
@@ -30,8 +32,9 @@ class Playlist:
     url: str
     video_count: int
     completed: int
-    status: str  # queued / active / done
-    active_stage: str
+    # Transitional typing: still accepts str while migrating call-sites.
+    status: PlaylistStatus | str
+    active_stage: VideoStage | str
     speed: float
     split_enabled: bool
     split_min: int

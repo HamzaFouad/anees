@@ -8,6 +8,12 @@ from typing import Callable
 from backend.models import Playlist
 
 
+def get_joc_base() -> int:
+    """Expose the starting merge sequence number for UI previews."""
+    from backend.services.merge_service import JOC_BASE
+    return JOC_BASE
+
+
 class MergeAPI:
     def fetch_splitter_playlist(self, playlist_url: str) -> list[tuple[str, str, int]]:
         """Return [(video_url, title, duration_sec)] for all videos in a playlist."""

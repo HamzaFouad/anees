@@ -10,6 +10,8 @@ from backend.models import Playlist, Video
 from backend.commands.ytdlp import YtdlpClient
 from backend.services.split_service import SplitService
 from backend.services.speed_service import SpeedService
+from backend.types import VideoStage, PlaylistStatus
+from backend.errors import DownloadFailedError, InvalidOutputFolderError
 
 # Lines from ffmpeg that carry no actionable information for the user
 _FFMPEG_NOISE = re.compile(
@@ -40,6 +42,11 @@ class DownloadService:
         on_video_meta:   Callable[[str, int, str, int], None] | None = None,
         on_log:          Callable[[str, str, str], None] | None = None,
         on_complete:     Callable[[], None] | None = None,
+        client:          YtdlpClient | None = None,
+        stop_event:      threading.Event | None = None,
+        pause_event:     threading.Event | None = None,
+        split_service_factory: Callable[[Callable[[str], None]], SplitService] | None = None,
+        speed_service_factory: Callable[[Callable[[str], None]], SpeedService] | None = None,
     ):
         self._root            = output_root or str(Path.home() / "Downloads" / "Anees")
         self._on_videos_ready = on_videos_ready or (lambda *_: None)
@@ -47,9 +54,11 @@ class DownloadService:
         self._on_video_meta   = on_video_meta   or (lambda *_: None)
         self._on_log          = on_log          or (lambda *_: None)
         self._on_complete     = on_complete     or (lambda: None)
-        self._client       = YtdlpClient()
-        self._stop         = threading.Event()
-        self._pause        = threading.Event()
+        self._client       = client or YtdlpClient()
+        self._stop         = stop_event or threading.Event()
+        self._pause        = pause_event or threading.Event()
+        self._make_split_service = split_service_factory or (lambda on_log: SplitService(on_log=on_log))
+        self._make_speed_service = speed_service_factory or (lambda on_log: SpeedService(on_log=on_log))
         self._pause.set()
 
     # ── Public control ────────────────────────────────────────────────────────
@@ -58,7 +67,11 @@ class DownloadService:
         try:
             Path(self._root).mkdir(parents=True, exist_ok=True)
         except OSError as exc:
-            self._log("error", f"Cannot create output folder: {self._root} — {exc}")
+            err = InvalidOutputFolderError(
+                technical_message=f"Cannot create output folder: {self._root} — {exc}"
+            )
+            self._log("error", f"{err.user_message} ({err.code})")
+            self._log("debug", err.technical_message)
             self._on_complete()
             return
         self._log("info", f"Run started — output: {self._root}")
@@ -66,7 +79,7 @@ class DownloadService:
         for pl in playlists:
             if self._stop.is_set():
                 break
-            if pl.status == "done":
+            if pl.status == PlaylistStatus.DONE:
                 self._log("info", f"Skipping (already done): {pl.title}")
                 continue
             self._run_playlist(pl)
@@ -140,7 +153,7 @@ class DownloadService:
                 v = pl.videos[idx]
                 v.failed_at = v.stage if v.stage not in ("queued", "failed") else "download"
                 v.error = error_msg
-            self._on_video_stage(pl.id, idx, "failed", 0.0)
+            self._on_video_stage(pl.id, idx, VideoStage.FAILED, 0.0)
             self._log("error", f"[{idx+1}] failed: {error_msg}")
 
         def on_progress(d: dict) -> None:
@@ -158,10 +171,10 @@ class DownloadService:
                     speed = d.get("speed")
                     spd   = f"  {speed/1024/1024:.1f} MB/s" if speed else ""
                     self._log("debug", f"[{idx+1}] downloading {pct}%{spd}")
-                self._on_video_stage(pl.id, idx, "download", min(done / total, 0.99))
+                self._on_video_stage(pl.id, idx, VideoStage.DOWNLOAD, min(done / total, 0.99))
             elif status == "finished":
                 _logged_pct[0] = -1
-                self._on_video_stage(pl.id, idx, "mp3", 0.5)
+                self._on_video_stage(pl.id, idx, VideoStage.MP3, 0.5)
                 self._log("debug", f"[{idx+1}] converting to mono MP3…")
             elif status == "error":
                 error_msg = str(d.get("error") or "Download failed")
@@ -174,14 +187,14 @@ class DownloadService:
             Failures call _mark_failed so the row shows the broken stage + error.
             """
             if self._stop.is_set():
-                self._on_video_stage(pl.id, idx, "done", 1.0)
+                self._on_video_stage(pl.id, idx, VideoStage.DONE, 1.0)
                 return
 
             files = [filepath]
 
             if pl.split_enabled:
                 try:
-                    files = SplitService(on_log=_ffmpeg_log).split_file(
+                    files = self._make_split_service(_ffmpeg_log).split_file(
                         filepath, pl.split_min, self._stop
                     )
                     self._log("info", f"[{idx+1}] {title}  → {len(files)} part(s)")
@@ -190,15 +203,15 @@ class DownloadService:
                     return
 
             if pl.speed != 1.0 and not self._stop.is_set():
-                self._on_video_stage(pl.id, idx, "speed", 0.1)
+                self._on_video_stage(pl.id, idx, VideoStage.SPEED, 0.1)
                 try:
-                    SpeedService(on_log=_ffmpeg_log).apply_speed(files, pl.speed, self._stop)
+                    self._make_speed_service(_ffmpeg_log).apply_speed(files, pl.speed, self._stop)
                     self._log("info", f"[{idx+1}] ×{pl.speed} applied to {len(files)} file(s)")
                 except Exception as exc:
                     _mark_failed(idx, f"Speed ×{pl.speed} failed: {exc}")
                     return
 
-            self._on_video_stage(pl.id, idx, "done", 1.0)
+            self._on_video_stage(pl.id, idx, VideoStage.DONE, 1.0)
 
         def on_postprocess(d: dict) -> None:
             status = d.get("status")
@@ -235,12 +248,12 @@ class DownloadService:
                 # Advance UI to the first active post-processing stage immediately,
                 # then return so yt-dlp starts downloading the NEXT video right away.
                 # _do_postprocess() runs in the thread pool and emits "done" when finished.
-                first_stage = "split" if pl.split_enabled else "speed"
+                first_stage = VideoStage.SPLIT if pl.split_enabled else VideoStage.SPEED
                 self._on_video_stage(pl.id, idx, first_stage, 0.1)
                 executor.submit(_do_postprocess, idx, title, filepath)
             else:
                 self._log("info", f"[{idx+1}] {title}  ({size_mb:.1f} MB)")
-                self._on_video_stage(pl.id, idx, "done", 1.0)
+                self._on_video_stage(pl.id, idx, VideoStage.DONE, 1.0)
 
 
         try:
@@ -252,7 +265,11 @@ class DownloadService:
                 playlist_items=playlist_items,
             )
         except Exception as exc:
-            self._log("error", f"Download failed: {pl.title} — {exc}")
+            err = DownloadFailedError(
+                technical_message=f"Download failed: {pl.title} — {exc}"
+            )
+            self._log("error", f"{err.user_message} ({err.code})")
+            self._log("debug", err.technical_message)
         finally:
             # Drain all pending/running splits before _download() returns.
             # When _stop is set, split threads exit quickly (ffmpeg is killed).

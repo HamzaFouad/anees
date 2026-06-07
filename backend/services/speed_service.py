@@ -4,11 +4,16 @@ import threading
 from typing import Callable
 
 from backend.commands.ffmpeg import FfmpegClient
+from backend.errors import InvalidOutputFolderError
 
 
 class SpeedService:
-    def __init__(self, on_log: Callable[[str], None] | None = None):
-        self._client = FfmpegClient()
+    def __init__(
+        self,
+        on_log: Callable[[str], None] | None = None,
+        client: FfmpegClient | None = None,
+    ):
+        self._client = client or FfmpegClient()
         self._on_log = on_log or (lambda _: None)
 
     def apply_speed(
@@ -45,7 +50,9 @@ class SpeedService:
                         os.remove(tmp)
                     except OSError:
                         pass
-                    raise RuntimeError(f"Speed: cannot replace file — {exc}") from exc
+                    raise InvalidOutputFolderError(
+                        technical_message=f"Speed: cannot replace file — {exc}"
+                    ) from exc
             else:
                 try:
                     os.remove(tmp)
