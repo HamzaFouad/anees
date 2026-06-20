@@ -41,6 +41,9 @@ class Playlist:
     size_mb: Optional[float]
     added_at: str
     videos: list["Video"] = field(default_factory=list)
+    range_start: Optional[int] = None   # 1-based; None = start of playlist
+    range_end: Optional[int] = None     # 1-based inclusive; None = end of playlist
+    run_state: str = "idle"             # idle | running | paused | done
 
 
 @dataclass
