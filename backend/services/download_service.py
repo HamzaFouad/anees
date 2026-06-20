@@ -119,15 +119,27 @@ class DownloadService:
 
         pending = self._scan_existing(pl)
 
+        # Apply range filter (1-based, inclusive on both ends).
+        # pl.videos may already be sliced to the range, so derive r_end from
+        # pl.range_end rather than len(pl.videos) to get the correct absolute end.
+        r_start   = pl.range_start or 1
+        r_end     = pl.range_end if pl.range_end else (r_start + len(pl.videos) - 1)
+        has_range = bool(pl.range_start or pl.range_end)
+        if has_range:
+            pending = [i for i in pending if r_start <= i <= r_end]
+        range_total = r_end - r_start + 1
+
         if not pending:
-            self._log("info", f"{pl.title} — all {len(pl.videos)} video(s) already on disk, skipping")
+            self._log("info", f"{pl.title} — all video(s) in range {r_start}–{r_end} already on disk, skipping")
             return
 
-        already = len(pl.videos) - len(pending)
+        already = range_total - len(pending)
         if already:
-            self._log("info", f"Resuming — {already}/{len(pl.videos)} already downloaded, fetching {len(pending)} remaining")
+            self._log("info", f"Resuming — {already}/{range_total} already downloaded (range {r_start}–{r_end}), fetching {len(pending)} remaining")
+        elif has_range:
+            self._log("info", f"Range {r_start}–{r_end} ({range_total} video(s))")
 
-        playlist_items = ",".join(str(i) for i in pending) if already else None
+        playlist_items = ",".join(str(i) for i in pending) if (already or has_range) else None
         folder = _playlist_folder(pl)
         self._log("info", f"Downloading {len(pending)} video(s) → {self._root}/{folder}/")
         self._download(pl, playlist_items=playlist_items)
@@ -150,17 +162,21 @@ class DownloadService:
         except OSError:
             return list(range(1, len(pl.videos) + 1))
 
-        found: list[int] = []   # 1-based indices with files on disk
+        # Use absolute 1-based playlist indices (files are named by playlist_index,
+        # e.g. range 5–10 produces 05_…mp3 … 10_…mp3, not 01_…mp3).
+        r_start = pl.range_start or 1
+        found: list[int] = []   # absolute 1-based indices with files on disk
         for i in range(len(pl.videos)):
-            prefix = f"{i + 1:02d}_"
+            abs_idx = r_start + i
+            prefix  = f"{abs_idx:02d}_"
             if any(
                 f.startswith(prefix) and f.endswith(".mp3") and not f.endswith(".spd.mp3")
                 for f in existing
             ):
-                found.append(i + 1)
+                found.append(abs_idx)
 
         if not found:
-            return list(range(1, len(pl.videos) + 1))
+            return [r_start + i for i in range(len(pl.videos))]
 
         # Delete the last found file(s) — may have been interrupted mid-processing
         last = max(found)
@@ -174,13 +190,13 @@ class DownloadService:
                     self._log("warn", f"[{last}] could not delete {fname}: {exc}")
         found.remove(last)
 
-        # Mark the remaining confirmed-complete videos as done in the UI
-        for idx_1based in found:
-            self._on_video_stage(pl.id, idx_1based - 1, VideoStage.DONE, 1.0)
+        # Mark confirmed-complete videos as done using relative (0-based) indices
+        for abs_idx in found:
+            self._on_video_stage(pl.id, abs_idx - r_start, VideoStage.DONE, 1.0)
 
-        # pending = every index not confirmed complete (including the deleted last)
+        # pending = every absolute index not confirmed complete (including the deleted last)
         confirmed = set(found)
-        return [i + 1 for i in range(len(pl.videos)) if (i + 1) not in confirmed]
+        return [r_start + i for i in range(len(pl.videos)) if (r_start + i) not in confirmed]
 
     def retry_videos(self, pl: Playlist, playlist_items: str) -> None:
         """Re-download specific videos by a 1-based playlist_items string (e.g. '2,4,7')."""
@@ -191,6 +207,9 @@ class DownloadService:
     def _download(self, pl: Playlist, playlist_items: str | None = None) -> None:
         _done_fps: set[str] = set()    # dedup by MP3 filepath
         _logged_pct: list[int] = [-1]  # last milestone logged (reset per video)
+        # yt-dlp reports playlist_index as an absolute 1-based position in the full
+        # playlist; subtract this offset so idx maps into the (possibly sliced) pl.videos.
+        _idx_offset = (pl.range_start or 1) - 1
 
         # One background worker: split of video N runs concurrently with the
         # download of video N+1.  max_workers=1 keeps CPU pressure predictable
@@ -220,7 +239,7 @@ class DownloadService:
         def on_progress(d: dict) -> None:
             status = d.get("status")
             info   = d.get("info_dict") or {}
-            idx    = max(0, int(info.get("playlist_index") or 1) - 1)
+            idx    = max(0, int(info.get("playlist_index") or 1) - 1 - _idx_offset)
 
             if status == "downloading":
                 total = d.get("total_bytes") or d.get("total_bytes_estimate") or 1
@@ -282,7 +301,7 @@ class DownloadService:
             if status == "error":
                 error_msg = str(d.get("error") or
                                 f"{d.get('postprocessor', 'postprocessor')} failed")
-                idx = max(0, int(info.get("playlist_index") or 1) - 1)
+                idx = max(0, int(info.get("playlist_index") or 1) - 1 - _idx_offset)
                 _mark_failed(idx, error_msg)
                 return
 
@@ -297,7 +316,7 @@ class DownloadService:
                 return
             _done_fps.add(filepath)
 
-            idx      = max(0, int(info.get("playlist_index") or 1) - 1)
+            idx      = max(0, int(info.get("playlist_index") or 1) - 1 - _idx_offset)
             title    = info.get("title") or f"Video {idx+1}"
             duration = int(info.get("duration") or 0)
             size_mb  = os.path.getsize(filepath) / 1024 / 1024
