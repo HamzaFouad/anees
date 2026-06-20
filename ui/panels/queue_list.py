@@ -225,6 +225,17 @@ class PlaylistRow(QWidget):
         top_lay.addWidget(title, 1)
         mid_lay.addWidget(top)
 
+        # range badge (only when a range is configured)
+        if pl.range_start is not None or pl.range_end is not None:
+            r_start = pl.range_start or 1
+            r_end_str = str(pl.range_end) if pl.range_end is not None else "end"
+            range_lbl = QLabel(f"items {r_start}–{r_end_str}")
+            range_lbl.setStyleSheet(
+                f"font-size:10px; color:{FG_MUTED}; "
+                f"font-family:'JetBrains Mono',monospace;"
+            )
+            mid_lay.addWidget(range_lbl)
+
         # progress bar + count
         bot = QWidget()
         bot_lay = QHBoxLayout(bot)
