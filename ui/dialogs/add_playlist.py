@@ -324,6 +324,10 @@ class AddPlaylistDialog(QDialog):
             return
         url = _normalize_url(url)
 
+        if any(p.url == url for p in self._state.playlists):
+            self._show_url_error("This playlist is already in the queue.")
+            return
+
         from backend.api.config import get_prefix_start
         prefix   = self._prefix_input.text().strip() or str(get_prefix_start() + len(self._state.playlists)).zfill(2)
         speed_on = self._speed_toggle._checked
