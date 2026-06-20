@@ -147,11 +147,16 @@ class AppState(QObject):
 
     # ── Worker callbacks (called on main thread via queued Signal) ────────────
     def _on_videos_ready(self, pid: str, videos, real_title: str = "") -> None:
-        print(f"[state] videos_ready received — pid={pid} count={len(videos)}", flush=True)
         pl = self._playlist(pid)
         if not pl:
             return
-        pl.videos      = list(videos)
+        videos = list(videos)
+        if pl.range_start or pl.range_end:
+            r_start = (pl.range_start or 1) - 1  # 0-based slice start
+            r_end   = pl.range_end                # 1-based inclusive = slice end (None = to end)
+            videos  = videos[r_start:r_end]
+        print(f"[state] videos_ready — pid={pid} count={len(videos)}", flush=True)
+        pl.videos      = videos
         pl.video_count = len(videos)
         pl.status      = PlaylistStatus.ACTIVE
         if real_title:

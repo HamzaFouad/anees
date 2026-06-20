@@ -204,6 +204,31 @@ class AddPlaylistDialog(QDialog):
 
         b_lay.addWidget(row)
 
+        # RANGE — own row, single _section so toggle + inputs share one HBoxLayout
+        rng_w = _section()
+        rng_w.layout().addWidget(_lbl("Range"))
+        self._range_toggle = Toggle(False)
+        self._range_toggle.toggled.connect(self._on_range_toggle)
+        self._range_from = _value_input("1", QIntValidator(1, 9999), enabled=False)
+        self._range_from.setFixedWidth(64)
+        self._range_from.setPlaceholderText("from")
+        self._range_to = _value_input("", QIntValidator(1, 9999), enabled=False)
+        self._range_to.setFixedWidth(64)
+        self._range_to.setPlaceholderText("end")
+        _dash = QLabel("–")
+        _dash.setStyleSheet(f"color:{FG_MUTED}; background:transparent; border:none; font-size:13px;")
+        rng_ctrl = QWidget(); rng_ctrl.setStyleSheet("background:transparent;")
+        rc_lay = QHBoxLayout(rng_ctrl)
+        rc_lay.setContentsMargins(0, 0, 0, 0)
+        rc_lay.setSpacing(8)
+        rc_lay.addWidget(self._range_toggle)
+        rc_lay.addWidget(self._range_from)
+        rc_lay.addWidget(_dash)
+        rc_lay.addWidget(self._range_to)
+        rc_lay.addStretch()
+        rng_w.layout().addWidget(rng_ctrl)
+        b_lay.addWidget(rng_w)
+
         # destination hint
         from backend.api.config import get_output_root
         self._dest_hint = QLabel()
@@ -279,6 +304,12 @@ class AddPlaylistDialog(QDialog):
         self._split_input.setEnabled(checked)
         self._split_input.setStyleSheet(_input_style(checked))
 
+    def _on_range_toggle(self, checked: bool) -> None:
+        self._range_from.setEnabled(checked)
+        self._range_from.setStyleSheet(_input_style(checked))
+        self._range_to.setEnabled(checked)
+        self._range_to.setStyleSheet(_input_style(checked))
+
     # ── submit ───────────────────────────────────────────────────────────────
     def _on_add(self) -> None:
         url = self._url_input.text().strip()
@@ -308,6 +339,21 @@ class AddPlaylistDialog(QDialog):
         except ValueError:
             split_min = 30
 
+        range_on = self._range_toggle._checked
+        range_start: int | None = None
+        range_end:   int | None = None
+        if range_on:
+            try:
+                range_start = max(1, int(self._range_from.text())) if self._range_from.text().strip() else 1
+            except ValueError:
+                range_start = 1
+            try:
+                range_end = max(1, int(self._range_to.text())) if self._range_to.text().strip() else None
+            except ValueError:
+                range_end = None
+            if range_end is not None and range_end < range_start:
+                range_end = range_start
+
         pl = Playlist(
             id           = str(uuid.uuid4()),
             prefix       = prefix,
@@ -322,6 +368,8 @@ class AddPlaylistDialog(QDialog):
             split_min    = split_min,
             size_mb      = None,
             added_at     = _fmt_now(),
+            range_start  = range_start,
+            range_end    = range_end,
         )
         from ui.api import QueueAPI
         QueueAPI(self._state).add(pl)
