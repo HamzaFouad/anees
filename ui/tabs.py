@@ -3,7 +3,7 @@ from PySide6.QtCore import Qt, Signal, QRectF
 from PySide6.QtGui import QIcon, QPainter, QColor
 
 from ui.theme import PRIMARY, FG, FG_MUTED, BG, BORDER
-from ui.widgets import icon_pixmap, BreathingDot
+from ui.widgets import icon_pixmap, Spinner
 from ui.state import AppState
 from backend.models import RunState
 
@@ -125,7 +125,9 @@ class _LockPill(QWidget):
         lay.setContentsMargins(8, 4, 10, 4)
         lay.setSpacing(5)
 
-        lay.addWidget(BreathingDot(PRIMARY, size=14))
+        self._spinner = Spinner(12, PRIMARY)
+        self._spinner.stop()
+        lay.addWidget(self._spinner)
 
         lbl = QLabel("Queue locked — run in progress")
         lbl.setStyleSheet(
@@ -133,6 +135,14 @@ class _LockPill(QWidget):
             "background:transparent; border:none;"
         )
         lay.addWidget(lbl)
+
+    def hideEvent(self, event):
+        self._spinner.stop()
+        super().hideEvent(event)
+
+    def showEvent(self, event):
+        self._spinner.start()
+        super().showEvent(event)
 
     def paintEvent(self, _):
         p = QPainter(self)

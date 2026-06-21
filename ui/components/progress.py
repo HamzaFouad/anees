@@ -23,6 +23,12 @@ class SlimProgressBar(QWidget):
         self._total = total
         self.update()
 
+    def set_color(self, color: str, track: str | None = None):
+        self._color = color
+        if track is not None:
+            self._track = track
+        self.update()
+
     def paintEvent(self, _event):
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)

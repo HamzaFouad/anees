@@ -1,3 +1,4 @@
+from __future__ import annotations
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QScrollArea, QFrame,
@@ -138,25 +139,44 @@ class QueueList(QWidget):
             return
         self._rebuild_pending = False
 
-        # remove old rows (except stretch)
-        while self._list_layout.count() > 1:
-            item = self._list_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
-
         q = self._state.query.lower()
         pls = [p for p in self._state.playlists if not q or q in p.title.lower()]
         self._count_lbl.setText(f"Playlists ({len(pls)})")
+
+        locked = self._state.locked
+        selected_id = self._state.selected_id
+        rows = self._playlist_rows()
+        if pls and rows and [r._pl.id for r in rows] == [p.id for p in pls]:
+            for row, pl in zip(rows, pls):
+                row.refresh(pl, pl.id == selected_id, locked)
+            return
+
+        # remove old rows (except stretch)
+        while self._list_layout.count() > 1:
+            item = self._list_layout.takeAt(0)
+            w = item.widget()
+            if w:
+                if isinstance(w, PlaylistRow):
+                    w.stop_animations()
+                w.deleteLater()
 
         if not pls:
             empty = EmptyState("list", "Queue is empty", "Add YouTube playlists to begin.")
             self._list_layout.insertWidget(0, empty)
         else:
             for i, pl in enumerate(pls):
-                row = PlaylistRow(pl, pl.id == self._state.selected_id, self._state.locked)
+                row = PlaylistRow(pl, pl.id == selected_id, locked)
                 row.selected.connect(lambda _, pid=pl.id: self._api.select(pid))
                 row.remove_clicked.connect(lambda _, pid=pl.id: self._api.remove(pid))
                 self._list_layout.insertWidget(i, row)
+
+    def _playlist_rows(self) -> list[PlaylistRow]:
+        rows: list[PlaylistRow] = []
+        for i in range(self._list_layout.count()):
+            w = self._list_layout.itemAt(i).widget()
+            if isinstance(w, PlaylistRow):
+                rows.append(w)
+        return rows
 
 
     def _refresh_selection(self, pid: str):
@@ -164,6 +184,10 @@ class QueueList(QWidget):
             w = self._list_layout.itemAt(i).widget()
             if isinstance(w, PlaylistRow):
                 w.set_selected(w._pl.id == pid)
+
+
+def _chip_key(status: str, run_state: str) -> tuple[str, str]:
+    return (run_state, status)
 
 
 def _status_chip(status: str, run_state: str) -> Chip:
@@ -175,6 +199,33 @@ def _status_chip(status: str, run_state: str) -> Chip:
         return Chip("Done", SUCCESS_BG, SUCCESS_DARK, dot=SUCCESS)
     else:
         return Chip("Queued", BG_SUBTLE, FG_MUTED, dot=INACTIVE)
+
+
+def _row_meta(pl: Playlist) -> tuple[str, str, bool]:
+    failed_count = sum(1 for v in pl.videos if v.stage == "failed")
+    has_failures = failed_count > 0 and pl.status == "done"
+    speed_str = f"×{pl.speed}" if pl.speed != 1.0 else "×1"
+    split_str = f"/{pl.split_min}m" if pl.split_enabled else "no split"
+    has_range = pl.range_start is not None or pl.range_end is not None
+    range_str = f"[{pl.range_start or 1}:{pl.range_end}]" if has_range else ""
+    meta = "  ·  ".join(filter(None, [pl.prefix, speed_str, split_str, range_str]))
+    cnt_text = (
+        f"{pl.completed}/{pl.video_count} · {failed_count}✗"
+        if has_failures else f"{pl.completed}/{pl.video_count}"
+    )
+    return meta, cnt_text, has_failures
+
+
+def _bar_colors(pl: Playlist) -> tuple[str, str]:
+    failed_count = sum(1 for v in pl.videos if v.stage == "failed")
+    has_failures = failed_count > 0 and pl.status == "done"
+    if has_failures:
+        return ERROR, ERROR_DARK
+    if pl.status == "done":
+        return SUCCESS, SUCCESS
+    if pl.run_state == "paused":
+        return "#F59E0B", "#F59E0B"
+    return PRIMARY, FG_MUTED
 
 
 class PlaylistRow(QWidget):
@@ -202,21 +253,22 @@ class PlaylistRow(QWidget):
         # ── Row A: status chip + title ──────────────────────────────────────────
         row_a = QWidget()
         row_a.setStyleSheet("background:transparent;")
-        ra_lay = QHBoxLayout(row_a)
-        ra_lay.setContentsMargins(0, 0, 0, 0)
-        ra_lay.setSpacing(8)
-        ra_lay.addWidget(_status_chip(pl.status, pl.run_state))
-        title_lbl = QLabel(pl.title)
-        title_lbl.setStyleSheet(
+        self._ra_lay = QHBoxLayout(row_a)
+        self._ra_lay.setContentsMargins(0, 0, 0, 0)
+        self._ra_lay.setSpacing(8)
+        self._chip_key = _chip_key(pl.status, pl.run_state)
+        self._chip = _status_chip(pl.status, pl.run_state)
+        self._ra_lay.addWidget(self._chip)
+        self._title_lbl = QLabel(pl.title)
+        self._title_lbl.setStyleSheet(
             f"font-size:12px; font-weight:600; color:{FG}; background:transparent; border:none;"
         )
-        title_lbl.setMaximumWidth(155)
-        ra_lay.addWidget(title_lbl, 1)
+        self._title_lbl.setMaximumWidth(155)
+        self._ra_lay.addWidget(self._title_lbl, 1)
         m_lay.addWidget(row_a)
 
         # ── Row B: config meta  ·  [start:end]  ···  count ─────────────────────
-        failed_count = sum(1 for v in pl.videos if v.stage == "failed")
-        has_failures = failed_count > 0 and pl.status == "done"
+        meta, cnt_text, has_failures = _row_meta(pl)
 
         row_b = QWidget()
         row_b.setStyleSheet("background:transparent;")
@@ -224,30 +276,20 @@ class PlaylistRow(QWidget):
         rb_lay.setContentsMargins(0, 0, 0, 0)
         rb_lay.setSpacing(0)
 
-        speed_str = f"×{pl.speed}" if pl.speed != 1.0 else "×1"
-        split_str = f"/{pl.split_min}m" if pl.split_enabled else "no split"
-        has_range = pl.range_start is not None or pl.range_end is not None
-        range_str = f"[{pl.range_start or 1}:{pl.range_end}]" if has_range else ""
-        meta = "  ·  ".join(filter(None, [pl.prefix, speed_str, split_str, range_str]))
-
-        meta_lbl = QLabel(meta)
-        meta_lbl.setStyleSheet(
+        self._meta_lbl = QLabel(meta)
+        self._meta_lbl.setStyleSheet(
             f"font-size:11px; color:{FG_MUTED}; "
             f"font-family:'JetBrains Mono',monospace; background:transparent; border:none;"
         )
-        rb_lay.addWidget(meta_lbl)
+        rb_lay.addWidget(self._meta_lbl)
         rb_lay.addStretch()
 
-        cnt_text = (
-            f"{pl.completed}/{pl.video_count} · {failed_count}✗"
-            if has_failures else f"{pl.completed}/{pl.video_count}"
-        )
-        cnt_lbl = QLabel(cnt_text)
-        cnt_lbl.setStyleSheet(
+        self._cnt_lbl = QLabel(cnt_text)
+        self._cnt_lbl.setStyleSheet(
             f"font-size:10px; color:{ERROR_DARK if has_failures else FG_MUTED}; "
             f"font-family:'JetBrains Mono',monospace; background:transparent; border:none;"
         )
-        rb_lay.addWidget(cnt_lbl)
+        rb_lay.addWidget(self._cnt_lbl)
         m_lay.addWidget(row_b)
 
         # ── Row C: progress bar + percentage ───────────────────────────────────
@@ -257,33 +299,27 @@ class PlaylistRow(QWidget):
         rc_lay.setContentsMargins(0, 0, 0, 0)
         rc_lay.setSpacing(6)
 
-        if has_failures:
-            bar_color, pct_color = ERROR, ERROR_DARK
-        elif pl.status == "done":
-            bar_color, pct_color = SUCCESS, SUCCESS
-        elif pl.run_state == "paused":
-            bar_color, pct_color = "#F59E0B", "#F59E0B"
-        else:
-            bar_color, pct_color = PRIMARY, FG_MUTED
+        bar_color, pct_color = _bar_colors(pl)
 
-        bar = SlimProgressBar(color=bar_color, bar_height=3)
-        bar.set_value(pl.completed, pl.video_count)
-        rc_lay.addWidget(bar, 1)
+        self._bar = SlimProgressBar(color=bar_color, bar_height=3)
+        self._bar.set_value(pl.completed, pl.video_count)
+        rc_lay.addWidget(self._bar, 1)
 
         pct = int(pl.completed / pl.video_count * 100) if pl.video_count > 0 else 0
-        pct_lbl = QLabel(f"{pct}%")
-        pct_lbl.setFixedWidth(30)
-        pct_lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        pct_lbl.setStyleSheet(
+        self._pct_lbl = QLabel(f"{pct}%")
+        self._pct_lbl.setFixedWidth(30)
+        self._pct_lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self._pct_lbl.setStyleSheet(
             f"font-size:10px; font-weight:700; color:{pct_color}; "
             f"background:transparent; border:none;"
         )
-        rc_lay.addWidget(pct_lbl)
+        rc_lay.addWidget(self._pct_lbl)
         m_lay.addWidget(row_c)
 
         outer.addWidget(self._main, 1)
 
         # remove button — always visible so layout width never shifts
+        self._rm_btn = None
         if not locked:
             self._rm_btn = QPushButton()
             self._rm_btn.setIcon(QIcon(icon_pixmap("x", 12, FG_MUTED)))
@@ -295,6 +331,65 @@ class PlaylistRow(QWidget):
             )
             self._rm_btn.clicked.connect(self.remove_clicked)
             outer.addWidget(self._rm_btn)
+
+    def refresh(self, pl: Playlist, is_selected: bool, locked: bool):
+        """Update row content in-place — keeps the running spinner alive across refreshes."""
+        self._pl = pl
+        sel_changed = self._selected != is_selected
+        self._selected = is_selected
+        self._locked = locked
+
+        key = _chip_key(pl.status, pl.run_state)
+        if key != self._chip_key:
+            self._ra_lay.removeWidget(self._chip)
+            self._chip.stop_animations()
+            self._chip.deleteLater()
+            self._chip = _status_chip(pl.status, pl.run_state)
+            self._chip_key = key
+            self._ra_lay.insertWidget(0, self._chip)
+
+        self._title_lbl.setText(pl.title)
+
+        meta, cnt_text, has_failures = _row_meta(pl)
+        self._meta_lbl.setText(meta)
+        self._cnt_lbl.setText(cnt_text)
+        self._cnt_lbl.setStyleSheet(
+            f"font-size:10px; color:{ERROR_DARK if has_failures else FG_MUTED}; "
+            f"font-family:'JetBrains Mono',monospace; background:transparent; border:none;"
+        )
+
+        bar_color, pct_color = _bar_colors(pl)
+        self._bar.set_color(bar_color)
+        self._bar.set_value(pl.completed, pl.video_count)
+
+        pct = int(pl.completed / pl.video_count * 100) if pl.video_count > 0 else 0
+        self._pct_lbl.setText(f"{pct}%")
+        self._pct_lbl.setStyleSheet(
+            f"font-size:10px; font-weight:700; color:{pct_color}; "
+            f"background:transparent; border:none;"
+        )
+
+        if locked and self._rm_btn is not None:
+            self._rm_btn.hide()
+        elif not locked and self._rm_btn is None:
+            self._rm_btn = QPushButton()
+            self._rm_btn.setIcon(QIcon(icon_pixmap("x", 12, FG_MUTED)))
+            self._rm_btn.setFixedSize(24, 24)
+            self._rm_btn.setCursor(Qt.PointingHandCursor)
+            self._rm_btn.setStyleSheet(
+                "QPushButton { background:transparent; border:none; border-radius:4px; }"
+                "QPushButton:hover { background:#E5E7EB; }"
+            )
+            self._rm_btn.clicked.connect(self.remove_clicked)
+            self.layout().addWidget(self._rm_btn)
+        elif not locked and self._rm_btn is not None:
+            self._rm_btn.show()
+
+        if sel_changed:
+            self.update()
+
+    def stop_animations(self) -> None:
+        self._chip.stop_animations()
 
     # ── Paint (selected state only — no hover) ────────────────────────────────
     def paintEvent(self, event):

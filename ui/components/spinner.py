@@ -31,3 +31,7 @@ class Spinner(QWidget):
 
     def stop(self):
         self._timer.stop()
+
+    def start(self):
+        if not self._timer.isActive():
+            self._timer.start(16)

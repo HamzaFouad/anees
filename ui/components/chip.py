@@ -2,7 +2,7 @@ from __future__ import annotations
 from PySide6.QtWidgets import QWidget, QLabel, QHBoxLayout, QSizePolicy
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPainter, QColor
-from ui.components.pulse_dot import PulseDot
+from ui.components.spinner import Spinner
 
 
 def _parse_qcolor(css: str) -> QColor:
@@ -41,8 +41,7 @@ class Chip(QWidget):
 
         if dot:
             if pulse:
-                dot_w = PulseDot(dot)
-                dot_w.start_pulse()
+                dot_w = Spinner(12, dot)
             else:
                 dot_w = QLabel()
                 dot_w.setFixedSize(6, 6)
@@ -61,6 +60,11 @@ class Chip(QWidget):
     def label(self) -> QLabel:
         """Inner QLabel — used by PipelineStrip to update count text in-place."""
         return self._lbl
+
+    def stop_animations(self) -> None:
+        for sp in self.findChildren(Spinner):
+            sp.stop()
+        self.hide()
 
     def paintEvent(self, _event):
         p = QPainter(self)
