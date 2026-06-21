@@ -158,7 +158,7 @@ class AppState(QObject):
         print(f"[state] videos_ready — pid={pid} count={len(videos)}", flush=True)
         pl.videos      = videos
         pl.video_count = len(videos)
-        pl.status      = PlaylistStatus.ACTIVE
+        pl.status      = PlaylistStatus.QUEUED
         if real_title:
             pl.title = real_title
         self.playlists_changed.emit()
@@ -180,6 +180,12 @@ class AppState(QObject):
             pl.completed = sum(1 for vv in pl.videos if vv.stage == VideoStage.DONE)
             pl.status    = PlaylistStatus.DONE if pl.completed >= pl.video_count else PlaylistStatus.ACTIVE
             # sidebar needs updating when a video completes
+            self._dirty_pids.add(pid)
+            if not self._refresh_timer.isActive():
+                self._refresh_timer.start()
+        elif pl.status == PlaylistStatus.QUEUED and stage != VideoStage.FAILED:
+            # first stage callback marks the playlist as actively running
+            pl.status = PlaylistStatus.ACTIVE
             self._dirty_pids.add(pid)
             if not self._refresh_timer.isActive():
                 self._refresh_timer.start()

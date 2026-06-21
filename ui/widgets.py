@@ -115,6 +115,68 @@ class Btn(QPushButton):
             self.setText(text)
 
 
+def _parse_qcolor(css: str) -> QColor:
+    """Parse hex or CSS rgba(r,g,b,a) string into QColor."""
+    s = css.strip()
+    if s.startswith("rgba("):
+        parts = s[5:].rstrip(")").split(",")
+        r, g, b = int(parts[0].strip()), int(parts[1].strip()), int(parts[2].strip())
+        a = int(float(parts[3].strip()) * 255)
+        return QColor(r, g, b, a)
+    return QColor(s)
+
+
+# ── Chip ──────────────────────────────────────────────────────────────────────
+class Chip(QWidget):
+    """Pill-shaped chip with an optional leading 6 px dot.
+
+    Background drawn via paintEvent — bypasses Qt QSS border-radius cascade.
+    """
+
+    def __init__(self, text: str, bg: str, fg: str,
+                 dot: str | None = None,
+                 compact: bool = False,
+                 tooltip: str = "",
+                 parent=None):
+        super().__init__(parent)
+        self._bg = _parse_qcolor(bg)
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        if tooltip:
+            self.setToolTip(tooltip)
+
+        pad = 4 if compact else 8
+        lay = QHBoxLayout(self)
+        lay.setContentsMargins(pad, 2, pad, 2)
+        lay.setSpacing(4)
+
+        if dot:
+            dot_w = QLabel()
+            dot_w.setFixedSize(6, 6)
+            dot_w.setStyleSheet(f"background:{dot}; border-radius:3px; border:none;")
+            lay.addWidget(dot_w)
+
+        self._lbl = QLabel(text)
+        self._lbl.setTextFormat(Qt.PlainText)
+        self._lbl.setStyleSheet(
+            f"color:{fg}; font-size:{'10' if compact else '11'}px; font-weight:600; "
+            "background:transparent; border:none; text-decoration:none;"
+        )
+        lay.addWidget(self._lbl)
+
+    @property
+    def label(self) -> QLabel:
+        """Inner QLabel — used by PipelineStrip to update count text in-place."""
+        return self._lbl
+
+    def paintEvent(self, _event):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        p.setPen(Qt.NoPen)
+        p.setBrush(self._bg)
+        r = self.height() / 2
+        p.drawRoundedRect(self.rect(), r, r)
+
+
 # ── Badge ─────────────────────────────────────────────────────────────────────
 _BADGE_STYLES = {
     "default": (BG_MUTED,       FG_SUBTLE),
@@ -245,38 +307,18 @@ class PipelineStrip(QWidget):
                   and (self._speed or k != "speed")]
 
         for i, (key, label, short, _) in enumerate(stages):
-            # All visible stages are always blue; grey only if explicitly disabled
             bg, fg, dot_color = PRIMARY_TINT_8, PRIMARY, PRIMARY
-
-            pill = QWidget()
-            pill.setToolTip(label)
-            pl = QHBoxLayout(pill)
-            pl.setContentsMargins(4 if self._compact else 8,
-                                  2 if self._compact else 4,
-                                  4 if self._compact else 8,
-                                  2 if self._compact else 4)
-            pl.setSpacing(4)
-
-            dot_w = QLabel()
-            dot_w.setFixedSize(6, 6)
-            dot_w.setStyleSheet(f"background:{dot_color}; border-radius:3px;")
-            pl.addWidget(dot_w)
 
             if key in self._counts and not self._compact:
                 done, total = self._counts[key]
                 display = f"{label}  {done}/{total}"
             else:
                 display = short if self._compact else label
-            txt = QLabel(display)
-            txt.setTextFormat(Qt.PlainText)
-            txt.setStyleSheet(
-                f"color:{fg}; font-size:{'10' if self._compact else '11'}px; font-weight:500; "
-                "background:transparent; border:none; text-decoration:none;"
-            )
-            self._count_labels[key] = txt
-            pl.addWidget(txt)
-            pill.setStyleSheet(f"background:{bg}; border-radius:8px;")
-            lay.addWidget(pill)
+
+            chip = Chip(display, bg, fg, dot=dot_color,
+                        compact=self._compact, tooltip=label)
+            self._count_labels[key] = chip.label
+            lay.addWidget(chip)
 
             if i < len(stages) - 1:
                 sep = QFrame()

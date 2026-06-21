@@ -7,11 +7,12 @@ from PySide6.QtCore import QMimeData
 from PySide6.QtGui import QIcon, QDrag, QPainter, QColor, QPen
 
 from ui.theme import (
-    PRIMARY, PRIMARY_TINT_8, FG, FG_MUTED, BG, BG_MUTED, BG_SUBTLE, BORDER,
+    PRIMARY, PRIMARY_TINT_8, FG, FG_MUTED, BG, BG_MUTED, BG_SUBTLE, BORDER, ROW_DIVIDER,
     DISABLED_BG, DISABLED_FG, INACTIVE,
-    SUCCESS, ERROR, ERROR_DARK, TEXT_MD,
+    SUCCESS, SUCCESS_BG, SUCCESS_DARK, ERROR, ERROR_DARK, TEXT_MD,
+    WARN_BG, WARN_DARK,
 )
-from ui.widgets import Btn, SlimProgressBar, icon_pixmap, status_dot, EmptyState
+from ui.widgets import Btn, Chip, SlimProgressBar, icon_pixmap, status_dot, EmptyState
 from ui.state import AppState
 from backend.models import Playlist, RunState
 
@@ -21,7 +22,7 @@ class QueueList(QWidget):
         super().__init__(parent)
         self._state = state
         self.setFixedWidth(280)
-        self.setStyleSheet(f"background:{BG_SUBTLE};")
+        self.setStyleSheet(f"background:{BG};")
 
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
@@ -30,19 +31,19 @@ class QueueList(QWidget):
         # header
         self._header = QWidget()
         self._header.setFixedHeight(34)
-        self._header.setStyleSheet(f"background:{BG_SUBTLE};")
+        self._header.setStyleSheet(f"background:{BG};")
         h_lay = QHBoxLayout(self._header)
-        h_lay.setContentsMargins(12, 0, 10, 0)
+        h_lay.setContentsMargins(16, 0, 10, 0)
         self._count_lbl = QLabel("")
         self._count_lbl.setStyleSheet(
-            f"font-size:10px; font-weight:500; color:{FG_MUTED}; "
-            f"letter-spacing:0.06em; text-transform:uppercase;"
+            f"font-size:11px; font-weight:700; color:{FG_MUTED}; "
+            f"letter-spacing:0.1em; text-transform:uppercase;"
         )
         h_lay.addWidget(self._count_lbl)
         h_lay.addStretch()
         self._hint_lbl = QLabel("drag to reorder")
         self._hint_lbl.setStyleSheet(
-            f"font-size:10px; color:{FG_MUTED}; font-family:'JetBrains Mono',monospace;"
+            f"font-size:11px; color:#A6B0BF;"
         )
         h_lay.addWidget(self._hint_lbl)
         root.addWidget(self._header)
@@ -52,9 +53,9 @@ class QueueList(QWidget):
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.NoFrame)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        scroll.setStyleSheet(f"QScrollArea {{ background:{BG_SUBTLE}; border:none; }}")
+        scroll.setStyleSheet(f"QScrollArea {{ background:{BG}; border:none; }}")
         self._list_widget = _DroppableList()
-        self._list_widget.setStyleSheet(f"background:{BG_SUBTLE};")
+        self._list_widget.setStyleSheet(f"background:{BG};")
         self._list_widget.reorder_requested.connect(
             lambda pid, idx: self._api.reorder(pid, idx)
         )
@@ -64,26 +65,33 @@ class QueueList(QWidget):
         self._list_layout.setSpacing(0)
         self._list_layout.addStretch()
         scroll.setWidget(self._list_widget)
-        scroll.viewport().setStyleSheet(f"background:{BG_SUBTLE};")
+        scroll.viewport().setStyleSheet(f"background:{BG};")
         root.addWidget(scroll)
 
         # footer add button
         footer = QWidget()
-        footer.setFixedHeight(46)
-        footer.setStyleSheet(f"background:{BG_SUBTLE}; border-top:1px solid {BORDER};")
+        footer.setObjectName("SidebarFooter")
+        footer.setFixedHeight(52)
+        footer.setStyleSheet(
+            f"#SidebarFooter {{ background:{BG}; border-top:1px solid {BORDER}; }}"
+        )
         f_lay = QHBoxLayout(footer)
         f_lay.setContentsMargins(10, 7, 10, 7)
         self._add_btn = QPushButton("  Add playlist")
-        self._add_btn.setIcon(QIcon(icon_pixmap("plus", 13, FG_MUTED)))
-        self._add_btn.setFixedHeight(28)
+        self._add_btn.setIcon(QIcon(icon_pixmap("plus", 13, PRIMARY)))
+        self._add_btn.setFixedHeight(38)
         self._add_btn.setCursor(Qt.PointingHandCursor)
         self._add_btn.setStyleSheet(f"""
             QPushButton {{
-                background:{BG}; color:{FG}; border:1px solid {BORDER};
-                border-radius:6px; font-size:12px; font-weight:500;
+                background:{BG}; color:{PRIMARY};
+                border:1px dashed #BFD0FF; border-radius:8px;
+                font-size:12px; font-weight:600;
             }}
-            QPushButton:hover {{ background:{BG_MUTED}; }}
-            QPushButton:disabled {{ background:{DISABLED_BG}; color:{DISABLED_FG}; }}
+            QPushButton:hover {{ background:{BG_SUBTLE}; }}
+            QPushButton:disabled {{
+                background:{DISABLED_BG}; color:{DISABLED_FG};
+                border:1px dashed {BORDER};
+            }}
         """)
         f_lay.addWidget(self._add_btn)
         root.addWidget(footer)
@@ -111,7 +119,12 @@ class QueueList(QWidget):
     def _on_run_state(self, rs: RunState):
         locked = rs in (RunState.RUNNING, RunState.PAUSED)
         self._add_btn.setDisabled(locked)
-        self._add_btn.setText("  Locked while running" if locked else "  Add playlist")
+        if locked:
+            self._add_btn.setIcon(QIcon(icon_pixmap("plus", 13, DISABLED_FG)))
+            self._add_btn.setText("  Locked while running")
+        else:
+            self._add_btn.setIcon(QIcon(icon_pixmap("plus", 13, PRIMARY)))
+            self._add_btn.setText("  Add playlist")
         self._hint_lbl.setText("locked" if locked else "drag to reorder")
         self._rebuild()
 
@@ -145,19 +158,6 @@ class QueueList(QWidget):
                 row.remove_clicked.connect(lambda _, pid=pl.id: self._api.remove(pid))
                 self._list_layout.insertWidget(i, row)
 
-        # update add button style
-        has_items = bool(self._state.playlists)
-        from ui.theme import PRIMARY_HOVER, ON_PRIMARY
-        self._add_btn.setStyleSheet(f"""
-            QPushButton {{
-                background:{PRIMARY if not has_items else BG};
-                color:{ON_PRIMARY if not has_items else FG};
-                border:{'none' if not has_items else f'1px solid {BORDER}'};
-                border-radius:6px; font-size:{TEXT_MD}px; font-weight:500;
-            }}
-            QPushButton:hover {{ background:{PRIMARY_HOVER if not has_items else BG_MUTED}; }}
-            QPushButton:disabled {{ background:{DISABLED_BG}; color:{DISABLED_FG}; }}
-        """)
 
     def _refresh_selection(self, pid: str):
         for i in range(self._list_layout.count()):
@@ -166,101 +166,125 @@ class QueueList(QWidget):
                 w.set_selected(w._pl.id == pid)
 
 
+def _status_chip(status: str, run_state: str) -> Chip:
+    if run_state == "paused":
+        return Chip("Paused", WARN_BG, WARN_DARK, dot="#F59E0B")
+    elif status == "active":
+        return Chip("Running", PRIMARY_TINT_8, PRIMARY, dot=PRIMARY)
+    elif status == "done":
+        return Chip("Done", SUCCESS_BG, SUCCESS_DARK, dot=SUCCESS)
+    else:
+        return Chip("Queued", BG_SUBTLE, FG_MUTED, dot=INACTIVE)
+
+
 class PlaylistRow(QWidget):
-    selected      = Signal(bool)
+    selected       = Signal(bool)
     remove_clicked = Signal(bool)
 
     def __init__(self, pl: Playlist, is_selected: bool, locked: bool, parent=None):
         super().__init__(parent)
-        self._pl = pl
-        self._selected = is_selected
-        self._locked = locked
-        self._drag_start = None   # QPoint | None; cleared after every drag
+        self._pl         = pl
+        self._selected   = is_selected
+        self._locked     = locked
+        self._drag_start = None
         self.setCursor(Qt.PointingHandCursor)
 
         outer = QHBoxLayout(self)
-        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setContentsMargins(2, 0, 6, 0)   # 2px left = painted accent space
         outer.setSpacing(0)
 
-        # main clickable area
         self._main = QWidget()
-        self._main.setCursor(Qt.PointingHandCursor)
+        self._main.setStyleSheet("background:transparent;")
+        m_lay = QVBoxLayout(self._main)
+        m_lay.setContentsMargins(10, 10, 0, 11)
+        m_lay.setSpacing(6)
 
-        m_lay = QHBoxLayout(self._main)
-        m_lay.setContentsMargins(12, 10, 4, 10)
-        m_lay.setSpacing(10)
-
-        # prefix
-        pfx = QLabel(pl.prefix)
-        pfx.setFixedWidth(36)
-        pfx.setAlignment(Qt.AlignCenter)
-        pfx.setStyleSheet(
-            f"font-family:'JetBrains Mono',monospace; font-size:11px; "
-            f"font-weight:600; color:{FG_MUTED};"
+        # ── Row A: status chip + title ──────────────────────────────────────────
+        row_a = QWidget()
+        row_a.setStyleSheet("background:transparent;")
+        ra_lay = QHBoxLayout(row_a)
+        ra_lay.setContentsMargins(0, 0, 0, 0)
+        ra_lay.setSpacing(8)
+        ra_lay.addWidget(_status_chip(pl.status, pl.run_state))
+        title_lbl = QLabel(pl.title)
+        title_lbl.setStyleSheet(
+            f"font-size:12px; font-weight:600; color:{FG}; background:transparent; border:none;"
         )
-        m_lay.addWidget(pfx)
+        title_lbl.setMaximumWidth(155)
+        ra_lay.addWidget(title_lbl, 1)
+        m_lay.addWidget(row_a)
 
-        # title + progress
-        mid = QWidget()
-        mid_lay = QVBoxLayout(mid)
-        mid_lay.setContentsMargins(0, 0, 0, 0)
-        mid_lay.setSpacing(4)
-
-        # status dot + title
-        top = QWidget()
-        top_lay = QHBoxLayout(top)
-        top_lay.setContentsMargins(0, 0, 0, 0)
-        top_lay.setSpacing(6)
-
+        # ── Row B: config meta  ·  [start:end]  ···  count ─────────────────────
         failed_count = sum(1 for v in pl.videos if v.stage == "failed")
         has_failures = failed_count > 0 and pl.status == "done"
-        dot_color = ERROR if has_failures else (SUCCESS if pl.status == "done" else (PRIMARY if pl.status == "active" else INACTIVE))
-        top_lay.addWidget(status_dot(dot_color))
 
-        title = QLabel(pl.title)
-        title.setStyleSheet(
-            f"font-size:12.5px; font-weight:{'500' if is_selected else '400'}; color:{FG};"
+        row_b = QWidget()
+        row_b.setStyleSheet("background:transparent;")
+        rb_lay = QHBoxLayout(row_b)
+        rb_lay.setContentsMargins(0, 0, 0, 0)
+        rb_lay.setSpacing(0)
+
+        speed_str = f"×{pl.speed}" if pl.speed != 1.0 else "×1"
+        split_str = f"/{pl.split_min}m" if pl.split_enabled else "no split"
+        r0 = pl.range_start or 1
+        r1 = pl.range_end if pl.range_end is not None else pl.video_count
+        range_str = f"[{r0}:{r1}]" if pl.video_count > 0 else ""
+        meta = "  ·  ".join(filter(None, [pl.prefix, speed_str, split_str, range_str]))
+
+        meta_lbl = QLabel(meta)
+        meta_lbl.setStyleSheet(
+            f"font-size:11px; color:{FG_MUTED}; "
+            f"font-family:'JetBrains Mono',monospace; background:transparent; border:none;"
         )
-        title.setMaximumWidth(200)
-        top_lay.addWidget(title, 1)
-        mid_lay.addWidget(top)
+        rb_lay.addWidget(meta_lbl)
+        rb_lay.addStretch()
 
-        # range badge (only when a range is configured)
-        if pl.range_start is not None or pl.range_end is not None:
-            r_start = pl.range_start or 1
-            r_end_str = str(pl.range_end) if pl.range_end is not None else "end"
-            range_lbl = QLabel(f"items {r_start}–{r_end_str}")
-            range_lbl.setStyleSheet(
-                f"font-size:10px; color:{FG_MUTED}; "
-                f"font-family:'JetBrains Mono',monospace;"
-            )
-            mid_lay.addWidget(range_lbl)
-
-        # progress bar + count
-        bot = QWidget()
-        bot_lay = QHBoxLayout(bot)
-        bot_lay.setContentsMargins(0, 0, 0, 0)
-        bot_lay.setSpacing(6)
-        bar = SlimProgressBar(
-            color=ERROR if has_failures else (SUCCESS if pl.status == "done" else PRIMARY),
-            bar_height=3,
+        cnt_text = (
+            f"{pl.completed}/{pl.video_count} · {failed_count}✗"
+            if has_failures else f"{pl.completed}/{pl.video_count}"
         )
-        bar.set_value(pl.completed, pl.video_count)
-        bot_lay.addWidget(bar, 1)
-        cnt_text = f"{pl.completed}/{pl.video_count}" + (f" · {failed_count} failed" if has_failures else "")
-        cnt = QLabel(cnt_text)
-        cnt.setStyleSheet(
+        cnt_lbl = QLabel(cnt_text)
+        cnt_lbl.setStyleSheet(
             f"font-size:10px; color:{ERROR_DARK if has_failures else FG_MUTED}; "
-            f"font-family:'JetBrains Mono',monospace; min-width:36px;"
+            f"font-family:'JetBrains Mono',monospace; background:transparent; border:none;"
         )
-        cnt.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        bot_lay.addWidget(cnt)
-        mid_lay.addWidget(bot)
+        rb_lay.addWidget(cnt_lbl)
+        m_lay.addWidget(row_b)
 
-        m_lay.addWidget(mid, 1)
+        # ── Row C: progress bar + percentage ───────────────────────────────────
+        row_c = QWidget()
+        row_c.setStyleSheet("background:transparent;")
+        rc_lay = QHBoxLayout(row_c)
+        rc_lay.setContentsMargins(0, 0, 0, 0)
+        rc_lay.setSpacing(6)
+
+        if has_failures:
+            bar_color, pct_color = ERROR, ERROR_DARK
+        elif pl.status == "done":
+            bar_color, pct_color = SUCCESS, SUCCESS
+        elif pl.run_state == "paused":
+            bar_color, pct_color = "#F59E0B", "#F59E0B"
+        else:
+            bar_color, pct_color = PRIMARY, FG_MUTED
+
+        bar = SlimProgressBar(color=bar_color, bar_height=3)
+        bar.set_value(pl.completed, pl.video_count)
+        rc_lay.addWidget(bar, 1)
+
+        pct = int(pl.completed / pl.video_count * 100) if pl.video_count > 0 else 0
+        pct_lbl = QLabel(f"{pct}%")
+        pct_lbl.setFixedWidth(30)
+        pct_lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        pct_lbl.setStyleSheet(
+            f"font-size:10px; font-weight:700; color:{pct_color}; "
+            f"background:transparent; border:none;"
+        )
+        rc_lay.addWidget(pct_lbl)
+        m_lay.addWidget(row_c)
+
         outer.addWidget(self._main, 1)
 
-        # remove button (hidden unless hovered, invisible when locked)
+        # remove button — always visible so layout width never shifts
         if not locked:
             self._rm_btn = QPushButton()
             self._rm_btn.setIcon(QIcon(icon_pixmap("x", 12, FG_MUTED)))
@@ -270,13 +294,19 @@ class PlaylistRow(QWidget):
                 "QPushButton { background:transparent; border:none; border-radius:4px; }"
                 "QPushButton:hover { background:#E5E7EB; }"
             )
-            self._rm_btn.setVisible(False)
             self._rm_btn.clicked.connect(self.remove_clicked)
             outer.addWidget(self._rm_btn)
-            outer.setContentsMargins(0, 0, 6, 0)
 
-        self._apply_style()
+    # ── Paint (selected state only — no hover) ────────────────────────────────
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.fillRect(self.rect(), QColor("#F5F7FF" if self._selected else BG))
+        if self._selected:
+            painter.fillRect(0, 0, 2, self.height(), QColor(PRIMARY))
+        painter.setPen(QPen(QColor(ROW_DIVIDER), 1))
+        painter.drawLine(0, self.height() - 1, self.width(), self.height() - 1)
 
+    # ── Mouse ─────────────────────────────────────────────────────────────────
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
             self._drag_start = event.position().toPoint()
@@ -295,11 +325,7 @@ class PlaylistRow(QWidget):
         if (event.position().toPoint() - self._drag_start).manhattanLength() < 12:
             return
         start = self._drag_start
-        self._drag_start = None   # clear before exec so stale point never lingers
-
-        # Parent the QDrag on the window, not on self. If _rebuild() fires during
-        # drag.exec() (e.g. a video completes) it calls deleteLater() on this row,
-        # which would also destroy a self-parented QDrag mid-flight and crash.
+        self._drag_start = None
         drag = QDrag(self.window())
         mime = QMimeData()
         mime.setText(self._pl.id)
@@ -310,29 +336,7 @@ class PlaylistRow(QWidget):
 
     def set_selected(self, sel: bool):
         self._selected = sel
-        self._apply_style()
-
-    def _apply_style(self):
-        if self._selected:
-            self.setStyleSheet(
-                f"background:{PRIMARY_TINT_8}; border:none; border-left:2px solid {PRIMARY};"
-            )
-        else:
-            self.setStyleSheet(f"background:{BG_SUBTLE}; border:none;")
-        self._main.setStyleSheet("background:transparent; border:none;")
-
-    def enterEvent(self, event):
-        if not self._selected:
-            self.setStyleSheet(f"background:{BG_MUTED}; border:none;")
-        if not self._locked and hasattr(self, "_rm_btn"):
-            self._rm_btn.setVisible(True)
-        super().enterEvent(event)
-
-    def leaveEvent(self, event):
-        self._apply_style()
-        if not self._locked and hasattr(self, "_rm_btn"):
-            self._rm_btn.setVisible(False)
-        super().leaveEvent(event)
+        self.update()
 
 
 class _DroppableList(QWidget):
