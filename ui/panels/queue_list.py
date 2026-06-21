@@ -226,9 +226,8 @@ class PlaylistRow(QWidget):
 
         speed_str = f"×{pl.speed}" if pl.speed != 1.0 else "×1"
         split_str = f"/{pl.split_min}m" if pl.split_enabled else "no split"
-        r0 = pl.range_start or 1
-        r1 = pl.range_end if pl.range_end is not None else pl.video_count
-        range_str = f"[{r0}:{r1}]" if pl.video_count > 0 else ""
+        has_range = pl.range_start is not None or pl.range_end is not None
+        range_str = f"[{pl.range_start or 1}:{pl.range_end}]" if has_range else ""
         meta = "  ·  ".join(filter(None, [pl.prefix, speed_str, split_str, range_str]))
 
         meta_lbl = QLabel(meta)
