@@ -3,6 +3,7 @@ from ui.components.utils import (
     hsep, status_dot, icon_button, field,
 )
 from ui.components.btn import Btn
+from ui.components.pulse_dot import PulseDot
 from ui.components.chip import Chip, _parse_qcolor
 from ui.components.badge import Badge
 from ui.components.toggle import Toggle

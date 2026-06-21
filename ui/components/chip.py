@@ -2,6 +2,7 @@ from __future__ import annotations
 from PySide6.QtWidgets import QWidget, QLabel, QHBoxLayout, QSizePolicy
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPainter, QColor
+from ui.components.pulse_dot import PulseDot
 
 
 def _parse_qcolor(css: str) -> QColor:
@@ -23,6 +24,7 @@ class Chip(QWidget):
 
     def __init__(self, text: str, bg: str, fg: str,
                  dot: str | None = None,
+                 pulse: bool = False,
                  compact: bool = False,
                  tooltip: str = "",
                  parent=None):
@@ -38,9 +40,13 @@ class Chip(QWidget):
         lay.setSpacing(4)
 
         if dot:
-            dot_w = QLabel()
-            dot_w.setFixedSize(6, 6)
-            dot_w.setStyleSheet(f"background:{dot}; border-radius:3px; border:none;")
+            if pulse:
+                dot_w = PulseDot(dot)
+                dot_w.start_pulse()
+            else:
+                dot_w = QLabel()
+                dot_w.setFixedSize(6, 6)
+                dot_w.setStyleSheet(f"background:{dot}; border-radius:3px; border:none;")
             lay.addWidget(dot_w)
 
         self._lbl = QLabel(text)

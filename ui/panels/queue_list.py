@@ -170,7 +170,7 @@ def _status_chip(status: str, run_state: str) -> Chip:
     if run_state == "paused":
         return Chip("Paused", WARN_BG, WARN_DARK, dot="#F59E0B")
     elif status == "active":
-        return Chip("Running", PRIMARY_TINT_8, PRIMARY, dot=PRIMARY)
+        return Chip("Running", PRIMARY_TINT_8, PRIMARY, dot=PRIMARY, pulse=True)
     elif status == "done":
         return Chip("Done", SUCCESS_BG, SUCCESS_DARK, dot=SUCCESS)
     else:
