@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
     QLineEdit, QFrame, QFileDialog, QListWidget, QListWidgetItem,
     QSizePolicy,
 )
-from PySide6.QtCore import Qt, QSize
+from PySide6.QtCore import Qt, QSize, QTimer
 from PySide6.QtGui import QIcon, QDoubleValidator, QIntValidator
 
 from ui.theme import (
@@ -562,6 +562,7 @@ class AddPlaylistDialog(QDialog):
         label = "+ Add folder" if source == "local" else "+ Add to Queue"
         self._confirm_btn.setText(f"  {label}")
         self.setFocus()  # prevent focus jumping to a text input on page switch
+        QTimer.singleShot(0, self.adjustSize)
 
     # ── local folder ─────────────────────────────────────────────────────────
 
