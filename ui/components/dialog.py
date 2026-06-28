@@ -52,12 +52,12 @@ class RoundedDialog(QDialog):
         h_lay.setContentsMargins(20, 0, 16, 0)
         if title:
             t_lbl = QLabel(title)
-            t_lbl.setStyleSheet(f"font-size:15px; font-weight:700; color:{FG};")
+            t_lbl.setStyleSheet(f"font-size:14px; font-weight:700; color:{FG};")
             h_lay.addWidget(t_lbl)
         h_lay.addStretch()
         x_btn = QPushButton()
-        x_btn.setIcon(QIcon(icon_pixmap("x", 14, FG_MUTED)))
-        x_btn.setFixedSize(30, 30)
+        x_btn.setIcon(QIcon(icon_pixmap("x", 15, FG_MUTED)))
+        x_btn.setFixedSize(28, 28)
         x_btn.setCursor(Qt.PointingHandCursor)
         x_btn.setStyleSheet(
             f"QPushButton {{ background:transparent; border:none; border-radius:6px; }}"
@@ -89,7 +89,7 @@ class RoundedDialog(QDialog):
         footer.setStyleSheet("background:transparent;")
         lay = QHBoxLayout(footer)
         lay.setContentsMargins(20, 0, 20, 0)
-        lay.setSpacing(10)
+        lay.setSpacing(8)
         self._root.addWidget(footer)
         return lay
 

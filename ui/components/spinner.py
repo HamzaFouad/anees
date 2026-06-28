@@ -7,7 +7,7 @@ from ui.theme import PRIMARY
 
 
 class Spinner(QWidget):
-    def __init__(self, size: int = 18, color: str = PRIMARY, parent=None):
+    def __init__(self, size: int = 13, color: str = PRIMARY, parent=None):
         super().__init__(parent)
         self._angle = 0
         self._color = color

@@ -50,7 +50,9 @@ class PipelineStrip(QWidget):
                 display = short if self._compact else label
 
             chip = Chip(display, bg, fg, dot=dot_color,
-                        compact=self._compact, tooltip=label)
+                        compact=self._compact,
+                        variant="pipeline" if not self._compact else "badge",
+                        tooltip=label)
             self._count_labels[key] = chip.label
             lay.addWidget(chip)
 

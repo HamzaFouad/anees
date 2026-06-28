@@ -26,6 +26,7 @@ class Chip(QWidget):
                  dot: str | None = None,
                  pulse: bool = False,
                  compact: bool = False,
+                 variant: str = "badge",
                  tooltip: str = "",
                  parent=None):
         super().__init__(parent)
@@ -34,9 +35,18 @@ class Chip(QWidget):
         if tooltip:
             self.setToolTip(tooltip)
 
-        pad = 4 if compact else 8
+        # pipeline chips: 0 11px padding, 12px font, 26px height
+        # badge chips: 2px 8px padding, 11px font (compact: 4px, 10px)
+        if variant == "pipeline":
+            h_pad, v_pad, fs = 11, 0, 12
+            self.setFixedHeight(26)
+        elif compact:
+            h_pad, v_pad, fs = 4, 2, 10
+        else:
+            h_pad, v_pad, fs = 8, 2, 11
+
         lay = QHBoxLayout(self)
-        lay.setContentsMargins(pad, 2, pad, 2)
+        lay.setContentsMargins(h_pad, v_pad, h_pad, v_pad)
         lay.setSpacing(4)
 
         if dot:
@@ -51,7 +61,7 @@ class Chip(QWidget):
         self._lbl = QLabel(text)
         self._lbl.setTextFormat(Qt.PlainText)
         self._lbl.setStyleSheet(
-            f"color:{fg}; font-size:{'10' if compact else '11'}px; font-weight:600; "
+            f"color:{fg}; font-size:{fs}px; font-weight:600; "
             "background:transparent; border:none; text-decoration:none;"
         )
         lay.addWidget(self._lbl)
