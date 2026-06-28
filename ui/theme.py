@@ -22,11 +22,15 @@ PRIMARY_TINT  = "rgba(0,68,255,0.10)"
 FG            = "#0F1729"
 FG_MUTED      = "#5C6F8A"
 FG_SUBTLE     = "#344256"
+FG_FAINT      = "#A6B0BF"   # column headers, section eyebrows, reorder hint
+FG_GHOST      = "#C4CDD8"   # date stamps in Build Card rows
+FG_DIMMED     = "#CBD5E1"   # inactive toggle values, strikethrough text
 
 BG            = "#FFFFFF"
 BG_MUTED      = "#F8FAFC"
 BG_SUBTLE     = "#F1F5F9"
 BG_ACCENT     = "#F3F4F7"
+BG_CANVAS     = "#E8ECF2"   # outermost page background behind window
 
 BORDER        = "#E5E7EB"
 
@@ -41,30 +45,38 @@ ERROR_BORDER  = "#FECACA"
 
 WARN_DARK     = "#92400E"
 WARN_BG       = "#FEF3C7"
+WARN_DOT      = "#F59E0B"   # amber paused status dot
 
 # ── Semantic surface / state roles ────────────────────────────────────────────
-ON_PRIMARY      = "#FFFFFF"           # text/icon on solid PRIMARY fill
-ROW_DIVIDER     = "#EAECF0"           # 1 px row separators in tables/lists
-DISABLED_BG     = "#F3F4F6"           # disabled button / input background
-DISABLED_FG     = "#9CA3AF"           # disabled text
-SURFACE_ALT     = "#E2E8F0"           # secondary button bg; toggle track-off
-INACTIVE        = "#D6D3D1"           # inactive playlist status dot
-WIN_CLOSE_HOVER = "#E81123"           # Windows system close-button hover
+ON_PRIMARY        = "#FFFFFF"          # text/icon on solid PRIMARY fill
+ROW_DIVIDER       = "#EAECF0"          # 1 px row separators in tables/lists
+DISABLED_BG       = "#F3F4F6"          # disabled button / input background
+DISABLED_FG       = "#9CA3AF"          # disabled text
+SURFACE_ALT       = "#E2E8F0"          # secondary button bg; toggle track-off
+SURFACE_ALT_HOVER = "#D6DEEA"          # hover on SURFACE_ALT (cancel buttons)
+INACTIVE          = "#D6D3D1"          # inactive playlist status dot
+WIN_CLOSE_HOVER   = "#E81123"          # Windows system close-button hover
 
 # ── Tint palette (all rgba(primary/error, …) usages consolidated) ─────────────
-PRIMARY_TINT_3  = "rgba(0,68,255,0.03)"
-PRIMARY_TINT_4  = "rgba(0,68,255,0.04)"
-PRIMARY_TINT_8  = "rgba(0,68,255,0.08)"   # PRIMARY_TINT stays as 0.10
-PRIMARY_TINT_18 = "rgba(0,68,255,0.18)"
-ERROR_TINT_4    = "rgba(239,68,68,0.04)"
-ERROR_TINT_10   = "rgba(239,68,68,0.10)"
-WARN_TINT_4     = "rgba(245,158,11,0.04)"
+PRIMARY_TINT_3      = "rgba(0,68,255,0.03)"
+PRIMARY_TINT_4      = "rgba(0,68,255,0.04)"
+PRIMARY_TINT_8      = "rgba(0,68,255,0.08)"   # PRIMARY_TINT stays as 0.10
+PRIMARY_TINT_18     = "rgba(0,68,255,0.18)"
+PRIMARY_TINT_EEF    = "#EEF3FF"               # active tab bg, active badge bg, source toggle active
+PRIMARY_TINT_BANNER = "#F0F4FF"               # info banner / pipeline banner background
+BORDER_DASHED_BLUE  = "#BFD0FF"               # "Add playlist" footer button dashed border
+ERROR_TINT_4        = "rgba(239,68,68,0.04)"
+ERROR_TINT_10       = "rgba(239,68,68,0.10)"
+WARN_TINT_4         = "rgba(245,158,11,0.04)"
 
 # ── Log level surfaces ────────────────────────────────────────────────────────
 LOG_BG_INFO  = "#E8ECF2"
 LOG_BG_DEBUG = "#F1F5F9"
 LOG_BG_DARK  = "#0E142C"              # expandable log-detail background
 FG_ON_DARK   = "rgba(255,255,255,0.78)"
+LOG_ROW_INFO  = "#F4F7FB"             # info log row background
+LOG_ROW_WARN  = "#FFFBEB"             # warn log row background
+LOG_ROW_ERROR = "#FEF6F6"             # error log row background
 
 # ── Typography ────────────────────────────────────────────────────────────────
 FONT_UI   = "'.AppleSystemUIFont','Segoe UI','Helvetica Neue',sans-serif"
@@ -74,7 +86,7 @@ TEXT_SM   = 11    # timestamps, secondary labels, hints
 TEXT_MD   = 12    # body text, table cells, button text
 TEXT_BASE = 13    # global default
 TEXT_LG   = 14    # dialog titles
-TEXT_XL   = 16    # detail panel playlist title
+TEXT_XL   = 17    # detail panel playlist title
 TEXT_2XL  = 18    # history summary values
 
 # ── Spacing scale ─────────────────────────────────────────────────────────────
@@ -90,9 +102,10 @@ RADIUS_XL   = 12   # large cards
 RADIUS_PILL = 99   # fully-rounded pills
 
 # ── Fixed component dimensions ────────────────────────────────────────────────
-H_TITLEBAR  = 36;  H_TOOLBAR  = 52;  H_TABBAR    = 36;  H_STATUSBAR = 24
-H_BTN_SM    = 28;  H_BTN_MD   = 32;  H_ROW       = 44
-W_SIDEBAR   = 280; W_COL_IDX  = 28;  W_COL_DUR   = 50
+H_TITLEBAR  = 36;  H_TOOLBAR  = 52;  H_TABBAR    = 38;  H_STATUSBAR = 24
+H_BTN_SM    = 28;  H_BTN_MD   = 32;  H_BTN_LARGE = 36;  H_ROW       = 44
+H_INPUT_SM  = 34;  H_INPUT_URL = 36
+W_SIDEBAR   = 288; W_COL_IDX  = 28;  W_COL_DUR   = 50
 W_COL_STAGE = 28;  W_COL_STATE = 92
 
 # ── Equalizer icon SVG (app mark) ────────────────────────────────────────────
@@ -182,22 +195,29 @@ def apply_global_stylesheet(app: QApplication) -> None:
             border: 0;
         }}
         QScrollBar:vertical {{
-            width: 6px; background: transparent; margin: 0;
+            width: 10px; background: transparent; margin: 0;
         }}
         QScrollBar::handle:vertical {{
-            background: {BORDER}; border-radius: 3px; min-height: 20px;
+            background: #CFD6E2; border-radius: 8px;
+            border: 3px solid transparent; background-clip: content-box;
+            min-height: 20px;
         }}
         QScrollBar::handle:vertical:hover {{
-            background: {FG_MUTED};
+            background: #B6C0D0; background-clip: content-box;
         }}
         QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
             height: 0;
         }}
         QScrollBar:horizontal {{
-            height: 6px; background: transparent; margin: 0;
+            height: 10px; background: transparent; margin: 0;
         }}
         QScrollBar::handle:horizontal {{
-            background: {BORDER}; border-radius: 3px; min-width: 20px;
+            background: #CFD6E2; border-radius: 8px;
+            border: 3px solid transparent; background-clip: content-box;
+            min-width: 20px;
+        }}
+        QScrollBar::handle:horizontal:hover {{
+            background: #B6C0D0; background-clip: content-box;
         }}
         QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
             width: 0;
