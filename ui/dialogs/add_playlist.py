@@ -15,10 +15,18 @@ from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon, QDoubleValidator, QIntValidator
 
 from ui.theme import (
-    PRIMARY, ON_PRIMARY, PRIMARY_HOVER, PRIMARY_TINT_8,
-    FG, FG_MUTED, BG, BG_SUBTLE, BORDER,
+    PRIMARY, ON_PRIMARY, PRIMARY_HOVER,
+    FG, FG_SUBTLE, FG_MUTED, BG, BG_MUTED, BG_SUBTLE, BORDER,
     ERROR, ERROR_DARK,
 )
+
+# Dialog-specific color values (see add-playlist-typography-colors.md)
+_FG_DIM        = "#8B97A9"   # helper/caption text, file metadata, range labels
+_FG_DISABLED   = "#CBD5E1"   # inactive toggle inputs, strikethrough
+_BG_ACTIVE_TAB = "#EEF3FF"   # active source toggle button
+_BG_PIPELINE   = "#F0F4FF"   # pipeline info banner
+_BTN_CANCEL_BG = "#E2E8F0"   # cancel button bg
+_BTN_CANCEL_HV = "#D6DEEA"   # cancel button hover
 from ui.widgets import Toggle, StyledInput, icon_pixmap
 from ui.state import AppState
 from backend.models import Playlist, Video
@@ -80,10 +88,10 @@ def _fmt_duration(secs: int) -> str:
 
 
 def _lbl(text: str) -> QLabel:
-    l = QLabel(text)
+    l = QLabel(text.upper())
     l.setStyleSheet(
-        f"font-size:10px; font-weight:600; color:{FG_MUTED}; "
-        "letter-spacing:0.05em; background:transparent; border:none;"
+        f"font-size:11px; font-weight:600; color:{FG_MUTED}; "
+        "letter-spacing:0.06em; background:transparent; border:none;"
     )
     return l
 
@@ -125,12 +133,12 @@ class AddPlaylistDialog(QDialog):
         h_lay = QHBoxLayout(header)
         h_lay.setContentsMargins(20, 0, 16, 0)
         t = QLabel(title)
-        t.setStyleSheet(f"font-size:15px; font-weight:700; color:{FG};")
+        t.setStyleSheet(f"font-size:14px; font-weight:700; color:{FG};")
         h_lay.addWidget(t)
         h_lay.addStretch()
         x_btn = QPushButton()
-        x_btn.setIcon(QIcon(icon_pixmap("x", 14, FG_MUTED)))
-        x_btn.setFixedSize(30, 30)
+        x_btn.setIcon(QIcon(icon_pixmap("x", 15, FG_MUTED)))
+        x_btn.setFixedSize(28, 28)
         x_btn.setCursor(Qt.PointingHandCursor)
         x_btn.setStyleSheet(
             f"QPushButton {{ background:transparent; border:none; border-radius:6px; }}"
@@ -147,7 +155,7 @@ class AddPlaylistDialog(QDialog):
         body.setStyleSheet("background:transparent;")
         b_lay = QVBoxLayout(body)
         b_lay.setContentsMargins(20, 20, 20, 20)
-        b_lay.setSpacing(12)
+        b_lay.setSpacing(14)
 
         # SOURCE TOGGLE (hidden in edit mode)
         self._source_toggle_w = _SourceToggle(self._source)
@@ -162,6 +170,9 @@ class AddPlaylistDialog(QDialog):
         self._local_page.setVisible(self._source == "local")
         b_lay.addWidget(self._yt_page)
         b_lay.addWidget(self._local_page)
+
+        # RANGE
+        b_lay.addWidget(self._build_range_section())
 
         # SETTINGS ROW: PREFIX | SPLIT | SPEED
         from backend.api.config import get_prefix_start
@@ -182,7 +193,7 @@ class AddPlaylistDialog(QDialog):
         self._prefix_input.setCursor(Qt.ArrowCursor)
         self._prefix_input.setStyleSheet(
             self._prefix_input.styleSheet() +
-            f"QLineEdit {{ background:{BG_SUBTLE}; color:{FG_MUTED}; }}"
+            f"QLineEdit {{ height:34px; background:{BG_MUTED}; color:{_FG_DIM}; }}"
         )
         pfx_w.layout().addWidget(self._prefix_input)
         r_lay.addWidget(pfx_w)
@@ -213,37 +224,11 @@ class AddPlaylistDialog(QDialog):
 
         b_lay.addWidget(row)
 
-        # RANGE ROW (hidden in edit mode for simplicity)
-        rng_w = _section()
-        rng_w.layout().addWidget(_lbl("Range"))
-        self._range_toggle = Toggle(False)
-        self._range_toggle.toggled.connect(self._on_range_toggle)
-        self._range_from = _value_input("1", QIntValidator(1, 9999), enabled=False)
-        self._range_from.setFixedWidth(64)
-        self._range_from.setPlaceholderText("from")
-        self._range_to = _value_input("", QIntValidator(1, 9999), enabled=False)
-        self._range_to.setFixedWidth(64)
-        self._range_to.setPlaceholderText("end")
-        _dash = QLabel("–")
-        _dash.setStyleSheet(f"color:{FG_MUTED}; background:transparent; border:none; font-size:13px;")
-        rng_ctrl = QWidget(); rng_ctrl.setStyleSheet("background:transparent;")
-        rc_lay = QHBoxLayout(rng_ctrl)
-        rc_lay.setContentsMargins(0, 0, 0, 0)
-        rc_lay.setSpacing(8)
-        rc_lay.addWidget(self._range_toggle)
-        rc_lay.addWidget(self._range_from)
-        rc_lay.addWidget(_dash)
-        rc_lay.addWidget(self._range_to)
-        rc_lay.addStretch()
-        rng_w.layout().addWidget(rng_ctrl)
-        rng_w.setVisible(self._source == "youtube" and not edit_mode)
-        self._range_w = rng_w
-        b_lay.addWidget(rng_w)
-
         # DEST HINT
         self._dest_hint = QLabel()
         self._dest_hint.setStyleSheet(
-            f"font-size:11px; color:{FG_MUTED}; background:transparent; border:none;"
+            f"font-family:'JetBrains Mono','Consolas','Courier New',monospace; "
+            f"font-size:12px; color:{FG_MUTED}; background:transparent; border:none;"
         )
         self._update_dest_hint()
         self._prefix_input.textChanged.connect(lambda _: self._update_dest_hint())
@@ -263,14 +248,14 @@ class AddPlaylistDialog(QDialog):
         f_lay.addStretch()
 
         cancel_btn = QPushButton("Cancel")
-        cancel_btn.setFixedHeight(36)
+        cancel_btn.setFixedHeight(32)
         cancel_btn.setCursor(Qt.PointingHandCursor)
         cancel_btn.setStyleSheet(f"""
             QPushButton {{
-                background:{BG}; color:{FG}; border:1px solid {BORDER};
-                border-radius:8px; padding:0 20px; font-size:13px;
+                background:{_BTN_CANCEL_BG}; color:{FG_SUBTLE}; border:none;
+                border-radius:6px; padding:0 14px; font-size:13px; font-weight:600;
             }}
-            QPushButton:hover {{ background:{BG_SUBTLE}; }}
+            QPushButton:hover {{ background:{_BTN_CANCEL_HV}; }}
         """)
         cancel_btn.clicked.connect(self.reject)
         f_lay.addWidget(cancel_btn)
@@ -279,12 +264,12 @@ class AddPlaylistDialog(QDialog):
             "+ Add folder" if self._source == "local" else "+ Add to Queue"
         )
         self._confirm_btn = QPushButton(f"  {confirm_label}")
-        self._confirm_btn.setFixedHeight(36)
+        self._confirm_btn.setFixedHeight(32)
         self._confirm_btn.setCursor(Qt.PointingHandCursor)
         self._confirm_btn.setStyleSheet(f"""
             QPushButton {{
                 background:{PRIMARY}; color:{ON_PRIMARY}; border:none;
-                border-radius:8px; padding:0 20px; font-size:13px; font-weight:600;
+                border-radius:6px; padding:0 16px; font-size:13px; font-weight:600;
             }}
             QPushButton:hover {{ background:{PRIMARY_HOVER}; }}
         """)
@@ -295,6 +280,14 @@ class AddPlaylistDialog(QDialog):
         # Pre-fill edit mode
         if edit_mode and playlist.source == "local":
             self._folder_input.setText(playlist.url)
+        if edit_mode:
+            rs = playlist.range_start   # 1-based, None = no start
+            re_ = playlist.range_end    # 1-based, None = no end
+            from_val = max(0, (rs or 1) - 1)
+            if from_val > 0:
+                self._range_from_input.setText(str(from_val))
+            if re_ is not None:
+                self._range_to_input.setText(str(max(0, re_ - 1)))
 
         # Toggles now exist — refresh pipeline text with correct initial state
         self._update_pipeline_text()
@@ -310,12 +303,15 @@ class AddPlaylistDialog(QDialog):
         lay.addWidget(_lbl("Playlist URL"))
         locked = self._edit_pl is not None and self._edit_pl.source == "youtube"
         self._url_input = StyledInput("https://youtube.com/playlist?list=…", mono=True)
+        self._url_input.setStyleSheet(
+            self._url_input.styleSheet() + "QLineEdit { height:36px; font-size:12px; }"
+        )
         if locked:
             self._url_input.setText(self._edit_pl.url)
             self._url_input.setReadOnly(True)
             self._url_input.setStyleSheet(
                 self._url_input.styleSheet() +
-                "QLineEdit { background:#F8FAFC; color:#8B97A9; }"
+                f"QLineEdit {{ background:{BG_MUTED}; color:{_FG_DIM}; }}"
             )
         self._url_input.textChanged.connect(self._clear_url_error)
         lay.addWidget(self._url_input)
@@ -344,17 +340,20 @@ class AddPlaylistDialog(QDialog):
         self._folder_input = StyledInput("", mono=True)
         self._folder_input.setReadOnly(True)
         self._folder_input.setPlaceholderText("No folder selected…")
+        self._folder_input.setStyleSheet(
+            self._folder_input.styleSheet() + "QLineEdit { height:36px; font-size:12px; }"
+        )
         fr_lay.addWidget(self._folder_input, 1)
 
         browse_btn = QPushButton("Browse…")
-        browse_btn.setFixedHeight(32)
+        browse_btn.setFixedHeight(36)
         browse_btn.setCursor(Qt.PointingHandCursor)
         browse_btn.setStyleSheet(f"""
             QPushButton {{
-                background:{BG_SUBTLE}; color:{FG}; border:1px solid {BORDER};
-                border-radius:8px; padding:0 14px; font-size:12px;
+                background:{BG}; color:{FG_SUBTLE}; border:1px solid {BORDER};
+                border-radius:6px; padding:0 14px; font-size:13px; font-weight:600;
             }}
-            QPushButton:hover {{ background:{BORDER}; }}
+            QPushButton:hover {{ background:{BG_SUBTLE}; }}
         """)
         browse_btn.clicked.connect(self._on_browse)
         fr_lay.addWidget(browse_btn)
@@ -371,20 +370,19 @@ class AddPlaylistDialog(QDialog):
         self._file_list.setFixedHeight(120)
         self._file_list.setStyleSheet(f"""
             QListWidget {{
-                background:{BG_SUBTLE}; border:1px solid {BORDER};
+                background:{BG_MUTED}; border:1px solid {BORDER};
                 border-radius:8px; padding:4px;
-                font-size:12px; font-family:'JetBrains Mono',monospace; color:{FG};
+                font-size:12px; color:{FG};
             }}
-            QListWidget::item {{ padding:3px 6px; border:none; }}
+            QListWidget::item {{ padding:5px 12px; border:none; }}
             QListWidget::item:selected {{ background:{PRIMARY}20; color:{FG}; }}
         """)
         self._file_list.setVisible(False)
         lay.addWidget(self._file_list)
 
         self._file_footer = QLabel("")
-        self._file_footer.setStyleSheet(
-            f"font-size:11px; color:{FG_MUTED}; background:transparent; border:none;"
-        )
+        self._file_footer.setTextFormat(Qt.RichText)
+        self._file_footer.setStyleSheet("background:transparent; border:none;")
         self._file_footer.setVisible(False)
         lay.addWidget(self._file_footer)
 
@@ -400,7 +398,7 @@ class AddPlaylistDialog(QDialog):
         banner.setObjectName("pipelineBanner")
         # rgba alpha is 0-255 in Qt QSS — 0.08×255 ≈ 20
         banner.setStyleSheet(
-            "#pipelineBanner { background: rgba(0,68,255,20); border-radius:8px; border:none; }"
+            f"#pipelineBanner {{ background:{_BG_PIPELINE}; border-radius:7px; border:none; }}"
         )
 
         lay = QHBoxLayout(banner)
@@ -418,7 +416,7 @@ class AddPlaylistDialog(QDialog):
         self._pipeline_lbl = QLabel()
         self._pipeline_lbl.setTextFormat(Qt.RichText)
         self._pipeline_lbl.setStyleSheet(
-            f"font-size:12px; color:{FG}; background:transparent; border:none;"
+            f"font-size:12px; color:{FG_SUBTLE}; background:transparent; border:none;"
         )
         lay.addWidget(self._pipeline_lbl)
         lay.addStretch()
@@ -437,10 +435,121 @@ class AddPlaylistDialog(QDialog):
         active = ("  →  " + "  →  ".join(steps)) if steps else ""
         self._pipeline_lbl.setText(
             f'Pipeline:  '
-            f'<span style="color:{FG_MUTED}; text-decoration:line-through;">'
+            f'<span style="color:{_FG_DISABLED}; text-decoration:line-through;">'
             f'Download  Convert</span>'
             f'{active}'
         )
+
+    # ── range section ────────────────────────────────────────────────────────
+
+    def _build_range_section(self) -> QWidget:
+        w = QWidget()
+        w.setStyleSheet("background:transparent;")
+        lay = QVBoxLayout(w)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(6)
+
+        lay.addWidget(_lbl("Range"))
+
+        row = QWidget()
+        row.setStyleSheet("background:transparent;")
+        r_lay = QHBoxLayout(row)
+        r_lay.setContentsMargins(0, 0, 0, 0)
+        r_lay.setSpacing(8)
+
+        self._range_from_input, from_box = self._make_range_box(
+            "From", "rangeBoxFrom", "rangeLblFrom", "0", FG
+        )
+        r_lay.addWidget(from_box, 1)
+
+        arrow = QLabel("→")
+        arrow.setAlignment(Qt.AlignCenter)
+        arrow.setFixedWidth(20)
+        arrow.setStyleSheet("font-size:13px; color:#CBD5E1; background:transparent; border:none;")
+        r_lay.addWidget(arrow)
+
+        self._range_to_input, to_box = self._make_range_box(
+            "To", "rangeBoxTo", "rangeLblTo", "end", _FG_DIM
+        )
+        r_lay.addWidget(to_box, 1)
+
+        lay.addWidget(row)
+
+        self._range_helper = QLabel(
+            "Default processes all videos. Use numbers to select a slice (e.g. 0 → 49)."
+        )
+        self._range_helper.setWordWrap(True)
+        self._range_helper.setStyleSheet(
+            f"font-size:11px; color:{_FG_DIM}; background:transparent; border:none;"
+        )
+        lay.addWidget(self._range_helper)
+
+        self._range_from_input.textChanged.connect(lambda _: self._update_dest_hint())
+        self._range_to_input.textChanged.connect(self._on_range_to_changed)
+
+        return w
+
+    def _make_range_box(
+        self, label: str, box_name: str, lbl_name: str, default: str, text_color: str
+    ) -> tuple[QLineEdit, QWidget]:
+        box = QWidget()
+        box.setObjectName(box_name)
+        box.setFixedHeight(34)
+        box.setStyleSheet(
+            f"#{box_name} {{ border:1px solid {BORDER}; border-radius:6px; background:{BG}; }}"
+        )
+
+        lay = QHBoxLayout(box)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(0)
+
+        lbl = QLabel(label)
+        lbl.setObjectName(lbl_name)
+        lbl.setStyleSheet(
+            f"#{lbl_name} {{ font-size:11px; font-weight:600; color:#8B97A9; "
+            f"background:#F8FAFC; padding:0 10px; border:none; "
+            f"border-right:1px solid {BORDER}; "
+            f"border-top-left-radius:5px; border-bottom-left-radius:5px; }}"
+        )
+        lay.addWidget(lbl)
+
+        inp = QLineEdit(default)
+        inp.setFrame(False)
+        inp.setStyleSheet(
+            f"QLineEdit {{ border:none; background:transparent; padding:0 10px; "
+            f"font-family:'JetBrains Mono','Consolas','Courier New',monospace; "
+            f"font-size:13px; color:{text_color}; }}"
+        )
+        lay.addWidget(inp, 1)
+
+        return inp, box
+
+    def _on_range_to_changed(self, text: str) -> None:
+        is_end = not text.strip() or text.strip().lower() == "end"
+        color = _FG_DIM if is_end else FG
+        self._range_to_input.setStyleSheet(
+            f"QLineEdit {{ border:none; background:transparent; padding:0 10px; "
+            f"font-family:'JetBrains Mono','Consolas','Courier New',monospace; "
+            f"font-size:13px; color:{color}; }}"
+        )
+        self._update_dest_hint()
+
+    def _read_range(self) -> tuple[int | None, int | None]:
+        from_str = self._range_from_input.text().strip()
+        to_str = self._range_to_input.text().strip()
+        try:
+            from_val = max(0, int(from_str))
+        except (ValueError, TypeError):
+            from_val = 0
+        is_end = not to_str or to_str.lower() == "end"
+        try:
+            to_val: int | None = max(0, int(to_str)) if not is_end else None
+        except (ValueError, TypeError):
+            to_val = None
+        # Convert 0-based UI to 1-based backend; from=0 means "from start" → None
+        range_start = from_val + 1 if from_val > 0 else None
+        range_end = to_val + 1 if to_val is not None else None
+        return range_start, range_end
 
     # ── source toggle ────────────────────────────────────────────────────────
 
@@ -448,7 +557,14 @@ class AddPlaylistDialog(QDialog):
         self._source = source
         self._yt_page.setVisible(source == "youtube")
         self._local_page.setVisible(source == "local")
-        self._range_w.setVisible(source == "youtube")
+        if source == "youtube":
+            self._range_helper.setText(
+                "Default processes all videos. Use numbers to select a slice (e.g. 0 → 49)."
+            )
+        else:
+            self._range_helper.setText(
+                "Default processes all files. Use numbers to select a subset."
+            )
         label = "+ Add folder" if source == "local" else "+ Add to Queue"
         self._confirm_btn.setText(f"  {label}")
         self.setFocus()  # prevent focus jumping to a text input on page switch
@@ -487,7 +603,11 @@ class AddPlaylistDialog(QDialog):
             self._file_list.addItem(item)
 
         total_mb = total_bytes / 1_048_576
-        self._file_footer.setText(f"{len(files)} files  ·  {total_mb:.1f} MB")
+        n = len(files)
+        self._file_footer.setText(
+            f'<span style="font-size:12px;font-weight:600;color:{FG};">{n} files</span>'
+            f'<span style="font-size:11px;font-family:monospace;color:{_FG_DIM};">  ·  {total_mb:.1f} MB</span>'
+        )
         self._file_list.setVisible(True)
         self._file_footer.setVisible(True)
 
@@ -497,7 +617,9 @@ class AddPlaylistDialog(QDialog):
         from backend.api.config import get_output_root
         prefix = self._prefix_input.text().strip() or "??"
         root = get_output_root().rstrip("/\\")
-        self._dest_hint.setText(f"→  {root}/{prefix}_…/")
+        from_str = self._range_from_input.text().strip() or "0"
+        to_str = self._range_to_input.text().strip() or "end"
+        self._dest_hint.setText(f"→  {root}/{prefix}_…/  [{from_str} → {to_str}]")
 
     def _clear_url_error(self) -> None:
         self._url_error.setVisible(False)
@@ -513,12 +635,6 @@ class AddPlaylistDialog(QDialog):
     def _on_split_toggle(self, checked: bool) -> None:
         self._split_input.setEnabled(checked)
         self._split_input.setStyleSheet(_input_style(checked))
-
-    def _on_range_toggle(self, checked: bool) -> None:
-        self._range_from.setEnabled(checked)
-        self._range_from.setStyleSheet(_input_style(checked))
-        self._range_to.setEnabled(checked)
-        self._range_to.setStyleSheet(_input_style(checked))
 
     # ── submit ───────────────────────────────────────────────────────────────
 
@@ -565,20 +681,7 @@ class AddPlaylistDialog(QDialog):
         except ValueError:
             split_min = 30
 
-        range_on = self._range_toggle._checked
-        range_start: int | None = None
-        range_end: int | None = None
-        if range_on:
-            try:
-                range_start = max(1, int(self._range_from.text())) if self._range_from.text().strip() else 1
-            except ValueError:
-                range_start = 1
-            try:
-                range_end = max(1, int(self._range_to.text())) if self._range_to.text().strip() else None
-            except ValueError:
-                range_end = None
-            if range_end is not None and range_end < range_start:
-                range_end = range_start
+        range_start, range_end = self._read_range()
 
         pl = Playlist(
             id           = str(uuid.uuid4()),
@@ -630,6 +733,8 @@ class AddPlaylistDialog(QDialog):
         except ValueError:
             split_min = 30
 
+        range_start, range_end = self._read_range()
+
         videos = [
             Video(
                 title=f.stem,
@@ -656,6 +761,8 @@ class AddPlaylistDialog(QDialog):
             size_mb      = round(total_bytes / 1_048_576, 1),
             added_at     = _fmt_now(),
             videos       = videos,
+            range_start  = range_start,
+            range_end    = range_end,
             source       = "local",
         )
         from ui.api import QueueAPI
@@ -678,20 +785,15 @@ class _SourceToggle(QWidget):
 
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
-        lay.setSpacing(8)
+        lay.setSpacing(7)
 
-        lbl = QLabel("SOURCE")
-        lbl.setStyleSheet(
-            f"font-size:10px; font-weight:600; color:{FG_MUTED}; "
-            "letter-spacing:0.05em; background:transparent; border:none;"
-        )
-        lay.addWidget(lbl)
+        lay.addWidget(_lbl("Source"))
 
         container = QWidget()
         container.setObjectName("segContainer")
-        container.setFixedHeight(46)
+        container.setFixedHeight(40)
         container.setStyleSheet(
-            f"#segContainer {{ background:{BG}; border:1px solid {BORDER}; border-radius:10px; }}"
+            f"#segContainer {{ background:{BG}; border:1px solid {BORDER}; border-radius:7px; }}"
         )
         c_lay = QHBoxLayout(container)
         c_lay.setContentsMargins(3, 3, 3, 3)
@@ -707,7 +809,7 @@ class _SourceToggle(QWidget):
 
     def _make_seg(self, label: str, key: str, icon_key: str) -> QPushButton:
         btn = QPushButton(f"  {label}")
-        btn.setFixedHeight(38)
+        btn.setFixedHeight(34)
         btn.setIconSize(QSize(14, 14))
         btn.setCursor(Qt.PointingHandCursor)
         btn.clicked.connect(lambda: self._select(key))
@@ -738,13 +840,13 @@ class _SourceToggle(QWidget):
             btn.setIconSize(QSize(ICON_PX, ICON_PX))
             if active:
                 btn.setStyleSheet(
-                    f"QPushButton {{ background:{PRIMARY_TINT_8}; color:{PRIMARY}; border:none; "
-                    f"border-radius:8px; font-size:13px; font-weight:700; text-align:center; }}"
+                    f"QPushButton {{ background:{_BG_ACTIVE_TAB}; color:{PRIMARY}; border:none; "
+                    f"border-radius:6px; font-size:13px; font-weight:600; text-align:center; }}"
                 )
             else:
                 btn.setStyleSheet(
                     f"QPushButton {{ background:transparent; color:{FG_MUTED}; border:none; "
-                    f"border-radius:8px; font-size:13px; font-weight:500; text-align:center; }}"
+                    f"border-radius:6px; font-size:13px; font-weight:600; text-align:center; }}"
                     f"QPushButton:hover {{ color:{FG}; }}"
                 )
 
@@ -764,18 +866,17 @@ def _section() -> QWidget:
 
 
 def _input_style(enabled: bool) -> str:
-    bg    = BG       if enabled else BG_SUBTLE
-    color = FG       if enabled else FG_MUTED
+    bg    = BG       if enabled else BG_MUTED
+    color = FG       if enabled else _FG_DISABLED
     return (
         f"QLineEdit {{ background:{bg}; color:{color}; border:1px solid {BORDER}; "
-        f"border-radius:8px; padding:0 10px; "
-        f"font-family:'JetBrains Mono',monospace; font-size:13px; }}"
+        f"border-radius:6px; padding:0 10px; font-size:13px; }}"
     )
 
 
 def _value_input(default: str, validator, enabled: bool = True) -> QLineEdit:
     e = QLineEdit(default)
-    e.setFixedHeight(32)
+    e.setFixedHeight(34)
     e.setEnabled(enabled)
     e.setValidator(validator)
     e.setAlignment(Qt.AlignCenter)
