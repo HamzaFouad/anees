@@ -1,6 +1,7 @@
 from __future__ import annotations
 import os
 import re
+import shutil
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -99,6 +100,9 @@ class DownloadService:
 
     # ── Per-playlist ──────────────────────────────────────────────────────────
     def _run_playlist(self, pl: Playlist) -> None:
+        if pl.source == "local":
+            self._run_local_playlist(pl)
+            return
         self._log("info", f"Processing: {pl.title}")
 
         if not pl.videos or all(v.title.startswith("Video ") for v in pl.videos):
@@ -197,6 +201,97 @@ class DownloadService:
         # pending = every absolute index not confirmed complete (including the deleted last)
         confirmed = set(found)
         return [r_start + i for i in range(len(pl.videos)) if (r_start + i) not in confirmed]
+
+    def _run_local_playlist(self, pl: Playlist) -> None:
+        """Process a local folder source — copy each MP3, then run split/speed pipeline."""
+        folder = Path(pl.url)
+        if not folder.is_dir():
+            self._log("error", f"Local folder not found: {pl.url}")
+            return
+
+        files = sorted(folder.glob("*.mp3"))
+        if not files:
+            self._log("error", f"No MP3 files in: {pl.url}")
+            return
+
+        out_dir = Path(self._root) / _playlist_folder(pl)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        self._log("info", f"Local folder: {len(files)} file(s) → {out_dir}")
+
+        executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="split")
+
+        def _ffmpeg_log(m: str) -> None:
+            if _FFMPEG_NOISE.match(m.strip()):
+                return
+            lvl = "error" if m.strip().lower().startswith("error") else "debug"
+            self._log(lvl, m)
+
+        def _mark_failed(idx: int, error_msg: str) -> None:
+            if idx < len(pl.videos):
+                v = pl.videos[idx]
+                v.error = error_msg
+            self._on_video_stage(pl.id, idx, VideoStage.FAILED, 0.0)
+            self._log("error", f"[{idx+1}] failed: {error_msg}")
+
+        def _do_postprocess(idx: int, title: str, filepath: str) -> None:
+            if self._stop.is_set():
+                self._on_video_stage(pl.id, idx, VideoStage.DONE, 1.0)
+                return
+
+            files_to_process = [filepath]
+
+            if pl.split_enabled:
+                try:
+                    files_to_process = self._make_split_service(_ffmpeg_log).split_file(
+                        filepath, pl.split_min, self._stop
+                    )
+                    self._log("info", f"[{idx+1}] {title}  → {len(files_to_process)} part(s)")
+                except Exception as exc:
+                    _mark_failed(idx, f"Split failed: {exc}")
+                    return
+
+            if pl.speed != 1.0 and not self._stop.is_set():
+                self._on_video_stage(pl.id, idx, VideoStage.SPEED, 0.1)
+                try:
+                    self._make_speed_service(_ffmpeg_log).apply_speed(files_to_process, pl.speed, self._stop)
+                    self._log("info", f"[{idx+1}] ×{pl.speed} applied to {len(files_to_process)} file(s)")
+                except Exception as exc:
+                    _mark_failed(idx, f"Speed ×{pl.speed} failed: {exc}")
+                    return
+
+            self._on_video_stage(pl.id, idx, VideoStage.DONE, 1.0)
+
+        try:
+            for idx, src in enumerate(files):
+                if self._stop.is_set():
+                    break
+                self._pause.wait()
+
+                title = src.stem
+                dest = out_dir / f"{idx+1:02d}_{src.name}"
+
+                self._on_video_stage(pl.id, idx, VideoStage.DOWNLOAD, 0.5)
+                try:
+                    shutil.copy2(str(src), str(dest))
+                except OSError as exc:
+                    _mark_failed(idx, f"Copy failed: {exc}")
+                    continue
+
+                self._on_video_stage(pl.id, idx, VideoStage.MP3, 1.0)
+                size_mb = dest.stat().st_size / 1024 / 1024
+                dur = pl.videos[idx].duration_sec if idx < len(pl.videos) else 0
+                self._on_video_meta(pl.id, idx, title, dur)
+
+                needs_postproc = (pl.split_enabled or pl.speed != 1.0) and not self._stop.is_set()
+                if needs_postproc:
+                    first_stage = VideoStage.SPLIT if pl.split_enabled else VideoStage.SPEED
+                    self._on_video_stage(pl.id, idx, first_stage, 0.1)
+                    executor.submit(_do_postprocess, idx, title, str(dest))
+                else:
+                    self._log("info", f"[{idx+1}] {title}  ({size_mb:.1f} MB)")
+                    self._on_video_stage(pl.id, idx, VideoStage.DONE, 1.0)
+        finally:
+            executor.shutdown(wait=True)
 
     def retry_videos(self, pl: Playlist, playlist_items: str) -> None:
         """Re-download specific videos by a 1-based playlist_items string (e.g. '2,4,7')."""
