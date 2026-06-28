@@ -8,7 +8,7 @@ from PySide6.QtCore import QMimeData
 from PySide6.QtGui import QIcon, QDrag, QPainter, QColor, QPen
 
 from ui.theme import (
-    PRIMARY, PRIMARY_TINT_3, PRIMARY_TINT_8, FG, FG_MUTED, FG_FAINT,
+    PRIMARY, PRIMARY_TINT_EEF, PRIMARY_TINT_8, FG, FG_MUTED, FG_FAINT,
     BG, BG_MUTED, BG_SUBTLE, BORDER, BORDER_DASHED_BLUE, ROW_DIVIDER,
     DISABLED_BG, DISABLED_FG, INACTIVE,
     SUCCESS, SUCCESS_BG, SUCCESS_DARK, ERROR, ERROR_DARK, TEXT_MD,
@@ -39,8 +39,8 @@ class QueueList(QWidget):
         h_lay.setContentsMargins(16, 0, 10, 0)
         self._count_lbl = QLabel("")
         self._count_lbl.setStyleSheet(
-            f"font-size:11px; font-weight:700; color:{FG_MUTED}; "
-            f"letter-spacing:0.1em; text-transform:uppercase;"
+            f"font-size:11px; font-weight:700; color:{FG_FAINT}; "
+            f"letter-spacing:0.08em;"
         )
         h_lay.addWidget(self._count_lbl)
         h_lay.addStretch()
@@ -396,7 +396,7 @@ class PlaylistRow(QWidget):
     # ── Paint (selected state only — no hover) ────────────────────────────────
     def paintEvent(self, event):
         painter = QPainter(self)
-        painter.fillRect(self.rect(), QColor(PRIMARY_TINT_3 if self._selected else BG))
+        painter.fillRect(self.rect(), QColor(PRIMARY_TINT_EEF if self._selected else BG))
         if self._selected:
             painter.fillRect(0, 0, 2, self.height(), QColor(PRIMARY))
         painter.setPen(QPen(QColor(ROW_DIVIDER), 1))

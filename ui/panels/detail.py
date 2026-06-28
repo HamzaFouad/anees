@@ -7,12 +7,12 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QIcon, QColor
 
 from ui.theme import (
-    PRIMARY, FG, FG_MUTED, FG_SUBTLE, BG, BG_MUTED, BG_SUBTLE, BG_ACCENT, BORDER,
+    PRIMARY, FG, FG_MUTED, FG_META, FG_SUBTLE, FG_FAINT, BG, BG_MUTED, BG_SUBTLE, BG_ACCENT, BORDER,
     SUCCESS, SUCCESS_DARK, SUCCESS_BG, ERROR, ERROR_DARK, ERROR_BG, ERROR_BORDER,
     SURFACE_ALT, ERROR_TINT_4,
     WARN_DARK, WARN_DOT,
     PIPELINE_STAGES, fmt_dur, fmt_mb,
-    TEXT_XL,
+    TEXT_XL, TEXT_2XL,
 )
 from ui.widgets import Badge, Btn, PipelineStrip, SlimProgressBar, Spinner, BreathingDot, icon_pixmap, icon_label
 from ui.state import AppState
@@ -288,9 +288,9 @@ class _DetailHeader(QWidget):
             ("Failed",   str(failed_count), "none" if failed_count == 0 else "see below", True),
         ]
         for label, val, sub, is_fail in stats:
-            lc = ERROR_DARK if is_fail and failed_count > 0 else FG_MUTED
+            lc = ERROR_DARK if is_fail and failed_count > 0 else FG_FAINT
             vc = ERROR_DARK if is_fail and failed_count > 0 else FG
-            sc = ERROR_DARK if is_fail and failed_count > 0 else FG_MUTED
+            sc = ERROR_DARK if is_fail and failed_count > 0 else FG_META
             col_w = QWidget(); col_w.setStyleSheet("background:transparent;")
             col = QVBoxLayout(col_w)
             col.setContentsMargins(0, 0, 0, 0)
@@ -301,11 +301,11 @@ class _DetailHeader(QWidget):
             col.addWidget(lbl)
             val_lbl = QLabel(val)
             val_lbl.setTextFormat(Qt.PlainText)
-            val_lbl.setStyleSheet(f"font-size:14px; font-weight:600; color:{vc};")
+            val_lbl.setStyleSheet(f"font-size:{TEXT_2XL}px; font-weight:700; color:{vc};")
             col.addWidget(val_lbl)
             sub_lbl = QLabel(sub)
             sub_lbl.setTextFormat(Qt.PlainText)
-            sub_lbl.setStyleSheet(f"font-size:10px; color:{sc};")
+            sub_lbl.setStyleSheet(f"font-size:11px; color:{sc};")
             col.addWidget(sub_lbl)
             stats_row.addWidget(col_w)
             stats_row.addSpacing(24)
@@ -321,7 +321,7 @@ class _DetailHeader(QWidget):
         pl_lbl = QLabel("Pipeline")
         pl_lbl.setTextFormat(Qt.PlainText)
         pl_lbl.setStyleSheet(
-            f"font-size:10px; color:{FG_MUTED}; font-weight:500; letter-spacing:0.04em;"
+            f"font-size:10px; color:{FG_FAINT}; font-weight:700; letter-spacing:0.06em;"
         )
         pipe_row.addWidget(pl_lbl)
         # count videos that have completed each stage (moved past it)
@@ -388,8 +388,8 @@ class _ColHeader(QWidget):
             lbl = QLabel(text)
             lbl.setTextFormat(Qt.PlainText)
             lbl.setStyleSheet(
-                f"font-size:10px; color:{FG_MUTED}; font-weight:500; "
-                f"letter-spacing:0.04em; text-transform:uppercase; "
+                f"font-size:10px; color:{FG_FAINT}; font-weight:700; "
+                f"letter-spacing:0.06em; "
                 "background:transparent; border:none; text-decoration:none;"
             )
             lbl.setAlignment(align | Qt.AlignVCenter)
@@ -447,7 +447,7 @@ class VideoRow(QWidget):
         num.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         num.setStyleSheet(
             f"font-family:'JetBrains Mono',monospace; font-size:11px; "
-            f"color:{ERROR_DARK if is_failed else FG_MUTED}; "
+            f"color:{ERROR_DARK if is_failed else FG_META}; "
             "background:transparent; border:none;"
         )
         lay.addWidget(num)
@@ -462,7 +462,7 @@ class VideoRow(QWidget):
         self._title_lbl = QLabel(video.title)
         self._title_lbl.setWordWrap(True)
         self._title_lbl.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        self._title_lbl.setStyleSheet(f"font-size:12px; color:{FG};")
+        self._title_lbl.setStyleSheet(f"font-size:13px; font-weight:400; color:{FG};")
         self._title_lbl.setTextInteractionFlags(Qt.TextSelectableByMouse)
         title_col.addWidget(self._title_lbl)
         if is_failed and video.error:
@@ -490,7 +490,7 @@ class VideoRow(QWidget):
         self._dur_lbl.setFixedWidth(50)
         self._dur_lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         self._dur_lbl.setStyleSheet(
-            f"font-family:'JetBrains Mono',monospace; font-size:11px; color:{FG_MUTED}; "
+            f"font-family:'JetBrains Mono',monospace; font-size:11px; color:{FG_META}; "
             "background:transparent; border:none;"
         )
         lay.addWidget(self._dur_lbl)
@@ -599,7 +599,7 @@ class VideoRow(QWidget):
         else:
             pct_lbl = QLabel(f"{self._overall_pct(video)}%")
             pct_lbl.setStyleSheet(
-                f"font-size:11px; color:{PRIMARY}; font-weight:500; "
+                f"font-size:11px; color:{PRIMARY}; font-weight:600; "
                 f"font-family:'JetBrains Mono',monospace;"
             )
             s_lay.addWidget(pct_lbl)
@@ -710,7 +710,7 @@ class _NoSelection(QWidget):
         lay.addSpacing(20)
 
         heading = QLabel("Your queue is empty. Let's get started.")
-        heading.setStyleSheet(f"font-size:16px; font-weight:600; color:{FG};")
+        heading.setStyleSheet(f"font-size:17px; font-weight:700; color:{FG};")
         heading.setAlignment(Qt.AlignHCenter)
         heading.setWordWrap(True)
         lay.addWidget(heading)

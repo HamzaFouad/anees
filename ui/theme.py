@@ -22,6 +22,7 @@ PRIMARY_TINT  = "rgba(0,68,255,0.10)"
 FG            = "#0F1729"
 FG_MUTED      = "#5C6F8A"
 FG_SUBTLE     = "#344256"
+FG_META       = "#8B97A9"   # timestamps, durations, mono paths, helper text
 FG_FAINT      = "#A6B0BF"   # column headers, section eyebrows, reorder hint
 FG_GHOST      = "#C4CDD8"   # date stamps in Build Card rows
 FG_DIMMED     = "#CBD5E1"   # inactive toggle values, strikethrough text

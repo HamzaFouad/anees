@@ -23,7 +23,7 @@ class EmptyState(QWidget):
         lay.addWidget(icon_w, alignment=Qt.AlignHCenter)
 
         t = QLabel(title)
-        t.setStyleSheet(f"font-size:{TEXT_MD + 1}px; font-weight:500; color:{FG};")
+        t.setStyleSheet(f"font-size:{TEXT_MD + 1}px; font-weight:600; color:{FG};")
         t.setAlignment(Qt.AlignHCenter)
         lay.addWidget(t)
 

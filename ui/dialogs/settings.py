@@ -103,7 +103,7 @@ class SettingsDialog(RoundedDialog):
     def _make_label(self, text: str) -> QLabel:
         lbl = QLabel(text.upper())
         lbl.setStyleSheet(
-            f"font-size:10px; font-weight:500; color:{FG_MUTED}; letter-spacing:.04em;"
+            f"font-size:11px; font-weight:600; color:{FG_MUTED}; letter-spacing:0.06em;"
         )
         return lbl
 
