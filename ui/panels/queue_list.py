@@ -8,10 +8,12 @@ from PySide6.QtCore import QMimeData
 from PySide6.QtGui import QIcon, QDrag, QPainter, QColor, QPen
 
 from ui.theme import (
-    PRIMARY, PRIMARY_TINT_8, FG, FG_MUTED, BG, BG_MUTED, BG_SUBTLE, BORDER, ROW_DIVIDER,
+    PRIMARY, PRIMARY_TINT_3, PRIMARY_TINT_8, FG, FG_MUTED, FG_FAINT,
+    BG, BG_MUTED, BG_SUBTLE, BORDER, BORDER_DASHED_BLUE, ROW_DIVIDER,
     DISABLED_BG, DISABLED_FG, INACTIVE,
     SUCCESS, SUCCESS_BG, SUCCESS_DARK, ERROR, ERROR_DARK, TEXT_MD,
-    WARN_BG, WARN_DARK,
+    WARN_BG, WARN_DARK, WARN_DOT,
+    W_SIDEBAR,
 )
 from ui.widgets import Btn, Chip, SlimProgressBar, icon_pixmap, status_dot, EmptyState
 from ui.state import AppState
@@ -22,7 +24,7 @@ class QueueList(QWidget):
     def __init__(self, state: AppState, parent=None):
         super().__init__(parent)
         self._state = state
-        self.setFixedWidth(280)
+        self.setFixedWidth(W_SIDEBAR)
         self.setStyleSheet(f"background:{BG};")
 
         root = QVBoxLayout(self)
@@ -44,7 +46,7 @@ class QueueList(QWidget):
         h_lay.addStretch()
         self._hint_lbl = QLabel("drag to reorder")
         self._hint_lbl.setStyleSheet(
-            f"font-size:11px; color:#A6B0BF;"
+            f"font-size:11px; color:{FG_FAINT};"
         )
         h_lay.addWidget(self._hint_lbl)
         root.addWidget(self._header)
@@ -85,7 +87,7 @@ class QueueList(QWidget):
         self._add_btn.setStyleSheet(f"""
             QPushButton {{
                 background:{BG}; color:{PRIMARY};
-                border:1px dashed #BFD0FF; border-radius:8px;
+                border:1px dashed {BORDER_DASHED_BLUE}; border-radius:8px;
                 font-size:12px; font-weight:600;
             }}
             QPushButton:hover {{ background:{BG_SUBTLE}; }}
@@ -192,7 +194,7 @@ def _chip_key(status: str, run_state: str) -> tuple[str, str]:
 
 def _status_chip(status: str, run_state: str) -> Chip:
     if run_state == "paused":
-        return Chip("Paused", WARN_BG, WARN_DARK, dot="#F59E0B")
+        return Chip("Paused", WARN_BG, WARN_DARK, dot=WARN_DOT)
     elif status == "active":
         return Chip("Running", PRIMARY_TINT_8, PRIMARY, dot=PRIMARY, pulse=True)
     elif status == "done":
@@ -224,7 +226,7 @@ def _bar_colors(pl: Playlist) -> tuple[str, str]:
     if pl.status == "done":
         return SUCCESS, SUCCESS
     if pl.run_state == "paused":
-        return "#F59E0B", "#F59E0B"
+        return WARN_DOT, WARN_DOT
     return PRIMARY, FG_MUTED
 
 
@@ -327,7 +329,7 @@ class PlaylistRow(QWidget):
             self._rm_btn.setCursor(Qt.PointingHandCursor)
             self._rm_btn.setStyleSheet(
                 "QPushButton { background:transparent; border:none; border-radius:4px; }"
-                "QPushButton:hover { background:#E5E7EB; }"
+                f"QPushButton:hover {{ background:{BORDER}; }}"
             )
             self._rm_btn.clicked.connect(self.remove_clicked)
             outer.addWidget(self._rm_btn)
@@ -378,7 +380,7 @@ class PlaylistRow(QWidget):
             self._rm_btn.setCursor(Qt.PointingHandCursor)
             self._rm_btn.setStyleSheet(
                 "QPushButton { background:transparent; border:none; border-radius:4px; }"
-                "QPushButton:hover { background:#E5E7EB; }"
+                f"QPushButton:hover {{ background:{BORDER}; }}"
             )
             self._rm_btn.clicked.connect(self.remove_clicked)
             self.layout().addWidget(self._rm_btn)
@@ -394,7 +396,7 @@ class PlaylistRow(QWidget):
     # ── Paint (selected state only — no hover) ────────────────────────────────
     def paintEvent(self, event):
         painter = QPainter(self)
-        painter.fillRect(self.rect(), QColor("#F5F7FF" if self._selected else BG))
+        painter.fillRect(self.rect(), QColor(PRIMARY_TINT_3 if self._selected else BG))
         if self._selected:
             painter.fillRect(0, 0, 2, self.height(), QColor(PRIMARY))
         painter.setPen(QPen(QColor(ROW_DIVIDER), 1))

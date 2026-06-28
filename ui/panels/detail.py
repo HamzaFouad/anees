@@ -10,8 +10,9 @@ from ui.theme import (
     PRIMARY, FG, FG_MUTED, FG_SUBTLE, BG, BG_MUTED, BG_SUBTLE, BG_ACCENT, BORDER,
     SUCCESS, SUCCESS_DARK, SUCCESS_BG, ERROR, ERROR_DARK, ERROR_BG, ERROR_BORDER,
     SURFACE_ALT, ERROR_TINT_4,
-    WARN_DARK,
+    WARN_DARK, WARN_DOT,
     PIPELINE_STAGES, fmt_dur, fmt_mb,
+    TEXT_XL,
 )
 from ui.widgets import Badge, Btn, PipelineStrip, SlimProgressBar, Spinner, BreathingDot, icon_pixmap, icon_label
 from ui.state import AppState
@@ -229,7 +230,7 @@ class _DetailHeader(QWidget):
         pfx.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
         pfx.setStyleSheet(
             f"font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:600; "
-            f"color:{FG_SUBTLE}; background:{BG_ACCENT}; border-radius:6px; padding:4px 10px;"
+            f"color:{FG_SUBTLE}; background:{BG_SUBTLE}; border-radius:6px; padding:4px 10px;"
         )
         top.addWidget(pfx)
 
@@ -239,7 +240,7 @@ class _DetailHeader(QWidget):
         title_col.setSpacing(2)
         t = QLabel(pl.title)
         t.setTextFormat(Qt.PlainText)
-        t.setStyleSheet(f"font-size:16px; font-weight:600; letter-spacing:-0.01em; color:{FG};")
+        t.setStyleSheet(f"font-size:{TEXT_XL}px; font-weight:700; letter-spacing:-0.01em; color:{FG};")
         t.setTextInteractionFlags(Qt.TextSelectableByMouse)
         title_col.addWidget(t)
         url_lbl = QLabel(f'<a href="{pl.url}" style="color:{FG_MUTED}; text-decoration:none;">{pl.url}</a>')
@@ -296,7 +297,7 @@ class _DetailHeader(QWidget):
             col.setSpacing(1)
             lbl = QLabel(label.upper())
             lbl.setTextFormat(Qt.PlainText)
-            lbl.setStyleSheet(f"font-size:10px; color:{lc}; font-weight:500; letter-spacing:0.04em;")
+            lbl.setStyleSheet(f"font-size:10px; color:{lc}; font-weight:700; letter-spacing:0.06em;")
             col.addWidget(lbl)
             val_lbl = QLabel(val)
             val_lbl.setTextFormat(Qt.PlainText)
