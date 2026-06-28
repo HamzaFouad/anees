@@ -8,6 +8,20 @@ from typing import Callable
 from backend.platform.tools import ffmpeg_exe
 
 
+def probe_duration_sec(path: str) -> int:
+    """Return duration of an audio file in seconds using ffprobe."""
+    exe = _find_ffmpeg().replace("ffmpeg", "ffprobe")
+    try:
+        result = subprocess.run(
+            [exe, "-v", "error", "-show_entries", "format=duration",
+             "-of", "default=noprint_wrappers=1:nokey=1", path],
+            capture_output=True, text=True, timeout=10,
+        )
+        return int(float(result.stdout.strip()))
+    except (ValueError, TypeError, subprocess.TimeoutExpired, OSError):
+        return 0
+
+
 def _find_ffmpeg() -> str:
     """Compatibility shim: delegate lookup to platform layer."""
     return ffmpeg_exe()
