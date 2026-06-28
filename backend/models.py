@@ -44,6 +44,7 @@ class Playlist:
     range_start: Optional[int] = None   # 1-based; None = start of playlist
     range_end: Optional[int] = None     # 1-based inclusive; None = end of playlist
     run_state: str = "idle"             # idle | running | paused | done
+    source: str = "youtube"             # "youtube" | "local"
 
 
 @dataclass
