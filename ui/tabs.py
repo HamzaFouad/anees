@@ -2,7 +2,7 @@ from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QPushButton
 from PySide6.QtCore import Qt, Signal, QRectF
 from PySide6.QtGui import QIcon, QPainter, QColor
 
-from ui.theme import PRIMARY, FG, FG_MUTED, BG, BORDER
+from ui.theme import PRIMARY, FG, FG_MUTED, BG, BORDER, H_TABBAR
 from ui.widgets import icon_pixmap, Spinner
 from ui.state import AppState
 from backend.models import RunState
@@ -12,7 +12,7 @@ class TabBar(QWidget):
     def __init__(self, state: AppState, parent=None):
         super().__init__(parent)
         self._state = state
-        self.setFixedHeight(36)
+        self.setFixedHeight(H_TABBAR)
         self.setStyleSheet(f"background:{BG}; border-bottom:1px solid {BORDER};")
 
         lay = QHBoxLayout(self)
@@ -69,7 +69,7 @@ class _TabBtn(QPushButton):
         self._enabled = enabled
         self._active = False
         self._count = 0
-        self.setFixedHeight(36)
+        self.setFixedHeight(H_TABBAR)
         if enabled:
             self.setCursor(Qt.PointingHandCursor)
         else:
@@ -148,6 +148,6 @@ class _LockPill(QWidget):
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
         p.setPen(Qt.NoPen)
-        p.setBrush(QColor(0, 68, 255, 20))   # rgba(0,68,255,0.08) — Qt needs int alpha 0-255
+        p.setBrush(QColor(0, 68, 255, 20))   # PRIMARY_TINT_8 (0.08×255≈20) — Qt QPainter needs int alpha
         r = self.height() / 2
         p.drawRoundedRect(QRectF(self.rect()), r, r)

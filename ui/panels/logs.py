@@ -9,7 +9,8 @@ from ui.theme import (
     PRIMARY, PRIMARY_HOVER, ON_PRIMARY,
     FG, FG_MUTED, FG_SUBTLE, BG, BG_MUTED, BG_SUBTLE, BORDER,
     ERROR_BG, ERROR_DARK, WARN_BG, WARN_DARK,
-    ERROR_TINT_4, WARN_TINT_4, LOG_BG_INFO, LOG_BG_DEBUG, LOG_BG_DARK, FG_ON_DARK,
+    LOG_BG_INFO, LOG_BG_DEBUG, LOG_BG_DARK, FG_ON_DARK,
+    LOG_ROW_INFO, LOG_ROW_WARN, LOG_ROW_ERROR,
 )
 from ui.widgets import Toggle, icon_pixmap
 from backend.mock_data import MOCK_LOGS
@@ -275,7 +276,7 @@ class _LogRow(QWidget):
         is_err = entry.lvl == "error"
         is_warn = entry.lvl == "warn"
 
-        row_bg = ERROR_TINT_4 if is_err else (WARN_TINT_4 if is_warn else BG)
+        row_bg = LOG_ROW_ERROR if is_err else (LOG_ROW_WARN if is_warn else (LOG_ROW_INFO if entry.lvl == "info" else BG))
         self.setStyleSheet(f"background:{row_bg};")
 
         root = QVBoxLayout(self)

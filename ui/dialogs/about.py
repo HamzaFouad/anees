@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
 
 from backend.api.health import get_ffmpeg_version, get_ytdlp_version
 from backend.platform.resources import app_icon_path
-from ui.theme import BG, BG_MUTED, BORDER, FG, FG_MUTED, FG_SUBTLE, PRIMARY
+from ui.theme import BG, BG_MUTED, BORDER, FG, FG_MUTED, FG_SUBTLE, PRIMARY, PRIMARY_TINT_4
 from ui.widgets import RoundedDialog, icon_pixmap
 
 # ── Content ───────────────────────────────────────────────────────────────────
@@ -98,8 +98,8 @@ class AboutDialog(RoundedDialog):
         hadith_box.setObjectName("hadithBox")
         hadith_box.setFixedWidth(400)
         hadith_box.setStyleSheet(
-            "#hadithBox { background:rgba(0,68,255,0.04); "
-            "border:1px solid rgba(0,68,255,0.12); border-radius:10px; }"
+            f"#hadithBox {{ background:{PRIMARY_TINT_4}; "
+            f"border:1px solid rgba(0,68,255,0.12); border-radius:10px; }}"
         )
         hb = QVBoxLayout(hadith_box)
         hb.setContentsMargins(22, 20, 22, 18)
