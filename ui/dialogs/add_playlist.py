@@ -15,18 +15,12 @@ from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon, QDoubleValidator, QIntValidator
 
 from ui.theme import (
-    PRIMARY, ON_PRIMARY, PRIMARY_HOVER,
-    FG, FG_SUBTLE, FG_MUTED, BG, BG_MUTED, BG_SUBTLE, BORDER,
+    PRIMARY, ON_PRIMARY, PRIMARY_HOVER, PRIMARY_TINT_8, PRIMARY_TINT_EEF, PRIMARY_TINT_BANNER,
+    FG, FG_SUBTLE, FG_MUTED, FG_FAINT, FG_DIMMED,
+    BG, BG_MUTED, BG_SUBTLE, BORDER, BORDER_DASHED_BLUE,
     ERROR, ERROR_DARK,
+    SURFACE_ALT, SURFACE_ALT_HOVER,
 )
-
-# Dialog-specific color values (see add-playlist-typography-colors.md)
-_FG_DIM        = "#8B97A9"   # helper/caption text, file metadata, range labels
-_FG_DISABLED   = "#CBD5E1"   # inactive toggle inputs, strikethrough
-_BG_ACTIVE_TAB = "#EEF3FF"   # active source toggle button
-_BG_PIPELINE   = "#F0F4FF"   # pipeline info banner
-_BTN_CANCEL_BG = "#E2E8F0"   # cancel button bg
-_BTN_CANCEL_HV = "#D6DEEA"   # cancel button hover
 from ui.widgets import Toggle, StyledInput, icon_pixmap
 from ui.state import AppState
 from backend.models import Playlist, Video
@@ -193,7 +187,7 @@ class AddPlaylistDialog(QDialog):
         self._prefix_input.setCursor(Qt.ArrowCursor)
         self._prefix_input.setStyleSheet(
             self._prefix_input.styleSheet() +
-            f"QLineEdit {{ height:34px; background:{BG_MUTED}; color:{_FG_DIM}; }}"
+            f"QLineEdit {{ height:34px; background:{BG_MUTED}; color:{FG_FAINT}; }}"
         )
         pfx_w.layout().addWidget(self._prefix_input)
         r_lay.addWidget(pfx_w)
@@ -252,10 +246,10 @@ class AddPlaylistDialog(QDialog):
         cancel_btn.setCursor(Qt.PointingHandCursor)
         cancel_btn.setStyleSheet(f"""
             QPushButton {{
-                background:{_BTN_CANCEL_BG}; color:{FG_SUBTLE}; border:none;
+                background:{SURFACE_ALT}; color:{FG_SUBTLE}; border:none;
                 border-radius:6px; padding:0 14px; font-size:13px; font-weight:600;
             }}
-            QPushButton:hover {{ background:{_BTN_CANCEL_HV}; }}
+            QPushButton:hover {{ background:{SURFACE_ALT_HOVER}; }}
         """)
         cancel_btn.clicked.connect(self.reject)
         f_lay.addWidget(cancel_btn)
@@ -311,7 +305,7 @@ class AddPlaylistDialog(QDialog):
             self._url_input.setReadOnly(True)
             self._url_input.setStyleSheet(
                 self._url_input.styleSheet() +
-                f"QLineEdit {{ background:{BG_MUTED}; color:{_FG_DIM}; }}"
+                f"QLineEdit {{ background:{BG_MUTED}; color:{FG_FAINT}; }}"
             )
         self._url_input.textChanged.connect(self._clear_url_error)
         lay.addWidget(self._url_input)
@@ -398,7 +392,7 @@ class AddPlaylistDialog(QDialog):
         banner.setObjectName("pipelineBanner")
         # rgba alpha is 0-255 in Qt QSS — 0.08×255 ≈ 20
         banner.setStyleSheet(
-            f"#pipelineBanner {{ background:{_BG_PIPELINE}; border-radius:7px; border:none; }}"
+            f"#pipelineBanner {{ background:{PRIMARY_TINT_BANNER}; border-radius:7px; border:none; }}"
         )
 
         lay = QHBoxLayout(banner)
@@ -435,7 +429,7 @@ class AddPlaylistDialog(QDialog):
         active = ("  →  " + "  →  ".join(steps)) if steps else ""
         self._pipeline_lbl.setText(
             f'Pipeline:  '
-            f'<span style="color:{_FG_DISABLED}; text-decoration:line-through;">'
+            f'<span style="color:{FG_DIMMED}; text-decoration:line-through;">'
             f'Download  Convert</span>'
             f'{active}'
         )
@@ -469,7 +463,7 @@ class AddPlaylistDialog(QDialog):
         r_lay.addWidget(arrow)
 
         self._range_to_input, to_box = self._make_range_box(
-            "To", "rangeBoxTo", "rangeLblTo", "end", _FG_DIM
+            "To", "rangeBoxTo", "rangeLblTo", "end", FG_FAINT
         )
         r_lay.addWidget(to_box, 1)
 
@@ -480,7 +474,7 @@ class AddPlaylistDialog(QDialog):
         )
         self._range_helper.setWordWrap(True)
         self._range_helper.setStyleSheet(
-            f"font-size:11px; color:{_FG_DIM}; background:transparent; border:none;"
+            f"font-size:11px; color:{FG_FAINT}; background:transparent; border:none;"
         )
         lay.addWidget(self._range_helper)
 
@@ -526,7 +520,7 @@ class AddPlaylistDialog(QDialog):
 
     def _on_range_to_changed(self, text: str) -> None:
         is_end = not text.strip() or text.strip().lower() == "end"
-        color = _FG_DIM if is_end else FG
+        color = FG_FAINT if is_end else FG
         self._range_to_input.setStyleSheet(
             f"QLineEdit {{ border:none; background:transparent; padding:0 10px; "
             f"font-family:'JetBrains Mono','Consolas','Courier New',monospace; "
@@ -606,7 +600,7 @@ class AddPlaylistDialog(QDialog):
         n = len(files)
         self._file_footer.setText(
             f'<span style="font-size:12px;font-weight:600;color:{FG};">{n} files</span>'
-            f'<span style="font-size:11px;font-family:monospace;color:{_FG_DIM};">  ·  {total_mb:.1f} MB</span>'
+            f'<span style="font-size:11px;font-family:monospace;color:{FG_FAINT};">  ·  {total_mb:.1f} MB</span>'
         )
         self._file_list.setVisible(True)
         self._file_footer.setVisible(True)
@@ -840,7 +834,7 @@ class _SourceToggle(QWidget):
             btn.setIconSize(QSize(ICON_PX, ICON_PX))
             if active:
                 btn.setStyleSheet(
-                    f"QPushButton {{ background:{_BG_ACTIVE_TAB}; color:{PRIMARY}; border:none; "
+                    f"QPushButton {{ background:{PRIMARY_TINT_EEF}; color:{PRIMARY}; border:none; "
                     f"border-radius:6px; font-size:13px; font-weight:600; text-align:center; }}"
                 )
             else:
@@ -867,7 +861,7 @@ def _section() -> QWidget:
 
 def _input_style(enabled: bool) -> str:
     bg    = BG       if enabled else BG_MUTED
-    color = FG       if enabled else _FG_DISABLED
+    color = FG       if enabled else FG_DIMMED
     return (
         f"QLineEdit {{ background:{bg}; color:{color}; border:1px solid {BORDER}; "
         f"border-radius:6px; padding:0 10px; font-size:13px; }}"
