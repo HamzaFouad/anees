@@ -272,7 +272,8 @@ class AppState(QObject):
         self._selected = pl.id
         self.playlists_changed.emit()
         self.selection_changed.emit(pl.id)
-        self._fetch_info_async(pl)
+        if pl.source != "local":
+            self._fetch_info_async(pl)
 
     def _fetch_info_async(self, pl: Playlist) -> None:
         self._run_controller.fetch_info_async(pl.id, pl.url)

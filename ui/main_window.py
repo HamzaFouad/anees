@@ -97,7 +97,7 @@ class MainWindow(QWidget):
     def _on_add(self):
         if not self._state.locked:
             from ui.dialogs.add_playlist import AddPlaylistDialog
-            AddPlaylistDialog(self._state, self).exec()
+            AddPlaylistDialog(self._state, parent=self).exec()
 
     def _on_settings(self):
         from ui.dialogs.settings import SettingsDialog

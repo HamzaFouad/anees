@@ -115,7 +115,7 @@ class QueueList(QWidget):
     def _on_add(self):
         if not self._state.locked:
             from ui.dialogs.add_playlist import AddPlaylistDialog
-            AddPlaylistDialog(self._state, self.window()).exec()
+            AddPlaylistDialog(self._state, parent=self.window()).exec()
 
     def _on_run_state(self, rs: RunState):
         locked = rs in (RunState.RUNNING, RunState.PAUSED)
