@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
     QLineEdit, QFrame, QFileDialog, QListWidget, QListWidgetItem,
     QSizePolicy,
 )
-from PySide6.QtCore import Qt, QSize, QTimer
+from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon, QDoubleValidator, QIntValidator
 
 from ui.theme import (
@@ -549,6 +549,7 @@ class AddPlaylistDialog(QDialog):
 
     def _on_source_changed(self, source: str) -> None:
         self._source = source
+        self.setUpdatesEnabled(False)
         self._yt_page.setVisible(source == "youtube")
         self._local_page.setVisible(source == "local")
         if source == "youtube":
@@ -562,7 +563,13 @@ class AddPlaylistDialog(QDialog):
         label = "+ Add folder" if source == "local" else "+ Add to Queue"
         self._confirm_btn.setText(f"  {label}")
         self.setFocus()  # prevent focus jumping to a text input on page switch
-        QTimer.singleShot(0, self.adjustSize)
+        self.setMinimumHeight(0)
+        self.layout().activate()
+        # width is fixed — compute height at the exact fixed width to avoid
+        # adjustSize() inferring the wrong width from an unconstrained sizeHint
+        h = self.layout().totalHeightForWidth(self.width())
+        self.resize(self.width(), h if h > 0 else self.sizeHint().height())
+        self.setUpdatesEnabled(True)
 
     # ── local folder ─────────────────────────────────────────────────────────
 
